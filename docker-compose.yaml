@@ -1,0 +1,26 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.local
+    command: sleep infinity
+    volumes:
+      - .:/app
+    env_file:
+      - .env.local
+    ports:
+      - "8003:8000"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    env_file:
+      - .env.local
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

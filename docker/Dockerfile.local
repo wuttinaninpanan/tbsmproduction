@@ -1,0 +1,56 @@
+# Python 3.12
+FROM python:3.12-slim-bookworm
+
+# 作業ディレクトリ
+WORKDIR /app
+
+# =========================
+# Update OS
+# =========================
+RUN apt-get update -qq && apt-get install -y \
+    gcc \
+    python3-dev \
+    curl \
+    vim \
+    gettext \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# =========================
+# Node.js (for Tailwind)
+# =========================
+# NodeSource (Node 20 LTS)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && node -v \
+    && npm -v
+
+# =========================
+# pip / setuptools
+# =========================
+RUN pip install --no-cache-dir --upgrade pip setuptools
+
+# =========================
+# Poetry
+# =========================
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+ENV PATH="/root/.local/bin:$PATH"
+
+RUN poetry config virtualenvs.in-project true
+
+# =========================
+# Python dependencies
+# =========================
+COPY pyproject.toml poetry.lock* /app/
+RUN poetry install --no-root --no-interaction --no-ansi
+
+# =========================
+# App source
+# =========================
+COPY . /app
+
+# =========================
+# 開発用（常駐）
+# =========================
+CMD ["sleep", "infinity"]
