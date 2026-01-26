@@ -14,6 +14,7 @@ POSTGRES_PORT=5432
 DJANGO_SETTINGS_MODULE=config.settings.local
 ```
 
+
 ไฟล์ที่ต้องมี
 ```
 folder project
