@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}ติดต่อ — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="py-12">
+	<div class="max-w-3xl mx-auto">
+		<div class="glass-card p-8 rounded-xl">
+			<h1 class="text-2xl font-bold text-slate-900 mb-4">ติดต่อเรา</h1>
+			<p class="text-slate-700 mb-6">ส่งข้อความมาหาเรา ทางทีมจะติดต่อกลับภายใน 1-2 วันทำการ</p>
+
+			<form action="/contact/" method="post" class="space-y-4">
+				{% csrf_token %}
+				<div>
+					<label class="block text-sm text-slate-700">ชื่อ</label>
+					<input name="name" class="mt-1 w-full rounded-md border-gray-200 p-2" />
+				</div>
+
+				<div>
+					<label class="block text-sm text-slate-700">อีเมล</label>
+					<input type="email" name="email" class="mt-1 w-full rounded-md border-gray-200 p-2" />
+				</div>
+
+				<div>
+					<label class="block text-sm text-slate-700">ข้อความ</label>
+					<textarea name="message" rows="6" class="mt-1 w-full rounded-md border-gray-200 p-2"></textarea>
+				</div>
+
+				<div>
+					<button type="submit" class="inline-flex items-center px-4 py-2 rounded-md bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white">ส่งข้อความ</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</section>
+{% endblock %}
+

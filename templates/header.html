@@ -1,8 +1,47 @@
-<header style="padding:1rem;background:#f5f5f5;border-bottom:1px solid #e5e5e5;">
-	<div style="max-width:960px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;">
-		<h1 style="margin:0;font-size:1.25rem;"><a href="/" style="text-decoration:none;color:inherit;">TBSMRD</a></h1>
-		<nav>
-			<a href="/" style="margin-left:1rem;text-decoration:none;color:#333;">Home</a>
-		</nav>
+<nav class="navbar">
+	<div class="max-w-6xl mx-auto nav-container py-3 px-4">
+		<div class="brand-wrap">
+			<a href="/" class="brand no-underline">
+			<!-- Inline SVG logo (simple abstract mark) -->
+			<span class="brand-logo" aria-hidden="true">
+				<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+					<rect x="4" y="4" width="40" height="40" rx="10" fill="url(#g)" />
+					<path d="M14 28C18 20 30 20 34 28" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.95" />
+					<defs>
+						<linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+							<stop offset="0%" stop-color="#7c3aed"/>
+							<stop offset="100%" stop-color="#06b6d4"/>
+						</linearGradient>
+					</defs>
+				</svg>
+			</span>
+			<span class="ml-2">TBSMRD</span>
+			</a>
+		</div>
+
+		<div class="nav-center hidden md:flex">
+			<a href="/" class="nav-link font-semibold">หน้าแรก</a>
+		</div>
+
+				<div class="nav-actions">
+						<div class="hidden md:flex items-center gap-2 mr-3">
+							<a href="/about/" class="nav-small">เกี่ยวกับ</a>
+							<a href="/services/" class="nav-small">บริการ</a>
+							<a href="/contact/" class="nav-small">ติดต่อ</a>
+						</div>
+						<a href="/login/" class="btn-login inline-flex items-center bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white no-underline">Login</a>
+						<a href="#menu" class="md:hidden nav-link">เมนู</a>
+				</div>
 	</div>
-</header>
+
+	<!-- Mobile stacked menu -->
+	<div class="md:hidden bg-white/50 border-t border-gray-100">
+		<div class="max-w-6xl mx-auto px-4 py-3 space-y-2">
+			<a href="/" class="block text-slate-700">หน้าแรก</a>
+			<a href="/about/" class="block text-slate-700">เกี่ยวกับ</a>
+			<a href="/services/" class="block text-slate-700">บริการ</a>
+			<a href="/contact/" class="block text-slate-700">ติดต่อ</a>
+			<a href="/login/" class="block text-slate-800 font-medium">Login</a>
+		</div>
+	</div>
+</nav>

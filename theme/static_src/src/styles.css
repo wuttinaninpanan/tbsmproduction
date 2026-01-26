@@ -9,3 +9,102 @@
   * the scope of this path.
   */
 @source "../../../**/*.{html,py,js}";
+/* Custom futuristic utilities and animations */
+/* Color palette (sample from Coolors-style modern palette) */
+:root {
+  --clr-ink: #0f172a; /* dark slate */
+  --clr-primary: #7c3aed; /* purple */
+  --clr-accent: #06b6d4; /* cyan */
+  --clr-success: #10b981; /* green */
+  --clr-surface: #f5f7fb; /* light surface */
+}
+
+/* Navbar helpers */
+.navbar {
+  background: linear-gradient(180deg, rgba(255,255,255,0.66), rgba(255,255,255,0.56));
+  border-bottom: 1px solid rgba(15,23,42,0.04);
+}
+.navbar a { color: var(--clr-ink); }
+.navbar .brand { display:inline-flex; align-items:center; gap:0.5rem; font-weight:600; color:var(--clr-ink); }
+.brand-logo { width:36px; height:36px; display:inline-block; }
+.nav-link { color:rgba(15,23,42,0.72); padding:0.5rem 0.75rem; border-radius:8px; font-weight:500; }
+.nav-link:hover { color:var(--clr-ink); background:rgba(15,23,42,0.02); }
+
+/* center nav flex helper to keep links spaced and centered */
+.nav-center { display:flex; flex:1; justify-content:center; gap:1.25rem; align-items:center; }
+
+/* ensure login stays to the right */
+.nav-actions { display:flex; align-items:center; gap:0.75rem; }
+.btn-login { padding:0.5rem 0.9rem; border-radius:0.5rem; font-weight:600; }
+
+/* Grid container to ensure left brand, centered nav, right actions */
+.nav-container { display:grid; grid-template-columns: auto 1fr auto; align-items:center; gap:1rem; }
+.nav-container > .brand-wrap { justify-self:start; }
+.nav-container > .nav-center { justify-self:center; }
+.nav-container > .nav-actions { justify-self:end; }
+
+/* smaller right-hand links next to login */
+.nav-small { color: rgba(15,23,42,0.7); padding: 0.35rem 0.6rem; border-radius:6px; font-size:0.95rem; text-decoration:none; }
+.nav-small:hover { background: rgba(15,23,42,0.02); color: var(--clr-ink); }
+
+/* responsive tweaks */
+@media (max-width: 767px) {
+  .nav-center { justify-self:start; }
+  .nav-actions { gap:0.5rem; }
+}
+
+@layer components {
+  .futuristic-bg {
+    background: radial-gradient(ellipse at 10% 10%, rgba(79,70,229,0.18), transparent 10%),
+                radial-gradient(ellipse at 90% 90%, rgba(16,185,129,0.12), transparent 12%),
+                linear-gradient(120deg, rgba(14,165,233,0.06), rgba(124,58,237,0.04));
+    position: relative;
+    overflow: hidden;
+  }
+  .glass-card {
+    background: rgba(255,255,255,0.85);
+    color: #0f172a;
+    border: 1px solid rgba(15,23,42,0.06);
+    box-shadow: 0 10px 30px rgba(2,6,23,0.06);
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+  }
+}
+
+@layer utilities {
+  .neon-btn {
+    box-shadow: 0 6px 24px rgba(99,102,241,0.12), 0 0 24px rgba(99,102,241,0.06) inset;
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .neon-btn:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(99,102,241,0.18); }
+}
+
+@keyframes float-y {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+  100% { transform: translateY(0); }
+}
+
+.orb { position:absolute; border-radius:9999px; filter:blur(40px); opacity:.7; mix-blend-mode:screen; animation:float-y 6s ease-in-out infinite; }
+.orb--one { width:360px; height:360px; left:-6rem; top:-6rem; background:linear-gradient(135deg,#7c3aed,#06b6d4); animation-duration:8s; }
+.orb--two { width:240px; height:240px; right:-4rem; bottom:-4rem; background:linear-gradient(135deg,#06b6d4,#10b981); animation-duration:10s; }
+
+/* Subtle animated grid pattern */
+.grid-lines::before {
+  content: "";
+  position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 60px 60px, 60px 60px; pointer-events:none; opacity:0.6; transform:translateZ(0);
+}
+
+/* Gradient text utility */
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Slightly darker page background to increase contrast */
+.page-bg {
+  background: linear-gradient(180deg, #f5f7fb 0%, #eef2f7 100%);
+}
+

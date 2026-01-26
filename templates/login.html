@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Login — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="py-12">
+	<div class="max-w-md mx-auto">
+		<div class="glass-card p-8 rounded-xl">
+			<h1 class="text-2xl font-bold text-slate-900 mb-4">เข้าสู่ระบบ</h1>
+
+			<form action="/login/" method="post" class="space-y-4">
+				{% csrf_token %}
+				<div>
+					<label class="block text-sm text-slate-700">ชื่อผู้ใช้</label>
+					<input name="username" class="mt-1 w-full rounded-md border-gray-200 p-2" />
+				</div>
+
+				<div>
+					<label class="block text-sm text-slate-700">รหัสผ่าน</label>
+					<input type="password" name="password" class="mt-1 w-full rounded-md border-gray-200 p-2" />
+				</div>
+
+				<div class="flex items-center justify-between">
+					<label class="text-sm"><input type="checkbox" name="remember" class="mr-2"> จดจำฉัน</label>
+					<a href="/password-reset/" class="text-sm text-slate-700">ลืมรหัสผ่าน?</a>
+				</div>
+
+				<div>
+					<button type="submit" class="inline-flex items-center px-4 py-2 rounded-md bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white">เข้าสู่ระบบ</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</section>
+{% endblock %}
+
