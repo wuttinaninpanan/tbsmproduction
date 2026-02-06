@@ -26,10 +26,27 @@
 
     {% include "header.html" %}
 
-    <!-- ✅ กล่องเนื้อหาตรงกลาง -->
-    <main class="flex-1 flex justify-center px-4 py-10">
-        <div class="{% block container_class %}w-full max-w-4xl bg-white rounded-2xl shadow-xl px-8 py-10{% endblock %}">
-            {% block content %}{% endblock %}
+    <!-- ✅ เนื้อหา -->
+    <main class="flex-1 {% if user.is_authenticated %}py-6{% else %}px-4 py-10{% endif %}">
+        <div class="{% if user.is_authenticated %}w-full flex gap-6{% else %}max-w-4xl mx-auto w-full{% endif %}">
+            {% if user.is_authenticated %}
+                {% include "sidebar.html" %}
+            {% endif %}
+
+            <div class="{% if user.is_authenticated %}flex-1 min-w-0{% endif %}">
+                <div class="{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-8 py-10{% endblock %}">
+                    {% if messages %}
+                        <div class="space-y-2 mb-6">
+                            {% for message in messages %}
+                                <div class="rounded-xl border px-4 py-3 text-sm bg-white border-slate-200 text-slate-800">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
         </div>
     </main>
 

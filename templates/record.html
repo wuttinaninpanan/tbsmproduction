@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block container_class %}w-full max-w-7xl bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
 {% block title %}Production Scrap Record — TBSMRD{% endblock %}
 
@@ -8,13 +8,16 @@
 <section class="space-y-8">
 	<style>
 		/* Fallback to keep columns aligned even if Tailwind isn't applied */
-		.record-row{display:flex;align-items:center;gap:1.25rem}
+		.record-row{display:flex;align-items:flex-start;gap:1.25rem}
+		.photo-cell,.qty-cell{position:relative}
+		.qty-cell select{position:relative;z-index:2}
+		.check-cell{display:flex;justify-content:center;align-items:flex-start;padding-top:.55rem}
 		.record-col-line{width:13rem;flex:0 0 13rem}
 		.record-col-part{width:11rem;flex:0 0 11rem}
-		.record-col-defect{width:12rem;flex:0 0 12rem}
+		.record-col-defect{width:13rem;flex:0 0 13rem}
+		.record-col-scrap{width:13rem;flex:0 0 13rem}
 		.record-col-check{width:2.5rem;flex:0 0 2.5rem}
 		.record-col-photo{width:13rem;flex:0 0 13rem}
-		.record-col-scrap{width:10rem;flex:0 0 10rem}
 		.record-col-qty{width:8rem;flex:0 0 8rem}
 	</style>
 
@@ -22,115 +25,97 @@
 		<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Production Scrap Record</h1>
 	</header>
 
-	<form id="record-form" action="/record/" method="post" enctype="multipart/form-data" class="space-y-6">
+	<form id="record-form" action="/record/" method="post" class="space-y-6">
 		{% csrf_token %}
 
 		<!-- Board -->
 		<div class="rounded-2xl bg-orange-50 p-4 sm:p-6">
 			<div class="overflow-x-auto">
 				<div class="min-w-max">
-					<!-- Column headers (match screenshot) -->
+					<!-- Column headers -->
 					<div class="flex items-end gap-5 text-sm font-extrabold text-slate-900">
 						<div class="w-52 shrink-0 record-col-line">Production line</div>
 						<div class="w-44 shrink-0 record-col-part">Part number</div>
-						<div class="w-48 shrink-0 record-col-defect">Defect mode</div>
+						<div class="w-52 shrink-0 record-col-defect">Defect mode</div>
 						<div class="w-10 shrink-0 record-col-check">&nbsp;</div>
-						<div class="w-52 shrink-0 record-col-photo">Photo</div>
-						<div class="w-40 shrink-0 record-col-scrap">Scrap</div>
+						<div class="w-52 shrink-0 record-col-photo">Photo (Ref)</div>
+						<div class="w-56 shrink-0 record-col-scrap">Scrap</div>
 						<div class="w-32 shrink-0 record-col-qty">Quantity</div>
 					</div>
 
 					<!-- Groups -->
-					<div id="defect-groups" class="mt-3 space-y-6"></div>
+					<div id="scrap-groups" class="mt-3 space-y-6"></div>
 
 				</div>
 			</div>
 
-			<!-- Add button (always visible; not pushed off-screen by horizontal scroll) -->
-			<div class="mt-6 flex justify-end gap-3">
-				<button id="add-defect" type="button"
-						class="inline-flex items-center justify-center px-6 py-2 rounded-lg font-semibold text-white
-								   bg-emerald-600 hover:bg-emerald-700 transition">
-					Add
-				</button>
-				<button id="delete-defect" type="button"
-						class="inline-flex items-center justify-center px-6 py-2 rounded-lg font-semibold text-white
-								   bg-red-600 hover:bg-red-700 transition">
-					Delete
-				</button>
+			<div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+				<div class="flex items-center justify-end gap-2">
+					<button id="add-group" type="button" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+						เพิ่ม
+					</button>
+					<button id="remove-group" type="button" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition">
+						ลบ
+					</button>
+				</div>
 			</div>
 		</div>
 
-		<!-- Actions (bottom center like screenshot) -->
-		<div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-			<button id="clear" type="button"
-					class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold
-						   bg-amber-400 hover:bg-amber-500 text-white transition">
-				Clear
-			</button>
-			<button type="submit"
-					class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold
-						   bg-blue-600 hover:bg-blue-700 text-white transition">
-				Save
-			</button>
+
+		<!-- Actions -->
+		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+			<div class="hidden sm:block w-28"></div>
+			<div class="flex items-center justify-center gap-4">
+				<button id="clear" type="button"
+						class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold
+							   bg-amber-400 hover:bg-amber-500 text-white transition">
+					Clear
+				</button>
+				<button type="submit"
+						class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold
+							   bg-blue-600 hover:bg-blue-700 text-white transition">
+					Save
+				</button>
+			</div>
 		</div>
 	</form>
 </section>
 
-{# Optional server-provided data: record_data dict #}
+{# Server-provided record data #}
 {% if record_data %}
 	{{ record_data|json_script:"record-data" }}
 {% endif %}
 
 <template id="group-template">
-	<div class="defect-group">
-		<div class="space-y-2">
-			<!-- 5 rows -->
+	<div class="scrap-group">
+		<div class="space-y-0">
+			<!-- rows will be inserted here -->
 		</div>
 		<div class="mt-6 border-t border-slate-300"></div>
 	</div>
 </template>
 
 <template id="row-template">
-	<div class="defect-row record-row flex items-center gap-5">
+	<div class="scrap-row record-row flex items-start gap-5">
 		<div class="w-52 shrink-0 record-col-line line-cell"></div>
 		<div class="w-44 shrink-0 record-col-part part-cell"></div>
-		<div class="w-48 shrink-0 record-col-defect defect-cell"></div>
+		<div class="w-52 shrink-0 record-col-defect defect-cell"></div>
 		<div class="w-10 shrink-0 record-col-check check-cell"></div>
 		<div class="w-52 shrink-0 record-col-photo photo-cell"></div>
-		<div class="w-40 shrink-0 record-col-scrap scrap-cell"></div>
+		<div class="w-56 shrink-0 record-col-scrap scrap-cell"></div>
 		<div class="w-32 shrink-0 record-col-qty qty-cell"></div>
 	</div>
 </template>
 
 <script>
 (() => {
-	const fallbackData = {
-		productionLines: [
-			{
-				id: 'DAA1',
-				parts: [
-					{
-						id: 'DAR-54',
-						group: 'Common',
-						defects: [
-							{ id: 'def1', name: 'Defect mode 1', scraps: ['Component part'] },
-							{ id: 'def2', name: 'Defect mode 2', scraps: ['Component part', 'Bush 10', 'Guide 5'] },
-							{ id: 'def3', name: 'Defect mode 3', scraps: ['Component part'] },
-						],
-					},
-				],
-			},
-		],
-	};
-
 	const dataEl = document.getElementById('record-data');
-	const recordData = dataEl ? JSON.parse(dataEl.textContent) : fallbackData;
+	const recordData = dataEl ? JSON.parse(dataEl.textContent) : { productionLines: [] };
 
-	const groupsWrap = document.getElementById('defect-groups');
-	const addBtn = document.getElementById('add-defect');
-	const deleteBtn = document.getElementById('delete-defect');
+	const groupsWrap = document.getElementById('scrap-groups');
 	const clearBtn = document.getElementById('clear');
+	const addGroupBtn = document.getElementById('add-group');
+	const removeGroupBtn = document.getElementById('remove-group');
 
 	const groupTpl = document.getElementById('group-template');
 	const rowTpl = document.getElementById('row-template');
@@ -138,91 +123,97 @@
 	let productionLineInput = null;
 	let productionLineList = null;
 	let partSelect = null;
+	let topDefectSelect = null;
+	let headerHints = null;
+	let topHeaderRowEl = null;
+
+	/** dynamic groups (gi >= 1) */
+	const extraGroups = [];
 
 	function getLine(lineId) {
 		return (recordData.productionLines || []).find(l => l.id === lineId) || null;
 	}
 
-	function getPart(lineId, partId) {
-		const line = getLine(lineId);
-		if (!line) return null;
-		return (line.parts || []).find(p => p.id === partId) || null;
-	}
+		function getPart(lineId, partId) {
+			const line = getLine(lineId);
+			if (!line) return null;
+			return (line.parts || []).find(p => p.id === partId) || null;
+		}
 
-	function setOptions(select, options, placeholder = '— Select —') {
-		select.innerHTML = '';
-		const ph = document.createElement('option');
-		ph.value = '';
-		ph.textContent = placeholder;
-		select.appendChild(ph);
-		options.forEach(opt => {
-			const o = document.createElement('option');
-			o.value = opt.value;
-			o.textContent = opt.label;
-			select.appendChild(o);
-		});
-	}
+		function setOptions(select, options, placeholder = '— Select —') {
+			select.innerHTML = '';
+			const ph = document.createElement('option');
+			ph.value = '';
+			ph.textContent = placeholder;
+			select.appendChild(ph);
+			options.forEach(opt => {
+				const o = document.createElement('option');
+				o.value = opt.value;
+				o.textContent = opt.label;
+				select.appendChild(o);
+			});
+		}
 
-	function getCurrentLineId() {
-		return (productionLineInput?.value || '').trim().toUpperCase();
-	}
+		function getCurrentLineId() {
+			return (productionLineInput?.value || '').trim().toUpperCase();
+		}
 
-	function refreshParts() {
-		const lineId = getCurrentLineId();
-		productionLineInput.value = lineId;
-		const line = getLine(lineId);
-		const parts = line ? (line.parts || []).map(p => ({ value: p.id, label: p.id })) : [];
-		setOptions(partSelect, parts);
-		refreshAllDefectSelects();
-	}
+		function currentParts() {
+			const lineId = getCurrentLineId();
+			const line = getLine(lineId);
+			return line ? (line.parts || []) : [];
+		}
 
-	function refreshDefects() {
-		const lineId = getCurrentLineId();
-		const partId = partSelect.value;
-		const part = getPart(lineId, partId);
-		refreshAllDefectSelects();
-	}
+		function currentDefects() {
+			const lineId = getCurrentLineId();
+			const partId = partSelect?.value || '';
+			const part = getPart(lineId, partId);
+			return part ? (part.defects || []) : [];
+		}
 
-	function currentDefectOptions() {
-		const lineId = getCurrentLineId();
-		const partId = partSelect.value;
-		const part = getPart(lineId, partId);
-		return part ? (part.defects || []) : [];
-	}
+		function defectsFor(lineId, partId) {
+			const part = getPart(lineId, partId);
+			return part ? (part.defects || []) : [];
+		}
 
-	function refreshAllDefectSelects() {
-		const defects = currentDefectOptions();
-		const options = defects.map(d => ({ value: d.id, label: d.name }));
-		groupsWrap.querySelectorAll('.defect-select').forEach(sel => {
-			const prev = sel.value;
-			setOptions(sel, options);
-			if (prev && options.some(o => o.value === prev)) sel.value = prev;
-			sel.dispatchEvent(new Event('change'));
-		});
-	}
+		function defectById(defectId) {
+			return currentDefects().find(d => d.id === defectId) || null;
+		}
 
-	function scrapsFor(defectId) {
-		const defects = currentDefectOptions();
-		const found = defects.find(d => d.id === defectId);
-		return found?.scraps || ['Component part'];
-	}
+		function defectByIdFor(lineId, partId, defectId) {
+			return defectsFor(lineId, partId).find(d => d.id === defectId) || null;
+		}
 
-	function buildRow(rowIndex, groupIndex, showTopInputs, showDefectSelect) {
-		const row = rowTpl.content.firstElementChild.cloneNode(true);
-		const lineCell = row.querySelector('.line-cell');
-		const partCell = row.querySelector('.part-cell');
-		const defectCell = row.querySelector('.defect-cell');
-		const checkCell = row.querySelector('.check-cell');
-		const photoCell = row.querySelector('.photo-cell');
-		const scrapCell = row.querySelector('.scrap-cell');
-		const qtyCell = row.querySelector('.qty-cell');
+		function populateLineDatalist(datalistEl) {
+			if (!datalistEl) return;
+			datalistEl.innerHTML = '';
+			(recordData.productionLines || []).forEach(l => {
+				const opt = document.createElement('option');
+				opt.value = l.id;
+				datalistEl.appendChild(opt);
+			});
+		}
 
-		if (showTopInputs) {
+		function buildHeaderRow() {
+			const row = rowTpl.content.firstElementChild.cloneNode(true);
+			const lineCell = row.querySelector('.line-cell');
+			const partCell = row.querySelector('.part-cell');
+			const defectCell = row.querySelector('.defect-cell');
+			const checkCell = row.querySelector('.check-cell');
+			const photoCell = row.querySelector('.photo-cell');
+			const scrapCell = row.querySelector('.scrap-cell');
+			const qtyCell = row.querySelector('.qty-cell');
+
+			checkCell.innerHTML = '';
+			photoCell.innerHTML = '';
+			scrapCell.innerHTML = '';
+			qtyCell.innerHTML = '';
+
 			// Production line
 			productionLineInput = document.createElement('input');
 			productionLineInput.id = 'production-line';
 			productionLineInput.name = 'production_line';
-			productionLineInput.placeholder = 'Input or scan bar code';
+			productionLineInput.placeholder = 'Input or scan';
 			productionLineInput.setAttribute('list', 'production-lines');
 			productionLineInput.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
 			productionLineList = document.createElement('datalist');
@@ -230,8 +221,8 @@
 			lineCell.appendChild(productionLineInput);
 			lineCell.appendChild(productionLineList);
 			const lineHint = document.createElement('div');
-			lineHint.className = 'text-xs text-slate-600 mt-2';
-			lineHint.textContent = 'กรุณาใส่หรือสแกนรหัส Production line';
+			lineHint.className = 'text-xs text-slate-600 mt-1';
+			lineHint.textContent = 'กรุณาใส่หรือสแกน Production line';
 			lineCell.appendChild(lineHint);
 
 			// Part number
@@ -241,164 +232,363 @@
 			partSelect.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
 			partCell.appendChild(partSelect);
 			const partHint = document.createElement('div');
-			partHint.className = 'text-xs text-slate-600 mt-2';
-			partHint.textContent = 'กรุณาเลือก Part number';
+			partHint.className = 'text-xs text-slate-600 mt-1';
+			partHint.textContent = 'เลือก Part number';
+			partCell.appendChild(partHint);
+			setOptions(partSelect, []);
+
+			// Defect mode (for first block)
+			topDefectSelect = document.createElement('select');
+			topDefectSelect.id = 'defect-mode';
+			topDefectSelect.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
+			defectCell.appendChild(topDefectSelect);
+			const defectHint = document.createElement('div');
+			defectHint.className = 'text-xs text-slate-600 mt-1';
+			defectHint.textContent = 'เลือก Defect mode';
+			defectCell.appendChild(defectHint);
+			setOptions(topDefectSelect, []);
+
+			row.classList.add('header-row');
+			headerHints = { lineHint, partHint, defectHint };
+			return row;
+		}
+
+		function setHintVisible(el, visible) {
+			if (!el) return;
+			el.style.display = visible ? '' : 'none';
+		}
+
+		function buildScrapRow({ gi, ri, scrap }) {
+			const row = rowTpl.content.firstElementChild.cloneNode(true);
+			row.querySelector('.line-cell').innerHTML = '';
+			row.querySelector('.part-cell').innerHTML = '';
+			row.querySelector('.defect-cell').innerHTML = '';
+			buildScrapCells({
+				gi,
+				ri,
+				scrap,
+				checkCell: row.querySelector('.check-cell'),
+				photoCell: row.querySelector('.photo-cell'),
+				scrapCell: row.querySelector('.scrap-cell'),
+				qtyCell: row.querySelector('.qty-cell'),
+			});
+			return row;
+		}
+
+		function buildScrapCells({ gi, ri, scrap, checkCell, photoCell, scrapCell, qtyCell }) {
+			checkCell.innerHTML = '';
+			photoCell.innerHTML = '';
+			scrapCell.innerHTML = '';
+			qtyCell.innerHTML = '';
+
+			// Enable
+			const enable = document.createElement('input');
+			enable.type = 'checkbox';
+			enable.className = 'row-enable h-4 w-4 rounded border-slate-300';
+			enable.name = `blocks[${gi}][rows][${ri}][enabled]`;
+			enable.value = '1';
+			checkCell.classList.add('check-cell');
+			checkCell.appendChild(enable);
+
+			// Photo ref
+			const refWrap = document.createElement('div');
+			refWrap.className = '';
+			const refLink = document.createElement('a');
+			refLink.className = 'inline-flex items-center gap-2';
+			refLink.target = '_blank';
+			refLink.rel = 'noreferrer';
+			const refImg = document.createElement('img');
+			refImg.className = 'w-10 h-10 rounded-lg object-cover border border-slate-300 bg-slate-100';
+			refImg.alt = 'Reference';
+			const refText = document.createElement('span');
+			refText.className = 'text-xs text-blue-700 font-semibold hover:underline whitespace-nowrap';
+			refText.textContent = 'ดูรูปอ้างอิง';
+			refLink.appendChild(refImg);
+			refLink.appendChild(refText);
+			refWrap.appendChild(refLink);
+			photoCell.appendChild(refWrap);
+
+			if (scrap?.image_url) {
+				refWrap.classList.remove('hidden');
+				refLink.href = scrap.image_url;
+				refImg.src = scrap.image_url;
+			} else {
+				refWrap.classList.add('hidden');
+			}
+
+			// Scrap name (read-only)
+			const scrapText = document.createElement('input');
+			scrapText.type = 'text';
+			scrapText.readOnly = true;
+			scrapText.className = 'w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none';
+			scrapText.value = scrap?.name || '';
+			scrapCell.appendChild(scrapText);
+			const scrapHint = document.createElement('div');
+			scrapHint.className = 'text-xs text-slate-600 mt-2';
+			scrapHint.textContent = 'Scrap (มาจาก master data)';
+			scrapCell.appendChild(scrapHint);
+
+			// Hidden fields
+			const scrapIdHidden = document.createElement('input');
+			scrapIdHidden.type = 'hidden';
+			scrapIdHidden.name = `blocks[${gi}][rows][${ri}][scrap_id]`;
+			scrapIdHidden.value = scrap?.id || '';
+			scrapCell.appendChild(scrapIdHidden);
+
+			const defectIdHidden = document.createElement('input');
+			defectIdHidden.type = 'hidden';
+			defectIdHidden.name = `blocks[${gi}][rows][${ri}][defect_id]`;
+			defectIdHidden.value = scrap?.defect_id || '';
+			scrapCell.appendChild(defectIdHidden);
+
+			const scrapNameHidden = document.createElement('input');
+			scrapNameHidden.type = 'hidden';
+			scrapNameHidden.name = `blocks[${gi}][rows][${ri}][scrap_name]`;
+			scrapNameHidden.value = scrap?.name || '';
+			scrapCell.appendChild(scrapNameHidden);
+
+			// Quantity (always selectable)
+			const qty = document.createElement('select');
+			qty.className = 'row-qty w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500';
+			qty.name = `blocks[${gi}][rows][${ri}][quantity]`;
+			qty.innerHTML = '<option value="">Qty 1</option><option value="2">Qty 2</option><option value="3">Qty 3</option><option value="4">Qty 4</option><option value="5">Qty 5</option>';
+			qtyCell.appendChild(qty);
+
+			qty.addEventListener('change', () => {
+				if (!enable.checked) enable.checked = true;
+			});
+			qty.addEventListener('focus', () => {
+				if (!enable.checked) enable.checked = true;
+			});
+		}
+
+		function rebuildBlockRows(gi, lineId, partId, defectId, rowsWrap, headerRowEl = null) {
+			rowsWrap.innerHTML = '';
+			if (headerRowEl) {
+				headerRowEl.querySelector('.check-cell').innerHTML = '';
+				headerRowEl.querySelector('.photo-cell').innerHTML = '';
+				headerRowEl.querySelector('.scrap-cell').innerHTML = '';
+				headerRowEl.querySelector('.qty-cell').innerHTML = '';
+			}
+			if (!defectId) return;
+			const defect = defectByIdFor(lineId, partId, defectId);
+			const scraps = defect ? (defect.scraps || []) : [];
+			const normalized = scraps.length ? scraps : [{ id: '', name: 'Component part', defect_id: defectId, image_url: '' }];
+
+			if (headerRowEl) {
+				buildScrapCells({
+					gi,
+					ri: 0,
+					scrap: normalized[0],
+					checkCell: headerRowEl.querySelector('.check-cell'),
+					photoCell: headerRowEl.querySelector('.photo-cell'),
+					scrapCell: headerRowEl.querySelector('.scrap-cell'),
+					qtyCell: headerRowEl.querySelector('.qty-cell'),
+				});
+				for (let idx = 1; idx < normalized.length; idx++) {
+					rowsWrap.appendChild(buildScrapRow({ gi, ri: idx, scrap: normalized[idx] }));
+				}
+				return;
+			}
+
+			normalized.forEach((s, idx) => rowsWrap.appendChild(buildScrapRow({ gi, ri: idx, scrap: s })));
+		}
+
+		function refreshPartsAndDefects() {
+			const lineId = getCurrentLineId();
+			productionLineInput.value = lineId;
+			setHintVisible(headerHints?.lineHint, !lineId);
+
+			// Parts
+			const parts = currentParts().map(p => ({ value: p.id, label: p.id }));
+			const prevPart = partSelect.value;
+			setOptions(partSelect, parts);
+			if (prevPart && parts.some(p => p.value === prevPart)) partSelect.value = prevPart;
+			setHintVisible(headerHints?.partHint, !partSelect.value);
+
+			// Defects
+			const defects = currentDefects();
+			const defectOpts = defects.map(d => ({ value: d.id, label: d.name || d.id }));
+			const prevTopDefect = topDefectSelect.value;
+			setOptions(topDefectSelect, defectOpts, '— Select defect —');
+			if (prevTopDefect && defectOpts.some(d => d.value === prevTopDefect)) topDefectSelect.value = prevTopDefect;
+			setHintVisible(headerHints?.defectHint, !topDefectSelect.value);
+
+			// Refresh extra groups independently (their own line/part)
+			extraGroups.forEach(g => {
+				const gLine = (g.lineInput?.value || '').trim().toUpperCase();
+				if (g.lineInput) g.lineInput.value = gLine;
+				setHintVisible(g.lineHint, !gLine);
+				const gParts = (getLine(gLine)?.parts || []).map(p => ({ value: p.id, label: p.id }));
+				const prevPart = g.partSelect?.value || '';
+				setOptions(g.partSelect, gParts);
+				if (prevPart && gParts.some(p => p.value === prevPart)) g.partSelect.value = prevPart;
+				setHintVisible(g.partHint, !(g.partSelect?.value || ''));
+				const gPartId = g.partSelect?.value || '';
+				const gDefectOpts = defectsFor(gLine, gPartId).map(d => ({ value: d.id, label: d.name || d.id }));
+				const prevDef = g.defectSelect.value;
+				setOptions(g.defectSelect, gDefectOpts, '— Select defect —');
+				if (prevDef && gDefectOpts.some(d => d.value === prevDef)) g.defectSelect.value = prevDef;
+				setHintVisible(g.defectHint, !g.defectSelect.value);
+			});
+
+			// Rebuild rows for every block
+			rebuildBlockRows(0, lineId, partSelect.value, topDefectSelect.value, document.getElementById('rows-0'), topHeaderRowEl);
+			extraGroups.forEach(g => {
+				const gLine = (g.lineInput?.value || '').trim().toUpperCase();
+				const gPart = g.partSelect?.value || '';
+				rebuildBlockRows(g.gi, gLine, gPart, g.defectSelect.value, g.rowsWrap, g.headerRowEl);
+			});
+		}
+
+		function addExtraGroup() {
+			const gi = extraGroups.length + 1;
+			const group = groupTpl.content.firstElementChild.cloneNode(true);
+			const rowsWrap = group.querySelector('.space-y-0');
+
+			// Create a header row (Line + Part + Defect) for this group
+			const defectRow = rowTpl.content.firstElementChild.cloneNode(true);
+			defectRow.querySelector('.check-cell').innerHTML = '';
+			defectRow.querySelector('.photo-cell').innerHTML = '';
+			defectRow.querySelector('.scrap-cell').innerHTML = '';
+			defectRow.querySelector('.qty-cell').innerHTML = '';
+			defectRow.classList.add('header-row');
+
+			// Line (editable)
+			const lineCell = defectRow.querySelector('.line-cell');
+			const lineMirror = document.createElement('input');
+			lineMirror.type = 'text';
+			lineMirror.name = `blocks[${gi}][production_line]`;
+			lineMirror.placeholder = 'Input or scan';
+			lineMirror.value = '';
+			lineMirror.setAttribute('list', `production-lines-${gi}`);
+			lineMirror.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
+			const lineList = document.createElement('datalist');
+			lineList.id = `production-lines-${gi}`;
+			lineCell.appendChild(lineMirror);
+			lineCell.appendChild(lineList);
+			const lineHint = document.createElement('div');
+			lineHint.className = 'text-xs text-slate-600 mt-1';
+			lineHint.textContent = 'กรุณาใส่หรือสแกน Production line';
+			lineCell.appendChild(lineHint);
+
+			// Part (editable)
+			const partCell = defectRow.querySelector('.part-cell');
+			const partMirror = document.createElement('select');
+			partMirror.name = `blocks[${gi}][part_number]`;
+			partMirror.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
+			partCell.appendChild(partMirror);
+			const partHint = document.createElement('div');
+			partHint.className = 'text-xs text-slate-600 mt-1';
+			partHint.textContent = 'เลือก Part number';
 			partCell.appendChild(partHint);
 
-			// Initial placeholder options
-			setOptions(partSelect, []);
-		}
+			const defectCell = defectRow.querySelector('.defect-cell');
+			const sel = document.createElement('select');
+			sel.name = `blocks[${gi}][defect_mode]`;
+			sel.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
+			defectCell.appendChild(sel);
+			const hint = document.createElement('div');
+			hint.className = 'text-xs text-slate-600 mt-1';
+			hint.textContent = 'เลือก Defect mode';
+			defectCell.appendChild(hint);
 
-		let defectSelect = null;
-		if (showDefectSelect) {
-			defectSelect = document.createElement('select');
-			defectSelect.className = 'defect-select w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
-			defectSelect.name = `blocks[${groupIndex}][defect]`;
-			defectCell.appendChild(defectSelect);
-			const defectHint = document.createElement('div');
-			defectHint.className = 'text-xs text-slate-600 mt-2';
-			defectHint.textContent = 'กรุณาเลือก Defect';
-			defectCell.appendChild(defectHint);
-		}
+			rowsWrap.appendChild(defectRow);
 
-		// Checkbox (separate column, like screenshot)
-		const enable = document.createElement('input');
-		enable.type = 'checkbox';
-		enable.className = 'row-enable h-4 w-4 rounded border-slate-300';
-		enable.name = `blocks[${groupIndex}][rows][${rowIndex}][enabled]`;
-		enable.value = '1';
-		checkCell.className = 'w-10 check-cell flex items-center justify-center';
-		checkCell.appendChild(enable);
+			const scrapRowsWrap = document.createElement('div');
+			scrapRowsWrap.className = 'space-y-2 mt-1';
+			rowsWrap.appendChild(scrapRowsWrap);
 
-		// Photo cell: button + hidden file
-		const file = document.createElement('input');
-		file.type = 'file';
-		file.accept = 'image/*';
-		file.className = 'row-file hidden';
-		file.name = `blocks[${groupIndex}][rows][${rowIndex}][photo]`;
-		const photoBtn = document.createElement('button');
-		photoBtn.type = 'button';
-		photoBtn.className = 'row-photo w-full px-3 py-2 rounded-md border border-slate-400 bg-slate-300 hover:bg-slate-400 text-red-600 font-extrabold whitespace-nowrap';
-		photoBtn.textContent = 'Image';
-		photoCell.appendChild(photoBtn);
-		photoCell.appendChild(file);
+			groupsWrap.appendChild(group);
 
-		// Scrap + Qty
-		const scrap = document.createElement('select');
-		scrap.className = 'row-scrap w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500';
-		scrap.name = `blocks[${groupIndex}][rows][${rowIndex}][scrap]`;
-		scrap.disabled = true;
-		scrapCell.appendChild(scrap);
+			populateLineDatalist(lineList);
+			setOptions(partMirror, []);
+			setOptions(sel, [], '— Select defect —');
+			const scheduleRefresh = () => {
+				const gLine = (lineMirror.value || '').trim().toUpperCase();
+				lineMirror.value = gLine;
+				setHintVisible(lineHint, !gLine);
+				const parts = (getLine(gLine)?.parts || []).map(p => ({ value: p.id, label: p.id }));
+				const prevPart = partMirror.value;
+				setOptions(partMirror, parts);
+				if (prevPart && parts.some(p => p.value === prevPart)) partMirror.value = prevPart;
+				setHintVisible(partHint, !partMirror.value);
+				const gPart = partMirror.value;
+				const defectOpts = defectsFor(gLine, gPart).map(d => ({ value: d.id, label: d.name || d.id }));
+				const prevDef = sel.value;
+				setOptions(sel, defectOpts, '— Select defect —');
+				if (prevDef && defectOpts.some(d => d.value === prevDef)) sel.value = prevDef;
+				setHintVisible(hint, !sel.value);
+				rebuildBlockRows(gi, gLine, gPart, sel.value, scrapRowsWrap, defectRow);
+			};
 
-		const qty = document.createElement('select');
-		qty.className = 'row-qty w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500';
-		qty.name = `blocks[${groupIndex}][rows][${rowIndex}][quantity]`;
-		qty.disabled = true;
-		qty.innerHTML = '<option value="">Quantity 1</option><option>Quantity 2</option><option>Quantity 3</option><option>Quantity 4</option><option>Quantity 5</option>';
-		qtyCell.appendChild(qty);
-
-		function setEnabled(on) {
-			scrap.disabled = !on;
-			qty.disabled = !on;
-			photoBtn.classList.toggle('opacity-60', !on);
-			photoBtn.classList.toggle('cursor-not-allowed', !on);
-			if (!on) file.value = '';
-			photoBtn.textContent = file.files?.length ? 'Image ✓' : 'Image';
-		}
-
-		enable.addEventListener('change', () => setEnabled(enable.checked));
-		setEnabled(false);
-
-		photoBtn.addEventListener('click', () => {
-			if (!enable.checked) return;
-			file.click();
-		});
-		file.addEventListener('change', () => {
-			photoBtn.textContent = file.files?.length ? 'Image ✓' : 'Image';
-		});
-
-		row._defectSelect = defectSelect;
-		row._scrapSelect = scrap;
-		return row;
-	}
-
-	function populateScrapSelect(select, items) {
-		select.innerHTML = '';
-		items.forEach((label, idx) => {
-			const o = document.createElement('option');
-			o.value = label;
-			o.textContent = label;
-			if (idx === 0) o.selected = true;
-			select.appendChild(o);
-		});
-	}
-
-	function addGroup({ includeTopInputs }) {
-		const groupIndex = groupsWrap.children.length;
-		const group = groupTpl.content.firstElementChild.cloneNode(true);
-		const rowsWrap = group.querySelector('.space-y-2');
-
-		for (let r = 0; r < 5; r += 1) {
-			const row = buildRow(r, groupIndex, includeTopInputs && r === 0, r === 0);
-			rowsWrap.appendChild(row);
-		}
-
-		// Wire defect select to update scrap options in its 5 rows
-		const firstRow = rowsWrap.firstElementChild;
-		const defectSelect = firstRow?._defectSelect;
-		if (defectSelect) {
-			defectSelect.addEventListener('change', () => {
-				const items = scrapsFor(defectSelect.value);
-				rowsWrap.querySelectorAll('.row-scrap').forEach(sel => populateScrapSelect(sel, items));
+			let t = null;
+			const debounce = () => { clearTimeout(t); t = setTimeout(scheduleRefresh, 40); };
+			lineMirror.addEventListener('input', debounce);
+			lineMirror.addEventListener('change', scheduleRefresh);
+			lineMirror.addEventListener('blur', scheduleRefresh);
+			partMirror.addEventListener('change', scheduleRefresh);
+			sel.addEventListener('change', () => {
+				const gLine = (lineMirror.value || '').trim().toUpperCase();
+				const gPart = partMirror.value;
+				rebuildBlockRows(gi, gLine, gPart, sel.value, scrapRowsWrap, defectRow);
 			});
+
+			scheduleRefresh();
+
+			extraGroups.push({ gi, groupEl: group, defectSelect: sel, rowsWrap: scrapRowsWrap, lineInput: lineMirror, partSelect: partMirror, lineList, lineHint, partHint, defectHint: hint, headerRowEl: defectRow });
+			removeGroupBtn.disabled = extraGroups.length === 0;
 		}
 
-		groupsWrap.appendChild(group);
-		refreshAllDefectSelects();
-		if (defectSelect) defectSelect.dispatchEvent(new Event('change'));
-	}
-
-	function deleteLastGroup() {
-		// Keep at least the first group (it contains the top inputs)
-		if (groupsWrap.children.length <= 1) return;
-		groupsWrap.lastElementChild?.remove();
-	}
-
-	function clearAll() {
-		groupsWrap.innerHTML = '';
-		productionLineInput = null;
-		productionLineList = null;
-		partSelect = null;
-
-		addGroup({ includeTopInputs: true });
-		addGroup({ includeTopInputs: false });
-		addGroup({ includeTopInputs: false });
-
-		// Suggestions
-		if (productionLineList) {
-			productionLineList.innerHTML = '';
-			(recordData.productionLines || []).forEach(l => {
-				const opt = document.createElement('option');
-				opt.value = l.id;
-				productionLineList.appendChild(opt);
-			});
+		function removeExtraGroup() {
+			const g = extraGroups.pop();
+			if (!g) return;
+			g.groupEl.remove();
+			removeGroupBtn.disabled = extraGroups.length === 0;
 		}
 
-		// Events for top inputs
-		productionLineInput.addEventListener('change', refreshParts);
-		productionLineInput.addEventListener('blur', refreshParts);
-		partSelect.addEventListener('change', refreshDefects);
+		function clearAll() {
+			groupsWrap.innerHTML = '';
+			extraGroups.splice(0, extraGroups.length);
+			removeGroupBtn.disabled = true;
 
-		// Initial populate
-		refreshParts();
-	}
+			// Header group container
+			const group0 = groupTpl.content.firstElementChild.cloneNode(true);
+			const rowsWrap0 = group0.querySelector('.space-y-0');
+			const headerRow = buildHeaderRow();
+			topHeaderRowEl = headerRow;
+			rowsWrap0.appendChild(headerRow);
 
-	addBtn.addEventListener('click', () => addGroup({ includeTopInputs: false }));
-	deleteBtn?.addEventListener('click', deleteLastGroup);
-	clearBtn.addEventListener('click', clearAll);
+			// Dedicated container for group0 scrap rows
+			const rows0 = document.createElement('div');
+			rows0.id = 'rows-0';
+			rows0.className = 'space-y-2 mt-1';
+			rowsWrap0.appendChild(rows0);
 
-	// Initial state
-	clearAll();
-})();
+			groupsWrap.appendChild(group0);
+
+			// Populate datalist
+			populateLineDatalist(productionLineList);
+
+			let plTimer = null;
+			const scheduleRefresh = () => {
+				clearTimeout(plTimer);
+				plTimer = setTimeout(refreshPartsAndDefects, 40);
+			};
+			productionLineInput.addEventListener('input', scheduleRefresh);
+			productionLineInput.addEventListener('change', refreshPartsAndDefects);
+			productionLineInput.addEventListener('blur', refreshPartsAndDefects);
+			partSelect.addEventListener('change', refreshPartsAndDefects);
+			topDefectSelect.addEventListener('change', () => rebuildBlockRows(0, getCurrentLineId(), partSelect.value, topDefectSelect.value, rows0, topHeaderRowEl));
+
+			refreshPartsAndDefects();
+		}
+
+		clearBtn.addEventListener('click', clearAll);
+		addGroupBtn.addEventListener('click', addExtraGroup);
+		removeGroupBtn.addEventListener('click', removeExtraGroup);
+
+		clearAll();
+	})();
 </script>
 {% endblock %}

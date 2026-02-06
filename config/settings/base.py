@@ -114,7 +114,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Display times in Thailand; datetimes are still stored in UTC when USE_TZ=True.
+TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Bangkok")
 
 USE_I18N = True
 
@@ -128,3 +129,7 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# Media (uploaded files)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

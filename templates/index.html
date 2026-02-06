@@ -17,8 +17,12 @@
 					<p class="mt-4 text-slate-700 max-w-prose">อินเตอร์เฟซยุคใหม่ที่ผสานดีไซน์ล้ำสมัยกับการใช้งานจริง — เร็ว, เรียบ, และมีอนาคต</p>
 
 					<div class="mt-6 flex flex-wrap gap-3">
+						{% if user.is_authenticated %}
+						<a href="/record/" class="inline-flex items-center px-4 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90 no-underline">เริ่มใช้งาน</a>
+						{% else %}
 						<a href="/login/" class="inline-flex items-center px-4 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90 no-underline">เริ่มใช้งาน</a>
-						<a href="/services/#features" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 text-slate-700 hover:bg-gray-50 no-underline">ดูฟีเจอร์</a>
+						{% endif %}
+						<a href="#features" class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 text-slate-700 hover:bg-gray-50 no-underline">ดูฟีเจอร์</a>
 					</div>
 				</div>
 

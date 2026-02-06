@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% load tz %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Manage Users — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการผู้ใช้งาน</h1>
+			<p class="text-sm text-slate-600 mt-1">ค้นหา ดูสถานะ และจัดการบัญชีผู้ใช้</p>
+		</div>
+		<div class="flex items-center gap-2">
+			<a href="/add-user/" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+				+ เพิ่มผู้ใช้งาน
+			</a>
+		</div>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">
+					{{ message }}
+				</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+			<div class="md:col-span-5">
+				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย username / ชื่อ / email"
+					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">บทบาท</label>
+				<select name="role" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">ทั้งหมด</option>
+					<option value="user" {% if role == 'user' %}selected{% endif %}>ผู้ใช้ทั่วไป</option>
+					<option value="staff" {% if role == 'staff' %}selected{% endif %}>เจ้าหน้าที่</option>
+					<option value="admin" {% if role == 'admin' %}selected{% endif %}>ผู้ดูแลระบบ</option>
+				</select>
+			</div>
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">สถานะ</label>
+				<select name="status" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">ทั้งหมด</option>
+					<option value="active" {% if status == 'active' %}selected{% endif %}>ใช้งาน</option>
+					<option value="disabled" {% if status == 'disabled' %}selected{% endif %}>ปิดใช้งาน</option>
+				</select>
+			</div>
+			<div class="md:col-span-1 flex items-end">
+				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
+					ค้นหา
+				</button>
+			</div>
+		</div>
+
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+			<div class="text-xs text-slate-600">
+				{% if total_count %}ทั้งหมด {{ total_count }} ผู้ใช้งาน{% else %}—{% endif %}
+			</div>
+			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+		</div>
+	</form>
+
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-slate-100 text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Username</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ชื่อ - นามสกุล</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Email</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Role</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Shift</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">สถานะ</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">เข้าใช้งานล่าสุด</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for u in users %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3 whitespace-nowrap font-semibold text-slate-900">{{ u.username|default:"-" }}</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ u.get_full_name|default:u.username }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ u.email|default:"-" }}</td>
+							<td class="px-4 py-3">
+								{% if u.is_superuser %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">admin</span>
+								{% elif u.is_staff %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">staff</span>
+								{% else %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-700 border border-slate-200">user</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">
+								{% if u.profile %}
+									{% if u.profile.shift == 'shift_a' %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">กะ A</span>
+									{% elif u.profile.shift == 'shift_b' %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">กะ B</span>
+									{% else %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-200">กะ Day</span>
+									{% endif %}
+								{% else %}
+									<span class="text-slate-400">—</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3">
+								{% if u.is_active|default:True %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">active</span>
+								{% else %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">disabled</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ u.last_login|localtime|date:"d M Y H:i"|default:"-" }}</td>
+							<td class="px-4 py-3">
+								<div class="flex items-center justify-end gap-2">
+									<button
+										type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition"
+										data-edit-user
+										data-id="{{ u.id|default:u.pk|default:'' }}"
+										data-username="{{ u.username|default:'' }}"
+										data-first-name="{{ u.first_name|default:'' }}"
+										data-last-name="{{ u.last_name|default:'' }}"
+										data-email="{{ u.email|default:'' }}"
+										data-role="{% if u.is_superuser %}admin{% elif u.is_staff %}staff{% else %}user{% endif %}"
+										data-shift="{{ u.profile.shift|default:'shift_day' }}"
+										data-active="{% if u.is_active|default:True %}1{% else %}0{% endif %}"
+									>
+										แก้ไข
+									</button>
+									<form method="post" class="inline-flex" data-confirm-delete data-username="{{ u.username|default:'' }}">
+										{% csrf_token %}
+										<input type="hidden" name="action" value="delete" />
+										<input type="hidden" name="id" value="{{ u.id|default:u.pk|default:'' }}" />
+										<button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition">
+											ลบ
+										</button>
+									</form>
+								</div>
+							</td>
+						</tr>
+					{% empty %}
+						<tr>
+							<td class="px-4 py-10 text-center text-slate-600" colspan="8">
+								ยังไม่มีข้อมูลผู้ใช้งาน หรือ backend ยังไม่ได้ส่ง `users` มา
+								<div class="mt-3">
+									<a href="/add-user/" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+										+ เพิ่มผู้ใช้งาน
+									</a>
+								</div>
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	{% if page_obj %}
+		<div class="flex items-center justify-between text-sm text-slate-700 pt-2">
+			<div>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
+			<div class="flex items-center gap-2">
+				{% if page_obj.has_previous %}
+					<a class="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50" href="?page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>
+				{% endif %}
+				{% if page_obj.has_next %}
+					<a class="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50" href="?page={{ page_obj.next_page_number }}">ถัดไป</a>
+				{% endif %}
+			</div>
+		</div>
+	{% endif %}
+</section>
+
+<!-- Edit User Modal (Centered overlay) -->
+<div id="editUserModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+
+	<div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl bg-white">
+		<button type="button"
+			class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow"
+			aria-label="Close"
+			data-modal-close>
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+
+		<div class="grid grid-cols-1 md:grid-cols-5">
+			<!-- Left panel (like example) -->
+			<div class="md:col-span-2 bg-indigo-700 text-white p-6 sm:p-7">
+				<div class="text-xs font-extrabold tracking-widest opacity-90">USER MANAGEMENT</div>
+				<div class="mt-3 text-2xl sm:text-3xl font-extrabold leading-tight">
+					EDIT USER
+				</div>
+				<div class="mt-6 border-t border-white/30 pt-6">
+					<div class="text-5xl font-extrabold">TBSM</div>
+				</div>
+			</div>
+
+			<!-- Right panel -->
+			<div class="md:col-span-3 p-6 sm:p-7">
+				<div class="pr-10">
+					<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไขผู้ใช้งาน</h2>
+					<p class="text-xs text-slate-600 mt-1">แก้ไขข้อมูล แล้วกดบันทึก</p>
+				</div>
+
+				<form method="post" class="mt-5 space-y-4" id="editUserForm">
+					{% csrf_token %}
+					<input type="hidden" name="action" value="update" />
+					<input type="hidden" name="id" id="edit_id" value="" />
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Username</label>
+							<input id="edit_username" type="text" readonly
+								class="mt-1 w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-slate-700" />
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Role</label>
+							<select name="role" id="edit_role"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="user">ผู้ใช้ทั่วไป</option>
+								<option value="staff">เจ้าหน้าที่</option>
+								<option value="admin">ผู้ดูแลระบบ</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">ชื่อ - นามสกุล</label>
+							<input name="full_name" id="edit_full_name" type="text" placeholder="เช่น สมชาย ใจดี"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">กะการทำงาน</label>
+							<select name="shift" id="edit_shift"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="shift_a">กะ A</option>
+								<option value="shift_b">กะ B</option>
+								<option value="shift_day" selected>กะ Day</option>
+							</select>
+						</div>
+					</div>
+
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Email</label>
+						<input name="email" id="edit_email" type="email"
+							class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					</div>
+
+					<div class="flex items-center justify-between gap-4">
+						<label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+							<input type="checkbox" name="is_active" id="edit_is_active"
+								class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+							<span>เปิดใช้งานบัญชี</span>
+						</label>
+						<div class="text-xs text-slate-500">ถ้าปิดใช้งาน ผู้ใช้จะล็อกอินไม่ได้</div>
+					</div>
+
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">ตั้งรหัสผ่านใหม่ (ไม่บังคับ)</label>
+						<input name="password" id="edit_password" type="password" autocomplete="new-password"
+							placeholder="เว้นว่าง ถ้าไม่ต้องการเปลี่ยน"
+							class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					</div>
+
+					<div class="flex items-center justify-end gap-2 pt-1">
+						<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>
+							ยกเลิก
+						</button>
+						<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">
+							บันทึก
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	function openEditModal(data) {
+		const modal = document.getElementById('editUserModal');
+		if (!modal) return;
+		document.getElementById('edit_id').value = data.id || '';
+		document.getElementById('edit_username').value = data.username || '';
+		const fullName = ((data.firstName || '').trim() + ' ' + (data.lastName || '').trim()).trim();
+		document.getElementById('edit_full_name').value = fullName;
+		document.getElementById('edit_email').value = data.email || '';
+		document.getElementById('edit_role').value = (data.role || 'user');
+		document.getElementById('edit_shift').value = (data.shift || 'shift_day');
+		document.getElementById('edit_is_active').checked = (data.active === '1');
+		document.getElementById('edit_password').value = '';
+
+		modal.classList.remove('hidden');
+		modal.classList.add('flex');
+		document.body.classList.add('overflow-hidden');
+	}
+
+	function closeEditModal() {
+		const modal = document.getElementById('editUserModal');
+		if (!modal) return;
+		modal.classList.add('hidden');
+		modal.classList.remove('flex');
+		document.body.classList.remove('overflow-hidden');
+	}
+
+	// Bind edit buttons
+	document.querySelectorAll('[data-edit-user]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			openEditModal({
+				id: btn.dataset.id,
+				username: btn.dataset.username,
+				firstName: btn.dataset.firstName,
+				lastName: btn.dataset.lastName,
+				email: btn.dataset.email,
+				role: btn.dataset.role,
+				shift: btn.dataset.shift,
+				active: btn.dataset.active,
+			});
+		});
+	});
+
+	// Close modal handlers
+	document.querySelectorAll('[data-modal-close]').forEach(el => {
+		el.addEventListener('click', closeEditModal);
+	});
+	const backdrop = document.querySelector('#editUserModal [data-modal-backdrop]');
+	if (backdrop) backdrop.addEventListener('click', closeEditModal);
+	window.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape') closeEditModal();
+	});
+
+	// Confirm before deleting (client-only; backend can ignore)
+	document.querySelectorAll('[data-confirm-delete]').forEach(form => {
+		form.addEventListener('submit', (e) => {
+			const username = form.dataset.username || '';
+			const msg = username ? `ยืนยันการลบผู้ใช้งาน ${username} ?` : 'ยืนยันการลบผู้ใช้งานรายนี้?';
+			if (!confirm(msg)) e.preventDefault();
+		});
+	});
+</script>
+{% endblock %}

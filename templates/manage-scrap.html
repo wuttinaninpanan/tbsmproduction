@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block container_class %}w-full max-w-7xl bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
 {% block title %}Manage Scrap — TBSMRD{% endblock %}
 
@@ -20,9 +20,9 @@
 
 	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
 		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-			<div class="md:col-span-4">
+			<div class="md:col-span-3">
 				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Production line / Part / Defect / Scrap"
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา ผู้ใช้งาน / กะ / Production line / Part / Defect / Scrap"
 					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div class="md:col-span-2">
@@ -35,19 +35,13 @@
 				<input type="date" name="date_to" value="{{ date_to|default:'' }}"
 					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
-			<div class="md:col-span-3">
-				<label class="block text-sm font-semibold text-slate-700">Production line</label>
-				<select name="line" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-					<option value="">ทั้งหมด</option>
-					{% for line in production_lines %}
-						<option value="{{ line }}" {% if selected_line == line %}selected{% endif %}>{{ line }}</option>
-					{% endfor %}
-				</select>
-			</div>
-			<div class="md:col-span-1 flex items-end gap-2">
+			<div class="md:col-span-4 flex items-end gap-2">
 				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
 					ค้นหา
 				</button>
+				<a href="?action=export_excel{% if q %}&q={{ q }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition whitespace-nowrap">
+					📊 Excel
+				</a>
 			</div>
 		</div>
 

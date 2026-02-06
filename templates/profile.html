@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load tz %}
 
 {% block title %}Profile — TBSMRD{% endblock %}
 
@@ -91,13 +92,13 @@
 					<div class="flex items-center justify-between gap-3">
 						<dt class="text-sm text-slate-600">เข้าร่วมเมื่อ</dt>
 						<dd class="text-sm font-semibold text-slate-900">
-							{% if request.user.is_authenticated %}{{ request.user.date_joined|date:"d M Y" }}{% else %}-{% endif %}
+							{% if request.user.is_authenticated %}{{ request.user.date_joined|localtime|date:"d M Y" }}{% else %}-{% endif %}
 						</dd>
 					</div>
 					<div class="flex items-center justify-between gap-3">
 						<dt class="text-sm text-slate-600">เข้าใช้งานล่าสุด</dt>
 						<dd class="text-sm font-semibold text-slate-900">
-							{% if request.user.is_authenticated %}{{ request.user.last_login|date:"d M Y"|default:"-" }}{% else %}-{% endif %}
+							{% if request.user.is_authenticated %}{{ request.user.last_login|localtime|date:"d M Y"|default:"-" }}{% else %}-{% endif %}
 						</dd>
 					</div>
 				</dl>

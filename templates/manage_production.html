@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Manage Production Master — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการข้อมูล Production Master</h1>
+			<p class="text-sm text-slate-600 mt-1">ค้นหา แก้ไข และลบข้อมูล: Line / Part / Defect / Scrap</p>
+		</div>
+		<div class="flex items-center gap-2">
+			<a href="/add-production/" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+				+ เพิ่ม/บันทึก Master Data
+			</a>
+		</div>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">
+					{{ message }}
+				</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+			<div class="md:col-span-4">
+				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Part / Defect / Scrap"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">Production line</label>
+				<select name="line" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">ทั้งหมด</option>
+					{% for line in production_lines %}
+						<option value="{{ line }}" {% if selected_line == line %}selected{% endif %}>{{ line }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">Part number</label>
+				<select name="part" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">ทั้งหมด</option>
+					{% for p in part_numbers %}
+						<option value="{{ p }}" {% if selected_part == p %}selected{% endif %}>{{ p }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">Defect mode</label>
+				<select name="defect" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">ทั้งหมด</option>
+					{% for d in defect_names %}
+						<option value="{{ d }}" {% if selected_defect == d %}selected{% endif %}>{{ d }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="md:col-span-1 flex items-end">
+				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+					ค้นหา
+				</button>
+			</div>
+		</div>
+
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+			<div class="text-xs text-slate-600">
+				Line {{ counts.lines|default:0 }} / Part {{ counts.parts|default:0 }} / Defect {{ counts.defects|default:0 }} / Scrap {{ counts.scraps|default:0 }}
+			</div>
+			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+		</div>
+	</form>
+
+	<!-- Single Combined Table -->
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3 font-extrabold text-slate-800">Master Data (Line / Part / Defect / Scrap)</div>
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Line</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">รูปภาพ</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Scrap</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Records</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for r in rows %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.line_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.defect_name|default:"-" }}</td>
+							<td class="px-4 py-3">
+								{% if r.scrap_image_url %}
+									<a href="{{ r.scrap_image_url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
+										<img src="{{ r.scrap_image_url }}" alt="{{ r.scrap_name|default:'' }}" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
+										<span class="text-xs text-blue-700 font-semibold hover:underline whitespace-nowrap">ดูรูป</span>
+									</a>
+								{% else %}
+									<span class="text-slate-500">-</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.scrap_name|default:"-" }}</td>
+							<td class="px-4 py-3 text-right text-slate-700">{{ r.record_count|default:0 }}</td>
+							<td class="px-4 py-3">
+								<div class="flex items-center justify-end gap-2">
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap"
+										data-open-edit-row
+										data-line-id="{{ r.line_id|default:'' }}"
+										data-part-id="{{ r.part_id|default:'' }}"
+										data-defect-id="{{ r.defect_id|default:'' }}"
+										data-scrap-id="{{ r.scrap_id|default:'' }}"
+										data-line-code="{{ r.line_code|default:'' }}"
+										data-part-number="{{ r.part_number|default:'' }}"
+										data-defect-name="{{ r.defect_name|default:'' }}"
+										data-scrap-name="{{ r.scrap_name|default:'' }}"
+										data-scrap-image-url="{{ r.scrap_image_url|default:'' }}">
+										แก้ไข
+									</button>
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
+										data-open-delete-row
+										data-line-id="{{ r.line_id|default:'' }}"
+										data-part-id="{{ r.part_id|default:'' }}"
+										data-defect-id="{{ r.defect_id|default:'' }}"
+										data-scrap-id="{{ r.scrap_id|default:'' }}"
+										data-label="{{ r.line_code|default:'' }} {{ r.part_number|default:'' }} / {{ r.defect_name|default:'' }} / {{ r.scrap_name|default:'' }}">
+										ลบ
+									</button>
+								</div>
+							</td>
+						</tr>
+					{% empty %}
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="7">ยังไม่มีข้อมูล Master Data</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</section>
+
+<!-- Single backend action form -->
+<form id="actionForm" method="post" enctype="multipart/form-data" class="hidden">
+	{% csrf_token %}
+	<input type="hidden" name="action" id="actionField" value="" />
+	<input type="hidden" name="id" id="idField" value="" />
+	<input type="hidden" name="value" id="valueField" value="" />
+	<input type="hidden" name="line_id" id="lineIdField" value="" />
+	<input type="hidden" name="part_id" id="partIdField" value="" />
+	<input type="hidden" name="defect_id" id="defectIdField" value="" />
+	<input type="hidden" name="scrap_id" id="scrapIdField" value="" />
+	<input type="hidden" name="line_code" id="lineCodeField" value="" />
+	<input type="hidden" name="part_number" id="partNumberField" value="" />
+	<input type="hidden" name="defect_name" id="defectNameField" value="" />
+	<input type="hidden" name="scrap_name" id="scrapNameField" value="" />
+</form>
+
+<!-- Edit Modal -->
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Master Data</h2>
+		<p class="text-xs text-slate-600 mt-1">แก้ไขข้อมูลในแถวเดียว แล้วกดบันทึก</p>
+		<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Line</label>
+				<input id="editLine" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Part</label>
+				<input id="editPart" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Defect</label>
+				<input id="editDefect" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Scrap</label>
+				<input id="editScrap" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="sm:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">รูปภาพ Scrap (Reference Image)</label>
+				<div class="mt-1 flex items-center gap-3">
+					<img id="editScrapImagePreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="Scrap image preview" />
+					<input id="editScrapImage" type="file" accept="image/*" name="scrap_image" form="actionForm"
+						class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+				</div>
+				<p class="mt-1 text-xs text-slate-500">เลือกไฟล์ใหม่เพื่อแทนที่รูปเดิม (แก้ได้เฉพาะแถวที่มี Scrap)</p>
+			</div>
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+		</div>
+	</div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">ยืนยันการลบ</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบรายการนี้หรือไม่?</p>
+		<div class="mt-2 text-xs text-slate-500 break-words" id="deleteLabel"></div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="deleteSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</div>
+	</div>
+</div>
+
+<script>
+	const actionForm = document.getElementById('actionForm');
+	const actionField = document.getElementById('actionField');
+	const idField = document.getElementById('idField');
+	const valueField = document.getElementById('valueField');
+	const lineIdField = document.getElementById('lineIdField');
+	const partIdField = document.getElementById('partIdField');
+	const defectIdField = document.getElementById('defectIdField');
+	const scrapIdField = document.getElementById('scrapIdField');
+	const lineCodeField = document.getElementById('lineCodeField');
+	const partNumberField = document.getElementById('partNumberField');
+	const defectNameField = document.getElementById('defectNameField');
+	const scrapNameField = document.getElementById('scrapNameField');
+
+	const editModal = document.getElementById('editModal');
+	const editLine = document.getElementById('editLine');
+	const editPart = document.getElementById('editPart');
+	const editDefect = document.getElementById('editDefect');
+	const editScrap = document.getElementById('editScrap');
+	const editScrapImage = document.getElementById('editScrapImage');
+	const editScrapImagePreview = document.getElementById('editScrapImagePreview');
+
+	const deleteModal = document.getElementById('deleteModal');
+	const deleteLabel = document.getElementById('deleteLabel');
+
+	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
+	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
+
+	function fillRowIds(btn) {
+		lineIdField.value = btn.dataset.lineId || '';
+		partIdField.value = btn.dataset.partId || '';
+		defectIdField.value = btn.dataset.defectId || '';
+		scrapIdField.value = btn.dataset.scrapId || '';
+	}
+
+	document.querySelectorAll('[data-open-edit-row]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			fillRowIds(btn);
+			actionField.value = 'update_master_row';
+			idField.value = '0';
+
+			editLine.value = btn.dataset.lineCode || '';
+			editPart.value = btn.dataset.partNumber || '';
+			editDefect.value = btn.dataset.defectName || '';
+			editScrap.value = btn.dataset.scrapName || '';
+			const scrapImageUrl = btn.dataset.scrapImageUrl || '';
+
+			// Disable fields that don't exist for this row
+			editLine.disabled = !lineIdField.value;
+			editPart.disabled = !partIdField.value;
+			editDefect.disabled = !defectIdField.value;
+			editScrap.disabled = !scrapIdField.value;
+			editScrapImage.disabled = !scrapIdField.value;
+			editScrapImage.value = '';
+			if (scrapImageUrl) {
+				editScrapImagePreview.src = scrapImageUrl;
+				editScrapImagePreview.classList.remove('opacity-40');
+			} else {
+				editScrapImagePreview.src = '';
+				editScrapImagePreview.classList.add('opacity-40');
+			}
+
+			openModal(editModal);
+			setTimeout(() => (editScrap.disabled ? (editDefect.disabled ? (editPart.disabled ? editLine : editPart) : editDefect) : editScrap).focus(), 0);
+		});
+	});
+
+	editScrapImage.addEventListener('change', () => {
+		const file = editScrapImage.files && editScrapImage.files[0];
+		if (!file) return;
+		const url = URL.createObjectURL(file);
+		editScrapImagePreview.src = url;
+		editScrapImagePreview.classList.remove('opacity-40');
+	});
+
+	document.querySelectorAll('[data-open-delete-row]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			fillRowIds(btn);
+			actionField.value = 'delete_master_row';
+			idField.value = '0';
+			valueField.value = '';
+			deleteLabel.textContent = btn.dataset.label || '';
+			openModal(deleteModal);
+		});
+	});
+
+	document.querySelectorAll('[data-modal-close]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			closeModal(editModal);
+			closeModal(deleteModal);
+		});
+	});
+
+	document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
+		bg.addEventListener('click', () => {
+			closeModal(editModal);
+			closeModal(deleteModal);
+		});
+	});
+
+	// Submit from modal
+	document.getElementById('editSubmit').addEventListener('click', () => {
+		lineCodeField.value = (editLine.value || '').trim();
+		partNumberField.value = (editPart.value || '').trim();
+		defectNameField.value = (editDefect.value || '').trim();
+		scrapNameField.value = (editScrap.value || '').trim();
+		actionForm.submit();
+	});
+	document.getElementById('deleteSubmit').addEventListener('click', () => {
+		actionForm.submit();
+	});
+
+	// Close on ESC
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape') {
+			closeModal(editModal);
+			closeModal(deleteModal);
+		}
+	});
+</script>
+{% endblock %}
