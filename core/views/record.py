@@ -5,6 +5,7 @@ from django.db import transaction
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 
 from core.models import DefectMode, PartNumber, ProductionLine, ScrapItem, ScrapRecord
 from core.decorators import user_required
@@ -16,69 +17,74 @@ class RecordViews(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        # Bulk-load master data to avoid N+1 queries.
         lines = list(ProductionLine.objects.all().order_by("code"))
+        parts = list(
+            PartNumber.objects.select_related("production_line")
+            .filter(production_line__in=lines)
+            .order_by("production_line__code", "number")
+        )
+        part_ids = [p.id for p in parts]
 
-        # Record page pulls master data from DB (Line -> Part -> Defect -> Scrap).
-        # Each scrap item provides its own reference image.
+        scraps_by_part: dict[int, list[dict]] = {pid: [] for pid in part_ids}
+        for scrap in (
+            ScrapItem.objects.filter(part_number_id__in=part_ids)
+            .only("id", "name", "reference_image", "part_number_id")
+            .order_by("part_number__production_line__code", "part_number__number", "name")
+        ):
+            scraps_by_part.setdefault(scrap.part_number_id, []).append(
+                {
+                    "id": str(scrap.pk),
+                    "name": scrap.name,
+                    "image_url": scrap.reference_image.url if getattr(scrap, "reference_image", None) else "",
+                }
+            )
+
+        global_defects = list(
+            DefectMode.objects.filter(part__isnull=True)
+            .only("id", "name")
+            .order_by("name")
+        )
+        defects_by_part: dict[int, list[DefectMode]] = {pid: [] for pid in part_ids}
+        for defect in (
+            DefectMode.objects.filter(part_id__in=part_ids)
+            .only("id", "name", "part_id")
+            .order_by("name")
+        ):
+            defects_by_part.setdefault(defect.part_id, []).append(defect)
+
+        parts_by_line_id: dict[int, list[PartNumber]] = {}
+        for p in parts:
+            parts_by_line_id.setdefault(p.production_line_id, []).append(p)
+
         production_lines_payload = []
         for line in lines:
             parts_payload = []
-            parts = list(PartNumber.objects.filter(production_line=line).order_by("number"))
-            for part in parts:
+            for part in parts_by_line_id.get(line.id, []):
+                scraps_payload = scraps_by_part.get(part.id, [])
+                if not scraps_payload:
+                    scraps_payload = [{"id": "", "name": "Component part", "image_url": ""}]
 
                 defects_payload = []
-                scraps_payload = []
-
-                defects = list(
-                    DefectMode.objects.filter(part=part)
-                    .prefetch_related("scraps")
-                    .order_by("name")
-                )
-
+                defects = defects_by_part.get(part.id, []) + global_defects
                 for defect in defects:
-                    defect_scraps = []
-                    for scrap in defect.scraps.all().order_by("name"):
-                        scrap_payload = {
-                            "id": str(scrap.pk),
-                            "name": scrap.name,
-                            "defect_id": str(defect.pk),
-                            "defect_name": defect.name,
-                            "image_url": scrap.reference_image.url if getattr(scrap, "reference_image", None) else "",
-                        }
-                        defect_scraps.append(scrap_payload)
-                        scraps_payload.append(scrap_payload)
-
                     defects_payload.append(
                         {
                             "id": str(defect.pk),
                             "name": defect.name,
-                            "scraps": defect_scraps,
+                            "scraps": [
+                                {
+                                    **s,
+                                    "defect_id": str(defect.pk),
+                                    "defect_name": defect.name,
+                                }
+                                for s in scraps_payload
+                            ],
                         }
                     )
 
-                if not scraps_payload:
-                    # Keep UI functional even if master data is incomplete
-                    first_defect = DefectMode.objects.filter(part=part).order_by("name").first()
-                    scraps_payload = [
-                        {
-                            "id": "",
-                            "name": "Component part",
-                            "defect_id": str(first_defect.pk) if first_defect else "",
-                            "defect_name": first_defect.name if first_defect else "",
-                            "image_url": "",
-                        }
-                    ]
-
                 if not defects_payload:
-                    # Allow Defect Mode dropdown to still render
-                    if scraps_payload and scraps_payload[0].get("defect_id"):
-                        defects_payload = [
-                            {
-                                "id": scraps_payload[0].get("defect_id") or "",
-                                "name": scraps_payload[0].get("defect_name") or "",
-                                "scraps": scraps_payload,
-                            }
-                        ]
+                    defects_payload = [{"id": "", "name": "", "scraps": scraps_payload}]
 
                 parts_payload.append({"id": part.number, "defects": defects_payload, "scraps": scraps_payload})
             production_lines_payload.append({"id": line.code, "parts": parts_payload})
@@ -147,26 +153,29 @@ class RecordViews(TemplateView):
                 scrap_item = None
                 defect = None
 
+                # Defect is still required on records
+                if not defect_id.isdigit():
+                    continue
+                defect = DefectMode.objects.filter(pk=int(defect_id)).filter(
+                    Q(part=part) | Q(part__isnull=True)
+                ).first()
+                if defect is None:
+                    continue
+
                 # Prefer scrap_id (from master data)
                 if scrap_id.isdigit():
                     scrap_item = (
-                        ScrapItem.objects.select_related("defect_mode", "defect_mode__part")
-                        .filter(pk=int(scrap_id))
+                        ScrapItem.objects.select_related("part_number")
+                        .filter(pk=int(scrap_id), part_number=part)
                         .first()
                     )
                     if scrap_item is None:
                         continue
-                    defect = scrap_item.defect_mode
-                    if defect is None or defect.part_id != part.id:
-                        continue
                 else:
                     # Fallback: "Component part" case
-                    if not defect_id.isdigit() or not scrap_name:
+                    if not scrap_name:
                         continue
-                    defect = DefectMode.objects.filter(pk=int(defect_id), part=part).first()
-                    if defect is None:
-                        continue
-                    scrap_item, _ = ScrapItem.objects.get_or_create(defect_mode=defect, name=scrap_name)
+                    scrap_item, _ = ScrapItem.objects.get_or_create(part_number=part, name=scrap_name)
 
                 ScrapRecord.objects.create(
                     production_line=line,

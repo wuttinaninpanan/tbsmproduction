@@ -8,5 +8,7 @@ from .record import RecordViews
 from .settings import SettingsViews
 from .manage_scrap import ManageScrapViews
 from .manage_production import ManageProductionViews
+from .manage_defectmode import ManageDefectModeViews
 from .add_user import AddUserViews
 from .manage_user import ManageUserViews
+from .report_scrap_monthly import MonthlyScrapReportViews

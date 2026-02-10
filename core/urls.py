@@ -10,8 +10,12 @@ from .views import RecordViews
 from .views import SettingsViews
 from .views import ManageScrapViews
 from .views import ManageProductionViews
+from .views.manage_production import download_manage_production_import_template
+from .views import ManageDefectModeViews
+from .views.manage_defectmode import download_manage_defectmode_import_template
 from .views import AddUserViews
 from .views import ManageUserViews
+from .views import MonthlyScrapReportViews
 from .views.add_user import download_user_import_template
 from .views.settings import download_production_import_template
 
@@ -29,10 +33,21 @@ urlpatterns = [
     path('record/',RecordViews.as_view(),name="record"),
     path('settings/',SettingsViews.as_view(),name="settings"),
     path('manage-scrap/',ManageScrapViews.as_view(),name="manage_scrap"),
+    path('manage-defectmode/', ManageDefectModeViews.as_view(), name="manage_defectmode"),
+    path(
+        "manage-defectmode/template/",
+        download_manage_defectmode_import_template,
+        name="manage_defectmode_import_template",
+    ),
     path('manage-production/', ManageProductionViews.as_view(), name="manage_production"),
+    path(
+        "manage-production/template/",
+        download_manage_production_import_template,
+        name="manage_production_import_template",
+    ),
     path('add-user/',AddUserViews.as_view(),name="add_user"),
     path('add-user/template/', download_user_import_template, name="user_import_template"),
     path('add-production/template/', download_production_import_template, name="production_import_template"),
     path('manage-user/',ManageUserViews.as_view(),name="manage_user"),
-    path('add-production/',SettingsViews.as_view(),name="add_production"),
+    path('report-scrap-monthly/', MonthlyScrapReportViews.as_view(), name="report_scrap_monthly"),
 ]

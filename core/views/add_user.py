@@ -10,7 +10,7 @@ from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 
 from core.decorators import admin_required
-from core.models.main import UserProfile
+from core.models import UserProfile
 
 try:
 	import openpyxl  # type: ignore

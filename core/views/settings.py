@@ -6,6 +6,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 
 from core.models import DefectMode, PartNumber, ProductionLine, ScrapItem
 from core.decorators import staff_required
@@ -136,10 +137,12 @@ class SettingsViews(TemplateView):
             parts = list(PartNumber.objects.filter(production_line=line).order_by("number"))
             for part in parts:
                 defects_payload = []
-                defects = list(DefectMode.objects.filter(part=part).order_by("name"))
+                defects = list(
+                    DefectMode.objects.filter(Q(part=part) | Q(part__isnull=True)).order_by("name")
+                )
                 for defect in defects:
                     scraps = list(
-                        ScrapItem.objects.filter(defect_mode=defect)
+                        ScrapItem.objects.filter(part_number=part)
                         .order_by("name")
                         .values_list("name", flat=True)
                     )
@@ -254,12 +257,12 @@ class SettingsViews(TemplateView):
 
                         if unique_scraps:
                             for scrap_name in unique_scraps:
-                                _, created = ScrapItem.objects.get_or_create(defect_mode=defect, name=scrap_name)
+                                _, created = ScrapItem.objects.get_or_create(part_number=part, name=scrap_name)
                                 if created:
                                     created_scraps += 1
                         else:
                             # Keep downstream pages usable even if no scrap was provided
-                            ScrapItem.objects.get_or_create(defect_mode=defect, name="Component part")
+                            ScrapItem.objects.get_or_create(part_number=part, name="Component part")
 
                     messages.success(
                         request,
@@ -304,12 +307,12 @@ class SettingsViews(TemplateView):
                     created_scraps = 0
                     if scrap_items:
                         for scrap_name in scrap_items:
-                            _, created = ScrapItem.objects.get_or_create(defect_mode=defect, name=scrap_name)
+                            _, created = ScrapItem.objects.get_or_create(part_number=part, name=scrap_name)
                             if created:
                                 created_scraps += 1
                     else:
                         # Keep downstream pages usable even if no scrap was provided
-                        ScrapItem.objects.get_or_create(defect_mode=defect, name="Component part")
+                        ScrapItem.objects.get_or_create(part_number=part, name="Component part")
 
                     messages.success(
                         request,
@@ -348,9 +351,9 @@ class SettingsViews(TemplateView):
                     part, _ = PartNumber.objects.get_or_create(production_line=line, number=part_number)
                     defect, _ = DefectMode.objects.get_or_create(part=part, name=defect_name)
 
-                    # Ensure at least one scrap option exists for this defect
-                    if not ScrapItem.objects.filter(defect_mode=defect).exists():
-                        ScrapItem.objects.get_or_create(defect_mode=defect, name="Component part")
+                    # Ensure at least one scrap option exists for this part
+                    if not ScrapItem.objects.filter(part_number=part).exists():
+                        ScrapItem.objects.get_or_create(part_number=part, name="Component part")
                     messages.success(request, f"เพิ่ม Defect mode {defect_name} สำเร็จ")
 
                 elif action == "add_scrap_item":
@@ -368,7 +371,7 @@ class SettingsViews(TemplateView):
                     if defect is None:
                         messages.error(request, "ไม่พบ Defect mode ที่ระบุ")
                         return self.get(request, *args, **kwargs)
-                    ScrapItem.objects.get_or_create(defect_mode=defect, name=scrap_name)
+                    ScrapItem.objects.get_or_create(part_number=defect.part, name=scrap_name)
                     messages.success(request, f"เพิ่ม Scrap item {scrap_name} สำเร็จ")
 
                 else:

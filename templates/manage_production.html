@@ -9,12 +9,6 @@
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการข้อมูล Production Master</h1>
-			<p class="text-sm text-slate-600 mt-1">ค้นหา แก้ไข และลบข้อมูล: Line / Part / Defect / Scrap</p>
-		</div>
-		<div class="flex items-center gap-2">
-			<a href="/add-production/" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
-				+ เพิ่ม/บันทึก Master Data
-			</a>
 		</div>
 	</header>
 
@@ -32,9 +26,10 @@
 		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
 			<div class="md:col-span-4">
 				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Part / Defect / Scrap"
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Part / Scrap"
 					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
+			<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
 			<div class="md:col-span-3">
 				<label class="block text-sm font-semibold text-slate-700">Production line</label>
 				<select name="line" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
@@ -53,15 +48,6 @@
 					{% endfor %}
 				</select>
 			</div>
-			<div class="md:col-span-2">
-				<label class="block text-sm font-semibold text-slate-700">Defect mode</label>
-				<select name="defect" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-					<option value="">ทั้งหมด</option>
-					{% for d in defect_names %}
-						<option value="{{ d }}" {% if selected_defect == d %}selected{% endif %}>{{ d }}</option>
-					{% endfor %}
-				</select>
-			</div>
 			<div class="md:col-span-1 flex items-end">
 				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
 					ค้นหา
@@ -71,7 +57,7 @@
 
 		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
 			<div class="text-xs text-slate-600">
-				Line {{ counts.lines|default:0 }} / Part {{ counts.parts|default:0 }} / Defect {{ counts.defects|default:0 }} / Scrap {{ counts.scraps|default:0 }}
+				Line {{ counts.lines|default:0 }} / Part {{ counts.parts|default:0 }} / Scrap {{ counts.scraps|default:0 }}
 			</div>
 			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
 		</div>
@@ -79,16 +65,77 @@
 
 	<!-- Single Combined Table -->
 	<div class="rounded-2xl border border-slate-200 overflow-hidden">
-		<div class="bg-slate-100 px-4 py-3 font-extrabold text-slate-800">Master Data (Line / Part / Defect / Scrap)</div>
+		<div class="bg-slate-100 px-4 py-3">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="font-extrabold text-slate-800">Master Data (Line / Part / Scrap)</div>
+				<div class="flex items-center gap-2">
+					<a href="?action=download_template" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M4 2.75A1.75 1.75 0 0 1 5.75 1h6.19c.46 0 .9.18 1.23.51l2.32 2.32c.33.33.51.77.51 1.23v12.19A1.75 1.75 0 0 1 14.25 19H5.75A1.75 1.75 0 0 1 4 17.25V2.75Z" />
+							<path d="M12 1.5v2.25c0 .69.56 1.25 1.25 1.25H15.5" />
+						</svg>
+						Template Excel
+					</a>
+					<form id="importForm" method="post" enctype="multipart/form-data" class="inline">
+						{% csrf_token %}
+						<input type="hidden" name="action" value="import_master_data" />
+						<input id="importFile" type="file" name="excel_file" accept=".xlsx" class="hidden" />
+						<button type="button" id="importBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold border border-green-600 bg-green-600 text-white hover:bg-green-700 transition whitespace-nowrap">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M10 1.75a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.5a.75.75 0 0 1 .75-.75ZM3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+							</svg>
+							นำเข้าข้อมูล
+						</button>
+					</form>
+					<a href="?action=export_excel&q={{ q|urlencode }}&line={{ selected_line|urlencode }}&part={{ selected_part|urlencode }}" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+  							<path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
+						</svg>
+						ส่งออกข้อมูล
+					</a>
+					<button type="button" id="openAddModal" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd" />
+						</svg>
+						เพิ่มข้อมูล
+					</button>
+					<button type="button" id="bulkDeleteBtn" disabled class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+						<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+						<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>	
+						</svg>
+						ลบรายการที่เลือก
+					</button>
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<input type="hidden" name="line" value="{{ selected_line|default:'' }}" />
+						<input type="hidden" name="part" value="{{ selected_part|default:'' }}" />
+						<div class="flex items-center gap-2">
+						  <span class="text-sm text-gray-700">Show</span>
+						  <select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+						    <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+						    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+						    <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+						    <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+						  </select>
+						  <span class="text-sm text-gray-700">entries</span>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
 		<div class="overflow-x-auto">
 			<table class="min-w-full text-sm">
 				<thead class="bg-white text-slate-800">
 					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
+						</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Line</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">รูปภาพ</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Scrap</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Component Part</th>
 						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Records</th>
 						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 					</tr>
@@ -96,9 +143,11 @@
 				<tbody class="divide-y divide-slate-200">
 					{% for r in rows %}
 						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3">
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-line-id="{{ r.line_id|default:'' }}" data-part-id="{{ r.part_id|default:'' }}" data-scrap-id="{{ r.scrap_id|default:'' }}" />
+							</td>
 							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.line_code|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
-							<td class="px-4 py-3 text-slate-700">{{ r.defect_name|default:"-" }}</td>
 							<td class="px-4 py-3">
 								{% if r.scrap_image_url %}
 									<a href="{{ r.scrap_image_url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
@@ -118,11 +167,9 @@
 										data-open-edit-row
 										data-line-id="{{ r.line_id|default:'' }}"
 										data-part-id="{{ r.part_id|default:'' }}"
-										data-defect-id="{{ r.defect_id|default:'' }}"
 										data-scrap-id="{{ r.scrap_id|default:'' }}"
 										data-line-code="{{ r.line_code|default:'' }}"
 										data-part-number="{{ r.part_number|default:'' }}"
-										data-defect-name="{{ r.defect_name|default:'' }}"
 										data-scrap-name="{{ r.scrap_name|default:'' }}"
 										data-scrap-image-url="{{ r.scrap_image_url|default:'' }}">
 										แก้ไข
@@ -132,9 +179,8 @@
 										data-open-delete-row
 										data-line-id="{{ r.line_id|default:'' }}"
 										data-part-id="{{ r.part_id|default:'' }}"
-										data-defect-id="{{ r.defect_id|default:'' }}"
 										data-scrap-id="{{ r.scrap_id|default:'' }}"
-										data-label="{{ r.line_code|default:'' }} {{ r.part_number|default:'' }} / {{ r.defect_name|default:'' }} / {{ r.scrap_name|default:'' }}">
+										data-label="{{ r.line_code|default:'' }} {{ r.part_number|default:'' }}{% if r.scrap_name %} / {{ r.scrap_name }}{% endif %}">
 										ลบ
 									</button>
 								</div>
@@ -146,6 +192,71 @@
 				</tbody>
 			</table>
 		</div>
+
+		{% if page_obj and paginator %}
+			<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 dark:border-white/10 dark:bg-transparent sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						Showing
+						<span class="font-medium">{{ page_obj.start_index }}</span>
+						to
+						<span class="font-medium">{{ page_obj.end_index }}</span>
+						of
+						<span class="font-medium">{{ rows_total }}</span>
+						results
+					</p>
+				</div>
+				{% if paginator.num_pages > 1 %}
+					<div class="flex items-center justify-between gap-3 sm:justify-end">
+						<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-xs dark:shadow-none">
+							{% if page_obj.has_previous %}
+								<a href="?q={{ q|urlencode }}&line={{ selected_line|urlencode }}&part={{ selected_part|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:inset-ring-gray-700 dark:hover:bg-white/5">
+									<span class="sr-only">Previous</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</a>
+							{% else %}
+								<span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200 dark:text-gray-600 dark:inset-ring-gray-800">
+									<span class="sr-only">Previous</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</span>
+							{% endif %}
+
+							{% for item in page_items %}
+								{% if item %}
+									{% if item == page_obj.number %}
+										<a href="?q={{ q|urlencode }}&line={{ selected_line|urlencode }}&part={{ selected_part|urlencode }}&per_page={{ per_page }}&page={{ item }}" aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:focus-visible:outline-indigo-500">{{ item }}</a>
+									{% else %}
+										<a href="?q={{ q|urlencode }}&line={{ selected_line|urlencode }}&part={{ selected_part|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:text-gray-200 dark:inset-ring-gray-700 dark:hover:bg-white/5">{{ item }}</a>
+									{% endif %}
+								{% else %}
+									<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 inset-ring inset-ring-gray-300 focus:outline-offset-0 dark:text-gray-400 dark:inset-ring-gray-700">...</span>
+								{% endif %}
+							{% endfor %}
+
+							{% if page_obj.has_next %}
+								<a href="?q={{ q|urlencode }}&line={{ selected_line|urlencode }}&part={{ selected_part|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:inset-ring-gray-700 dark:hover:bg-white/5">
+									<span class="sr-only">Next</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</a>
+							{% else %}
+								<span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200 dark:text-gray-600 dark:inset-ring-gray-800">
+									<span class="sr-only">Next</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</span>
+							{% endif %}
+						</nav>
+					</div>
+				{% endif %}
+			</div>
+		{% endif %}
 	</div>
 </section>
 
@@ -157,13 +268,51 @@
 	<input type="hidden" name="value" id="valueField" value="" />
 	<input type="hidden" name="line_id" id="lineIdField" value="" />
 	<input type="hidden" name="part_id" id="partIdField" value="" />
-	<input type="hidden" name="defect_id" id="defectIdField" value="" />
 	<input type="hidden" name="scrap_id" id="scrapIdField" value="" />
 	<input type="hidden" name="line_code" id="lineCodeField" value="" />
 	<input type="hidden" name="part_number" id="partNumberField" value="" />
-	<input type="hidden" name="defect_name" id="defectNameField" value="" />
 	<input type="hidden" name="scrap_name" id="scrapNameField" value="" />
 </form>
+
+<!-- Add Modal (Line/Part/Scrap) -->
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่ม Master Data</h2>
+		<p class="text-xs text-slate-600 mt-1">เพิ่ม Line / Part / Scrap (ไม่จัดการ Defect ในหน้านี้)</p>
+		<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Line <span class="text-red-600">*</span></label>
+				<input id="addLine" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 uppercase focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น DAA1" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Part <span class="text-red-600">*</span></label>
+				<input id="addPart" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น DAR-54" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Scrap</label>
+				<input id="addScrap" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น Burr" />
+				<p class="mt-1 text-xs text-slate-500">ถ้าไม่กรอก จะเพิ่มเฉพาะ Line/Part</p>
+			</div>
+			<div class="sm:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">รูปภาพ Scrap (Reference Image)</label>
+				<div class="mt-1 flex items-center gap-3">
+					<img id="addScrapImagePreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100 opacity-40" alt="Scrap image preview" />
+					<input id="addScrapImage" type="file" accept="image/*" name="scrap_image" form="actionForm"
+						class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+				</div>
+				<p class="mt-1 text-xs text-slate-500">ถ้าอัปโหลดรูป ต้องกรอกชื่อ Scrap ด้วย</p>
+			</div>
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="addSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">เพิ่ม</button>
+		</div>
+	</div>
+</div>
 
 <!-- Edit Modal -->
 <div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
@@ -182,10 +331,6 @@
 			<div>
 				<label class="block text-sm font-semibold text-slate-700">Part</label>
 				<input id="editPart" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-			</div>
-			<div>
-				<label class="block text-sm font-semibold text-slate-700">Defect</label>
-				<input id="editDefect" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div>
 				<label class="block text-sm font-semibold text-slate-700">Scrap</label>
@@ -232,17 +377,20 @@
 	const valueField = document.getElementById('valueField');
 	const lineIdField = document.getElementById('lineIdField');
 	const partIdField = document.getElementById('partIdField');
-	const defectIdField = document.getElementById('defectIdField');
 	const scrapIdField = document.getElementById('scrapIdField');
 	const lineCodeField = document.getElementById('lineCodeField');
 	const partNumberField = document.getElementById('partNumberField');
-	const defectNameField = document.getElementById('defectNameField');
 	const scrapNameField = document.getElementById('scrapNameField');
+	const addModal = document.getElementById('addModal');
+	const addLine = document.getElementById('addLine');
+	const addPart = document.getElementById('addPart');
+	const addScrap = document.getElementById('addScrap');
+	const addScrapImage = document.getElementById('addScrapImage');
+	const addScrapImagePreview = document.getElementById('addScrapImagePreview');
 
 	const editModal = document.getElementById('editModal');
 	const editLine = document.getElementById('editLine');
 	const editPart = document.getElementById('editPart');
-	const editDefect = document.getElementById('editDefect');
 	const editScrap = document.getElementById('editScrap');
 	const editScrapImage = document.getElementById('editScrapImage');
 	const editScrapImagePreview = document.getElementById('editScrapImagePreview');
@@ -250,15 +398,114 @@
 	const deleteModal = document.getElementById('deleteModal');
 	const deleteLabel = document.getElementById('deleteLabel');
 
+	const importBtn = document.getElementById('importBtn');
+	const importFile = document.getElementById('importFile');
+	const importForm = document.getElementById('importForm');
+
+	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+	const selectAllRows = document.getElementById('selectAllRows');
+
 	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
 	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
+
+	function getRowCheckboxes() {
+		return Array.from(document.querySelectorAll('.rowCheckbox'));
+	}
+	function getSelectedRowCheckboxes() {
+		return getRowCheckboxes().filter(cb => cb.checked);
+	}
+	function updateBulkDeleteState() {
+		const selectedCount = getSelectedRowCheckboxes().length;
+		bulkDeleteBtn.disabled = selectedCount === 0;
+		if (selectAllRows) {
+			const all = getRowCheckboxes();
+			selectAllRows.checked = all.length > 0 && all.every(cb => cb.checked);
+			selectAllRows.indeterminate = all.some(cb => cb.checked) && !selectAllRows.checked;
+		}
+	}
 
 	function fillRowIds(btn) {
 		lineIdField.value = btn.dataset.lineId || '';
 		partIdField.value = btn.dataset.partId || '';
-		defectIdField.value = btn.dataset.defectId || '';
 		scrapIdField.value = btn.dataset.scrapId || '';
 	}
+
+	document.getElementById('openAddModal').addEventListener('click', () => {
+		actionField.value = 'create_master_data';
+		idField.value = '0';
+		valueField.value = '';
+		lineIdField.value = '';
+		partIdField.value = '';
+		scrapIdField.value = '';
+		scrapNameField.value = '';
+		addLine.value = '';
+		addPart.value = '';
+		addScrap.value = '';
+		addScrapImage.value = '';
+		addScrapImagePreview.src = '';
+		addScrapImagePreview.classList.add('opacity-40');
+		openModal(addModal);
+		setTimeout(() => addLine.focus(), 0);
+	});
+
+	if (importBtn && importFile && importForm) {
+		importBtn.addEventListener('click', () => {
+			importFile.value = '';
+			importFile.click();
+		});
+		importFile.addEventListener('change', () => {
+			const file = importFile.files && importFile.files[0];
+			if (!file) return;
+			importForm.submit();
+		});
+	}
+
+	if (selectAllRows) {
+		selectAllRows.addEventListener('change', () => {
+			getRowCheckboxes().forEach(cb => { cb.checked = selectAllRows.checked; });
+			updateBulkDeleteState();
+		});
+	}
+	getRowCheckboxes().forEach(cb => {
+		cb.addEventListener('change', updateBulkDeleteState);
+	});
+	updateBulkDeleteState();
+
+	bulkDeleteBtn.addEventListener('click', () => {
+		const selected = getSelectedRowCheckboxes();
+		if (selected.length === 0) return;
+		// Clear previous bulk inputs
+		Array.from(actionForm.querySelectorAll('[data-bulk-row]')).forEach(el => el.remove());
+		actionField.value = 'bulk_delete_master_rows';
+		idField.value = '0';
+		valueField.value = '';
+		lineIdField.value = '';
+		partIdField.value = '';
+		scrapIdField.value = '';
+		lineCodeField.value = '';
+		partNumberField.value = '';
+		scrapNameField.value = '';
+		selected.forEach(cb => {
+			const lineId = cb.dataset.lineId || '';
+			const partId = cb.dataset.partId || '';
+			const scrapId = cb.dataset.scrapId || '';
+			const input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = 'bulk_row';
+			input.value = `${lineId}|${partId}|${scrapId}`;
+			input.setAttribute('data-bulk-row', '1');
+			actionForm.appendChild(input);
+		});
+		actionForm.submit();
+	});
+
+	addScrapImage.addEventListener('change', () => {
+		const file = addScrapImage.files && addScrapImage.files[0];
+		if (!file) return;
+		const url = URL.createObjectURL(file);
+		addScrapImagePreview.src = url;
+		addScrapImagePreview.classList.remove('opacity-40');
+	});
 
 	document.querySelectorAll('[data-open-edit-row]').forEach(btn => {
 		btn.addEventListener('click', () => {
@@ -268,16 +515,17 @@
 
 			editLine.value = btn.dataset.lineCode || '';
 			editPart.value = btn.dataset.partNumber || '';
-			editDefect.value = btn.dataset.defectName || '';
 			editScrap.value = btn.dataset.scrapName || '';
 			const scrapImageUrl = btn.dataset.scrapImageUrl || '';
 
-			// Disable fields that don't exist for this row
-			editLine.disabled = !lineIdField.value;
-			editPart.disabled = !partIdField.value;
-			editDefect.disabled = !defectIdField.value;
-			editScrap.disabled = !scrapIdField.value;
-			editScrapImage.disabled = !scrapIdField.value;
+				// Allow editing existing objects in the row (Line/Part/Scrap)
+				const hasLine = !!lineIdField.value;
+				const hasPart = !!partIdField.value;
+				const hasScrap = !!scrapIdField.value;
+				editLine.disabled = !hasLine;
+				editPart.disabled = !hasPart;
+				editScrap.disabled = !hasScrap;
+				editScrapImage.disabled = !hasScrap;
 			editScrapImage.value = '';
 			if (scrapImageUrl) {
 				editScrapImagePreview.src = scrapImageUrl;
@@ -287,8 +535,12 @@
 				editScrapImagePreview.classList.add('opacity-40');
 			}
 
-			openModal(editModal);
-			setTimeout(() => (editScrap.disabled ? (editDefect.disabled ? (editPart.disabled ? editLine : editPart) : editDefect) : editScrap).focus(), 0);
+				openModal(editModal);
+				setTimeout(() => {
+					if (!editLine.disabled) return editLine.focus();
+					if (!editPart.disabled) return editPart.focus();
+					if (!editScrap.disabled) return editScrap.focus();
+				}, 0);
 		});
 	});
 
@@ -313,6 +565,7 @@
 
 	document.querySelectorAll('[data-modal-close]').forEach(btn => {
 		btn.addEventListener('click', () => {
+			closeModal(addModal);
 			closeModal(editModal);
 			closeModal(deleteModal);
 		});
@@ -320,16 +573,23 @@
 
 	document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
 		bg.addEventListener('click', () => {
+			closeModal(addModal);
 			closeModal(editModal);
 			closeModal(deleteModal);
 		});
 	});
 
 	// Submit from modal
+	document.getElementById('addSubmit').addEventListener('click', () => {
+		lineCodeField.value = (addLine.value || '').trim().toUpperCase();
+		partNumberField.value = (addPart.value || '').trim();
+		scrapNameField.value = (addScrap.value || '').trim();
+		actionForm.submit();
+	});
+
 	document.getElementById('editSubmit').addEventListener('click', () => {
-		lineCodeField.value = (editLine.value || '').trim();
-		partNumberField.value = (editPart.value || '').trim();
-		defectNameField.value = (editDefect.value || '').trim();
+		lineCodeField.value = editLine.disabled ? '' : (editLine.value || '').trim();
+		partNumberField.value = editPart.disabled ? '' : (editPart.value || '').trim();
 		scrapNameField.value = (editScrap.value || '').trim();
 		actionForm.submit();
 	});
@@ -340,6 +600,7 @@
 	// Close on ESC
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape') {
+			closeModal(addModal);
 			closeModal(editModal);
 			closeModal(deleteModal);
 		}

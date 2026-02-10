@@ -5,6 +5,7 @@ from django.utils.dateparse import parse_date
 from django.utils import timezone
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
+from django.core.paginator import Paginator
 
 from core.models import DefectMode, PartNumber, ProductionLine, ScrapItem, ScrapRecord
 from core.decorators import staff_required
@@ -27,6 +28,8 @@ class ManageScrapViews(TemplateView):
         q = (self.request.GET.get("q") or "").strip()
         date_from_raw = (self.request.GET.get("date_from") or "").strip()
         date_to_raw = (self.request.GET.get("date_to") or "").strip()
+        per_page_raw = (self.request.GET.get("per_page") or "").strip()
+        page = (self.request.GET.get("page") or "1").strip() or "1"
         date_from = parse_date(date_from_raw) if date_from_raw else None
         date_to = parse_date(date_to_raw) if date_to_raw else None
 
@@ -54,27 +57,95 @@ class ManageScrapViews(TemplateView):
                 | Q(created_by__profile__shift__icontains=q)
             )
 
-        total_count = qs.count()
-        ctx["scrap_records"] = list(qs.order_by("-created_at")[:1000])
+        allowed_per_page = {20, 50, 100, 200}
+        try:
+            per_page = int(per_page_raw or 20)
+        except Exception:
+            per_page = 20
+        if per_page not in allowed_per_page:
+            per_page = 20
+
+        qs = qs.order_by("-created_at")
+        paginator = Paginator(qs, per_page)
+        page_obj = paginator.get_page(page)
+        ctx["scrap_records"] = list(page_obj.object_list)
         ctx["production_lines"] = list(ProductionLine.objects.order_by("code").values_list("code", flat=True))
 
-        # Provide full master-data for edit modal dropdowns (similar to record page)
+        def _page_items(num_pages: int, current: int) -> list[int | None]:
+            if num_pages <= 0:
+                return []
+            if num_pages <= 10:
+                return list(range(1, num_pages + 1))
+            items: list[int | None] = [1]
+            if current > 4:
+                items.append(None)
+            start = max(2, current - 1)
+            end = min(num_pages - 1, current + 1)
+            if current <= 4:
+                start, end = 2, 4
+            if current >= num_pages - 3:
+                start, end = num_pages - 3, num_pages - 1
+            for n in range(start, end + 1):
+                if 1 < n < num_pages:
+                    items.append(n)
+            if current < num_pages - 3:
+                items.append(None)
+            items.append(num_pages)
+            compressed: list[int | None] = []
+            for it in items:
+                if compressed and compressed[-1] == it:
+                    continue
+                if it is None and compressed and compressed[-1] is None:
+                    continue
+                compressed.append(it)
+            return compressed
+
+        # Provide full master-data for edit modal dropdowns (bulk-loaded to avoid N+1).
         lines = list(ProductionLine.objects.all().order_by("code"))
+        parts = list(
+            PartNumber.objects.select_related("production_line")
+            .filter(production_line__in=lines)
+            .order_by("production_line__code", "number")
+        )
+        part_ids = [p.id for p in parts]
+
+        scraps_by_part: dict[int, list[dict]] = {pid: [] for pid in part_ids}
+        for scrap in (
+            ScrapItem.objects.filter(part_number_id__in=part_ids)
+            .only("id", "name", "part_number_id")
+            .order_by("part_number__production_line__code", "part_number__number", "name")
+        ):
+            scraps_by_part.setdefault(scrap.part_number_id, []).append(
+                {"id": str(scrap.pk), "name": scrap.name}
+            )
+
+        global_defects = list(
+            DefectMode.objects.filter(part__isnull=True)
+            .only("id", "name")
+            .order_by("name")
+        )
+        defects_by_part: dict[int, list[DefectMode]] = {pid: [] for pid in part_ids}
+        for defect in (
+            DefectMode.objects.filter(part_id__in=part_ids)
+            .only("id", "name", "part_id")
+            .order_by("name")
+        ):
+            defects_by_part.setdefault(defect.part_id, []).append(defect)
+
+        parts_by_line_id: dict[int, list[PartNumber]] = {}
+        for p in parts:
+            parts_by_line_id.setdefault(p.production_line_id, []).append(p)
+
         production_lines_payload = []
         for line in lines:
             parts_payload = []
-            parts = list(PartNumber.objects.filter(production_line=line).order_by("number"))
-            for part in parts:
+            for part in parts_by_line_id.get(line.id, []):
                 defects_payload = []
-                defects = list(DefectMode.objects.filter(part=part).order_by("name"))
+                defects = defects_by_part.get(part.id, []) + global_defects
+                scraps = scraps_by_part.get(part.id, [])
+                if not scraps:
+                    scraps = [{"id": "", "name": "Component part"}]
                 for defect in defects:
-                    scraps = list(
-                        ScrapItem.objects.filter(defect_mode=defect)
-                        .order_by("name")
-                        .values("id", "name")
-                    )
-                    if not scraps:
-                        scraps = [{"id": "", "name": "Component part"}]
                     defects_payload.append(
                         {
                             "id": str(defect.pk),
@@ -82,19 +153,19 @@ class ManageScrapViews(TemplateView):
                             "scraps": scraps,
                         }
                     )
-                parts_payload.append(
-                    {
-                        "number": part.number,
-                        "defects": defects_payload,
-                    }
-                )
+                parts_payload.append({"number": part.number, "defects": defects_payload})
             production_lines_payload.append({"code": line.code, "parts": parts_payload})
 
         ctx["record_data"] = {"productionLines": production_lines_payload}
         ctx["q"] = q
         ctx["date_from"] = date_from_raw
         ctx["date_to"] = date_to_raw
-        ctx["total_count"] = total_count
+        ctx["page_obj"] = page_obj
+        ctx["paginator"] = paginator
+        ctx["per_page"] = per_page
+        ctx["rows_total"] = paginator.count
+        ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
+        ctx["total_count"] = paginator.count
         ctx.setdefault("delete_action", "")
         return ctx
 
@@ -151,13 +222,15 @@ class ManageScrapViews(TemplateView):
             if part is None:
                 messages.error(request, "ไม่พบ Part number ใน Production line ที่เลือก")
                 return self.get(request, *args, **kwargs)
-            defect = DefectMode.objects.filter(pk=int(defect_id), part=part).first()
+            defect = DefectMode.objects.filter(pk=int(defect_id)).filter(
+                Q(part=part) | Q(part__isnull=True)
+            ).first()
             if defect is None:
                 messages.error(request, "ไม่พบ Defect mode ใน Part ที่เลือก")
                 return self.get(request, *args, **kwargs)
-            scrap = ScrapItem.objects.filter(pk=int(scrap_id), defect_mode=defect).first()
+            scrap = ScrapItem.objects.filter(pk=int(scrap_id), part_number=part).first()
             if scrap is None:
-                messages.error(request, "ไม่พบ Scrap ใน Defect ที่เลือก")
+                messages.error(request, "ไม่พบ Scrap ใน Part ที่เลือก")
                 return self.get(request, *args, **kwargs)
 
             with transaction.atomic():

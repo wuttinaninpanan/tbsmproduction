@@ -58,13 +58,13 @@
 					</svg>
 					จัดการข้อมูล Scrap
 				</a>
-				<a href="/add-production/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/manage-defectmode/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<circle cx="12" cy="12" r="10"></circle>
 						<path d="M12 8v8"></path>
 						<path d="M8 12h8"></path>
 					</svg>
-					เพิ่มข้อมูล Production Line
+					จัดการข้อมูล Defect mode
 				</a>
 				<a href="/manage-production/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -78,7 +78,7 @@
 
 				{% if user.is_staff or user.is_superuser %}
 				<div class="px-2 pt-4 pb-1 text-xs font-semibold text-slate-500">รายงานข้อมูล</div>
-				<a href="/manage-scrap/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/report-scrap-monthly/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M8 6h13"></path>
 						<path d="M8 12h13"></path>

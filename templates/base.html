@@ -54,5 +54,54 @@
 
 </div>
 
+<!-- Back to top -->
+<button
+    id="back-to-top"
+    type="button"
+    class="hidden fixed bottom-6 right-6 z-50 h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white shadow-xl transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
+    aria-label="Back to top"
+    title="Back to top"
+>
+    <span class="text-xl leading-none">↑</span>
+</button>
+
+<script>
+    (() => {
+        const button = document.getElementById("back-to-top");
+        if (!button) return;
+
+        const toggle = () => {
+            const shouldShow = window.scrollY > 300;
+            if (shouldShow) {
+                button.classList.remove("hidden");
+                button.classList.add("flex");
+            } else {
+                button.classList.add("hidden");
+                button.classList.remove("flex");
+            }
+        };
+
+        let ticking = false;
+        window.addEventListener(
+            "scroll",
+            () => {
+                if (ticking) return;
+                ticking = true;
+                window.requestAnimationFrame(() => {
+                    toggle();
+                    ticking = false;
+                });
+            },
+            { passive: true }
+        );
+
+        button.addEventListener("click", () => {
+            window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        });
+
+        toggle();
+    })();
+</script>
+
 </body>
 </html>
