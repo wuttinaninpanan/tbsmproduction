@@ -3,6 +3,8 @@ from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
 from django.views.generic import TemplateView
 
+from core.services.auditlog import log_event
+
 
 class LoginViews(TemplateView):
     template_name = "login.html"
@@ -27,6 +29,13 @@ class LoginViews(TemplateView):
 
         user = authenticate(request, username=username, password=password)
         if user is None:
+            log_event(
+                request,
+                action="login",
+                status="failure",
+                actor_username=username,
+                message="Invalid credentials",
+            )
             return render(
                 request,
                 self.template_name,
@@ -34,6 +43,13 @@ class LoginViews(TemplateView):
             )
 
         if not user.is_active:
+            log_event(
+                request,
+                action="login",
+                status="failure",
+                actor_username=username,
+                message="Inactive account",
+            )
             return render(
                 request,
                 self.template_name,
@@ -41,6 +57,13 @@ class LoginViews(TemplateView):
             )
 
         login(request, user)
+        log_event(
+            request,
+            action="login",
+            status="success",
+            message="User logged in",
+            metadata={"remember": bool(remember)},
+        )
         if not remember:
             # Expire session on browser close
             request.session.set_expiry(0)

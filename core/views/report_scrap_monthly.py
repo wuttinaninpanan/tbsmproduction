@@ -8,8 +8,8 @@ from django.utils import timezone
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 
-from core.decorators import staff_required
-from core.models import PartNumber, ProductionLine, ScrapRecord
+from core.auth.decorators import staff_required
+from core.models import PartNumber, ProductionLine, ComponentPartRecord
 
 try:
 	import openpyxl  # type: ignore
@@ -18,7 +18,7 @@ except Exception:  # pragma: no cover
 
 
 @method_decorator(staff_required, name="dispatch")
-class MonthlyScrapReportViews(TemplateView):
+class MonthlyComponentPartReportViews(TemplateView):
     template_name = "report_scrap_monthly.html"
 
     def get(self, request, *args, **kwargs):
@@ -72,7 +72,7 @@ class MonthlyScrapReportViews(TemplateView):
             output_field=DateTimeField(),
         )
 
-        records_qs = ScrapRecord.objects.filter(created_at__gte=start_dt, created_at__lt=end_dt)
+        records_qs = ComponentPartRecord.objects.filter(created_at__gte=start_dt, created_at__lt=end_dt)
         if selected_line:
             records_qs = records_qs.filter(part_number__production_line__code=selected_line)
 
@@ -150,7 +150,7 @@ class MonthlyScrapReportViews(TemplateView):
         )
         suffix = f"_{selected_line}" if selected_line else ""
         response["Content-Disposition"] = (
-            f'attachment; filename="scrap_monthly_{year:04d}-{month:02d}{suffix}.xlsx"'
+            f'attachment; filename="component_part_monthly_{year:04d}-{month:02d}{suffix}.xlsx"'
         )
         wb.save(response)
         return response

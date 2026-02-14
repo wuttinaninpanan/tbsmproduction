@@ -3,7 +3,7 @@
 
 {% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
-{% block title %}Manage Scrap — TBSMRD{% endblock %}
+{% block title %}Manage Component Part — TBSMRD{% endblock %}
 
 {% block content %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -13,24 +13,14 @@
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการข้อมูล Scrap</h1>
-			<p class="text-sm text-slate-600 mt-1">แสดงข้อมูลทั้งหมดที่ได้จากการบันทึก และสามารถค้นหา/แก้ไข/ลบได้</p>
-		</div>		<div class="flex items-center gap-2">
-			<a href="{% url 'record' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
-				<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-					<path fill-rule="evenodd" d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5c0 .2.08.39.22.53l2.5 2.5a.75.75 0 1 0 1.06-1.06l-2.28-2.28V4.75Z" clip-rule="evenodd" />
-					<path fill-rule="evenodd" d="M10 2.25a7.75 7.75 0 1 0 0 15.5 7.75 7.75 0 0 0 0-15.5ZM.75 10a9.25 9.25 0 1 1 18.5 0 9.25 9.25 0 0 1-18.5 0Z" clip-rule="evenodd" />
-				</svg>
-				ไปหน้า Record
-			</a>
-		</div>
 	</header>
 
-<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 		<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 flex-1">
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
 				<div class="md:col-span-4">
 					<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-					<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา ผู้ใช้งาน / กะ / Production line / Part / Defect / Scrap"
+					<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา ผู้ใช้งาน / กะ / Production line / Part / Defect / Component Part"
 						   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 				</div>
 				<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
@@ -45,9 +35,9 @@
 						   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 				</div>
 				<div class="md:col-span-4 flex items-end gap-2">
-					<button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+					<button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
 						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-							<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
+						<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
 						</svg>
 						ค้นหา
 					</button>
@@ -61,44 +51,53 @@
 				<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
 			</div>
 		</form>
-
-		<div class="rounded-2xl bg-orange-50 border border-orange-200 p-5 sm:w-80">
-			<h3 class="font-extrabold text-slate-900">Download ข้อมูล ในรูปแบบ Excel</h3>
-			<a href="?action=export_excel{% if q %}&q={{ q }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition whitespace-nowrap">
-				<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-					<path fill-rule="evenodd" d="M10 1.75a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.5a.75.75 0 0 1 .75-.75ZM3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
-				</svg>
-				Excel
-			</a>
-		</div>
 	</div>
 	
 
 	<div class="rounded-2xl border border-slate-200 overflow-hidden">
 		<div class="bg-slate-100 px-4 py-3">
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-				<div class="font-extrabold text-slate-800">Scrap Records</div>
-				<form method="get" class="flex items-center gap-2">
-					<input type="hidden" name="q" value="{{ q|default:'' }}" />
-					<input type="hidden" name="date_from" value="{{ date_from|default:'' }}" />
-					<input type="hidden" name="date_to" value="{{ date_to|default:'' }}" />
-					<div class="flex items-center gap-2">
-						<span class="text-sm text-gray-700">Show</span>
-						<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
-							<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-							<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-							<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-							<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
-						</select>
-						<span class="text-sm text-gray-700">entries</span>
-					</div>
-				</form>
+				<div class="font-extrabold text-slate-800">Component Part Records</div>
+				<div class="flex items-center gap-2">
+					<a href="?action=export_excel{% if q %}&q={{ q }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+  							<path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
+						</svg>
+						ส่งออกข้อมูล
+					</a>
+					<button type="button" id="bulkDeleteBtn" disabled class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+						<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+						<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>	
+						</svg>
+						ลบที่เลือก
+					</button>
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<input type="hidden" name="date_from" value="{{ date_from|default:'' }}" />
+						<input type="hidden" name="date_to" value="{{ date_to|default:'' }}" />
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-gray-700">Show</span>
+							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							</select>
+							<span class="text-sm text-gray-700">entries</span>
+						</div>
+					</form>
+				</div>
 			</div>
 		</div>
 		<div class="overflow-x-auto">
 			<table class="min-w-full text-sm">
 				<thead class="bg-white text-slate-800">
 					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
+						</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
@@ -112,8 +111,11 @@
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200">
-					{% for r in scrap_records %}
+					{% for r in component_part_records %}
 						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3">
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id|default:'' }}" />
+							</td>
 							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
 							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.username|default:"-" }}</td>
 							<td class="px-4 py-3 whitespace-nowrap">
@@ -132,7 +134,7 @@
 							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.production_line|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700">{{ r.defect_mode|default:"-" }}</td>
-							<td class="px-4 py-3 text-slate-700">{{ r.scrap_item|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.component_part|default:"-" }}</td>
 							<td class="px-4 py-3 text-right font-semibold text-slate-900">{{ r.quantity|default:0 }}</td>
 							<td class="px-4 py-3">
 								{% if r.photo %}
@@ -140,9 +142,9 @@
 										<img src="{{ r.photo.url }}" alt="Photo" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
 										<span class="text-xs text-blue-700 font-semibold hover:underline whitespace-nowrap">ดูรูป</span>
 									</a>
-								{% elif r.scrap_item.reference_image %}
-									<a href="{{ r.scrap_item.reference_image.url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
-										<img src="{{ r.scrap_item.reference_image.url }}" alt="Reference" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
+								{% elif r.component_part.reference_image %}
+									<a href="{{ r.component_part.reference_image.url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
+										<img src="{{ r.component_part.reference_image.url }}" alt="Reference" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
 										<span class="text-xs text-blue-700 font-semibold hover:underline whitespace-nowrap">ดูรูปอ้างอิง</span>
 									</a>
 								{% else %}
@@ -161,17 +163,17 @@
 										data-line-code="{{ r.production_line.code|default:'' }}"
 										data-part-number="{{ r.part_number.number|default:'' }}"
 										data-defect-id="{{ r.defect_mode.id|default:'' }}"
-										data-scrap-id="{{ r.scrap_item.id|default:'' }}"
+										data-component-part-id="{{ r.component_part.id|default:'' }}"
 										data-quantity="{{ r.quantity|default:1 }}"
-										data-photo-url="{% if r.photo %}{{ r.photo.url }}{% elif r.scrap_item.reference_image %}{{ r.scrap_item.reference_image.url }}{% endif %}"
-										data-label="{{ r.production_line|default:'' }} {{ r.part_number|default:'' }} / {{ r.defect_mode|default:'' }} / {{ r.scrap_item|default:'' }}">
+										data-photo-url="{% if r.photo %}{{ r.photo.url }}{% elif r.component_part.reference_image %}{{ r.component_part.reference_image.url }}{% endif %}"
+										data-label="{{ r.production_line|default:'' }} {{ r.part_number|default:'' }} / {{ r.defect_mode|default:'' }} / {{ r.component_part|default:'' }}">
 										แก้ไข
 									</button>
 									<button type="button"
 										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
 										data-open-delete-row
 										data-id="{{ r.id|default:'' }}"
-										data-label="{{ r.production_line|default:'' }} {{ r.part_number|default:'' }} / {{ r.defect_mode|default:'' }} / {{ r.scrap_item|default:'' }}">
+										data-label="{{ r.production_line|default:'' }} {{ r.part_number|default:'' }} / {{ r.defect_mode|default:'' }} / {{ r.component_part|default:'' }}">
 										ลบ
 									</button>
 								</div>
@@ -179,8 +181,8 @@
 						</tr>
 					{% empty %}
 						<tr>
-							<td class="px-4 py-8 text-center text-slate-600" colspan="10">
-								ยังไม่มีรายการ Scrap Record (หน้านี้แสดงข้อมูลที่กด Save จากหน้า Record)
+							<td class="px-4 py-8 text-center text-slate-600" colspan="11">
+								ยังไม่มีรายการ Component Part Record (หน้านี้แสดงข้อมูลที่กด Save จากหน้า Record)
 							</td>
 						</tr>
 					{% endfor %}
@@ -263,7 +265,7 @@
 	<input type="hidden" name="line_code" id="lineField" value="" />
 	<input type="hidden" name="part_number" id="partField" value="" />
 	<input type="hidden" name="defect_id" id="defectField" value="" />
-	<input type="hidden" name="scrap_id" id="scrapField" value="" />
+	<input type="hidden" name="component_part_id" id="componentPartField" value="" />
 	<input type="hidden" name="quantity" id="qtyField" value="" />
 	<input type="hidden" name="clear_photo" id="clearPhotoField" value="0" />
 </form>
@@ -277,7 +279,7 @@
 		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
 			<span class="text-slate-700 text-xl leading-none">×</span>
 		</button>
-		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Scrap Record</h2>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Component Part Record</h2>
 		<p class="text-xs text-slate-600 mt-1" id="editLabel"></p>
 		<div class="mt-4 space-y-4">
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -308,8 +310,8 @@
 					<select id="editDefect" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
 				</div>
 				<div>
-					<label class="block text-sm font-semibold text-slate-700">Scrap</label>
-					<select id="editScrap" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
+					<label class="block text-sm font-semibold text-slate-700">Component Part</label>
+					<select id="editComponentPart" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
 				</div>
 			</div>
 			<div>
@@ -361,7 +363,7 @@
 	const lineField = document.getElementById('lineField');
 	const partField = document.getElementById('partField');
 	const defectField = document.getElementById('defectField');
-	const scrapField = document.getElementById('scrapField');
+	const componentPartField = document.getElementById('componentPartField');
 	const qtyField = document.getElementById('qtyField');
 	const clearPhotoField = document.getElementById('clearPhotoField');
 
@@ -373,7 +375,7 @@
 	const editLine = document.getElementById('editLine');
 	const editPart = document.getElementById('editPart');
 	const editDefect = document.getElementById('editDefect');
-	const editScrap = document.getElementById('editScrap');
+	const editComponentPart = document.getElementById('editComponentPart');
 	const editQty = document.getElementById('editQty');
 	const editPhoto = document.getElementById('editPhoto');
 	const editPhotoPreview = document.getElementById('editPhotoPreview');
@@ -417,29 +419,66 @@
 		const defects = (partObj?.defects || []).map(d => ({ value: String(d.id), label: d.name }));
 		setOptions(editDefect, defects, 'เลือก Defect');
 		editDefect.value = '';
-		refreshScraps();
+		refreshComponentParts();
 	}
-	function refreshScraps() {
+	function refreshComponentParts() {
 		const lineObj = findLine(editLine.value);
 		const partObj = findPart(lineObj, editPart.value);
 		const defectObj = findDefect(partObj, editDefect.value);
-		const scraps = (defectObj?.scraps || []).map(s => ({ value: String(s.id || ''), label: s.name }));
-		setOptions(editScrap, scraps, 'เลือก Scrap');
-		editScrap.value = '';
+		const componentParts = (defectObj?.component_parts || []).map(s => ({ value: String(s.id || ''), label: s.name }));
+		setOptions(editComponentPart, componentParts, 'เลือก Component Part');
+		editComponentPart.value = '';
 	}
 
 	// Initial line options
 	setOptions(editLine, (recordData.productionLines || []).map(l => ({ value: l.code, label: l.code })), 'เลือก Line');
 	setOptions(editPart, [], 'เลือก Part');
 	setOptions(editDefect, [], 'เลือก Defect');
-	setOptions(editScrap, [], 'เลือก Scrap');
+	setOptions(editComponentPart, [], 'เลือก Component Part');
 
 	editLine.addEventListener('change', refreshParts);
 	editPart.addEventListener('change', refreshDefects);
-	editDefect.addEventListener('change', refreshScraps);
+	editDefect.addEventListener('change', refreshComponentParts);
 
 	const deleteModal = document.getElementById('deleteModal');
 	const deleteLabel = document.getElementById('deleteLabel');
+
+	// Toolbar: bulk delete
+	const selectAllRows = document.getElementById('selectAllRows');
+	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+	const rowCheckboxes = Array.from(document.querySelectorAll('.rowCheckbox'));
+
+	function selectedIds() {
+		return rowCheckboxes.filter(cb => cb.checked).map(cb => cb.dataset.id).filter(Boolean);
+	}
+	function syncBulkState() {
+		if (!bulkDeleteBtn) return;
+		bulkDeleteBtn.disabled = selectedIds().length === 0;
+	}
+	if (selectAllRows) {
+		selectAllRows.addEventListener('change', () => {
+			rowCheckboxes.forEach(cb => { cb.checked = !!selectAllRows.checked; });
+			syncBulkState();
+		});
+	}
+	rowCheckboxes.forEach(cb => cb.addEventListener('change', syncBulkState));
+	if (bulkDeleteBtn) {
+		bulkDeleteBtn.addEventListener('click', () => {
+			const ids = selectedIds();
+			if (ids.length === 0) return;
+			Array.from(actionForm.querySelectorAll('input[name="bulk_id"]')).forEach(n => n.remove());
+			actionField.value = 'bulk_delete';
+			idField.value = '';
+			ids.forEach(id => {
+				const input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'bulk_id';
+				input.value = String(id);
+				actionForm.appendChild(input);
+			});
+			actionForm.submit();
+		});
+	}
 
 	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
 	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
@@ -451,7 +490,7 @@
 			lineField.value = '';
 			partField.value = '';
 			defectField.value = '';
-			scrapField.value = '';
+			componentPartField.value = '';
 			qtyField.value = '';
 			clearPhotoField.value = '0';
 
@@ -477,14 +516,14 @@
 			const lineCode = btn.dataset.lineCode || '';
 			const partNumber = btn.dataset.partNumber || '';
 			const defectId = btn.dataset.defectId || '';
-			const scrapId = btn.dataset.scrapId || '';
+			const componentPartId = btn.dataset.componentPartId || '';
 			editLine.value = lineCode;
 			refreshParts();
 			editPart.value = partNumber;
 			refreshDefects();
 			editDefect.value = String(defectId);
-			refreshScraps();
-			editScrap.value = String(scrapId);
+			refreshComponentParts();
+			editComponentPart.value = String(componentPartId);
 
 			editQty.value = btn.dataset.quantity || '1';
 			editClearPhoto.checked = false;
@@ -538,7 +577,7 @@
 		lineField.value = (editLine.value || '').trim();
 		partField.value = (editPart.value || '').trim();
 		defectField.value = (editDefect.value || '').trim();
-		scrapField.value = (editScrap.value || '').trim();
+		componentPartField.value = (editComponentPart.value || '').trim();
 		qtyField.value = (editQty.value || '1').trim();
 		clearPhotoField.value = editClearPhoto.checked ? '1' : '0';
 		actionForm.submit();
