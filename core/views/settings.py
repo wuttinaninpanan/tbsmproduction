@@ -8,8 +8,9 @@ from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 from django.db.models import Q
 
-from core.models import DefectMode, PartNumber, ProductionLine, ScrapItem
-from core.decorators import staff_required
+from core.models import DefectMode, PartNumber, ProductionLine, ComponentPart
+from core.auth.decorators import staff_required
+from core.services.auditlog import log_event
 
 try:
     import openpyxl  # type: ignore
@@ -25,11 +26,11 @@ def download_production_import_template(request):
 
     Notes:
     - Reference images are not supported via CSV/XLSX import.
-    - `scrap_items` can contain multiple values separated by `;`.
+    - `component_parts` can contain multiple values separated by `;`.
     """
     fmt = (request.GET.get("format") or "csv").strip().lower()
 
-    headers = ["line_code", "part_number", "defect_name", "defect_code", "scrap_items"]
+    headers = ["line_code", "part_number", "defect_name", "defect_code", "component_parts"]
     rows = [
         ["DAA1", "DAR-54", "รอยขีดข่วน", "DEF-001", "Component part; อื่นๆ"],
         ["DAA1", "DAR-54", "สีไม่สม่ำเสมอ", "", "Component part"],
@@ -105,7 +106,7 @@ def _parse_xlsx(uploaded_file):
         yield row
 
 
-def _split_scrap_items(value):
+def _split_component_parts(value):
     if value is None:
         return []
     s = str(value).strip()
@@ -141,21 +142,21 @@ class SettingsViews(TemplateView):
                     DefectMode.objects.filter(Q(part=part) | Q(part__isnull=True)).order_by("name")
                 )
                 for defect in defects:
-                    scraps = list(
-                        ScrapItem.objects.filter(part_number=part)
+                    component_parts = list(
+                        ComponentPart.objects.filter(part_number=part)
                         .order_by("name")
                         .values_list("name", flat=True)
                     )
 
-                    if not scraps:
-                        scraps = ["Component part"]
+                    if not component_parts:
+                        component_parts = ["Component part"]
                     defects_payload.append(
                         {
                             "id": str(defect.pk),
                             "name": defect.name,
                             "code": defect.code or "",
                             "image_url": defect.reference_image.url if defect.reference_image else "",
-                            "scraps": scraps,
+                            "component_parts": component_parts,
                         }
                     )
                 parts_payload.append(
@@ -203,7 +204,7 @@ class SettingsViews(TemplateView):
                     created_parts = 0
                     created_defects = 0
                     updated_defects = 0
-                    created_scraps = 0
+                    created_component_parts = 0
                     skipped = 0
 
                     for row in rows:
@@ -233,41 +234,65 @@ class SettingsViews(TemplateView):
                             if not defect_created:
                                 updated_defects += 1
 
-                        # scrap items: preferred field `scrap_items` (semicolon separated)
-                        scraps = []
-                        scraps.extend(_split_scrap_items(row.get("scrap_items")))
-                        scraps.extend(_split_scrap_items(row.get("scrap_item")))
-                        scraps.extend(_split_scrap_items(row.get("scrap")))
-                        scraps.extend(_split_scrap_items(row.get("scraps")))
+                        # component parts: preferred field `component_parts` (semicolon separated)
+                        component_parts = []
+                        component_parts.extend(_split_component_parts(row.get("component_parts")))
+                        component_parts.extend(_split_component_parts(row.get("component_part")))
+                        component_parts.extend(_split_component_parts(row.get("component")))
+                        component_parts.extend(_split_component_parts(row.get("components")))
 
-                        # also accept multiple columns like scrap_1, scrap_2, scrap1, scrap2, etc.
+                        # also accept multiple columns like component_part_1, component_part_2, etc.
                         for k, v in (row or {}).items():
                             kk = _normalized_key(k)
-                            if kk.startswith("scrap") and kk not in {"scrap", "scraps", "scrap_item", "scrap_items"}:
-                                scraps.extend(_split_scrap_items(v))
+                            if kk.startswith("component") and kk not in {
+                                "component",
+                                "components",
+                                "component_part",
+                                "component_parts",
+                            }:
+                                component_parts.extend(_split_component_parts(v))
 
                         # de-dup while preserving order
                         seen = set()
-                        unique_scraps = []
-                        for s in scraps:
+                        unique_component_parts = []
+                        for s in component_parts:
                             if s in seen:
                                 continue
                             seen.add(s)
-                            unique_scraps.append(s)
+                            unique_component_parts.append(s)
 
-                        if unique_scraps:
-                            for scrap_name in unique_scraps:
-                                _, created = ScrapItem.objects.get_or_create(part_number=part, name=scrap_name)
+                        if unique_component_parts:
+                            for component_part_name in unique_component_parts:
+                                _, created = ComponentPart.objects.get_or_create(
+                                    part_number=part,
+                                    name=component_part_name,
+                                )
                                 if created:
-                                    created_scraps += 1
+                                    created_component_parts += 1
                         else:
-                            # Keep downstream pages usable even if no scrap was provided
-                            ScrapItem.objects.get_or_create(part_number=part, name="Component part")
+                            # Keep downstream pages usable even if no component part was provided
+                            ComponentPart.objects.get_or_create(part_number=part, name="Component part")
 
                     messages.success(
                         request,
                         "นำเข้า Master Data สำเร็จ: "
-                        f"Line +{created_lines}, Part +{created_parts}, Defect +{created_defects} (อัปเดต {updated_defects}), Scrap +{created_scraps} | ข้าม {skipped}",
+                        f"Line +{created_lines}, Part +{created_parts}, Defect +{created_defects} (อัปเดต {updated_defects}), Component Part +{created_component_parts} | ข้าม {skipped}",
+                    )
+                    transaction.on_commit(
+                        lambda: log_event(
+                            request,
+                            action="settings:import_master_data",
+                            message="นำเข้า master data (settings) สำเร็จ",
+                            metadata={
+                                "filename": getattr(uploaded, "name", ""),
+                                "created_lines": created_lines,
+                                "created_parts": created_parts,
+                                "created_defects": created_defects,
+                                "updated_defects": updated_defects,
+                                "created_component_parts": created_component_parts,
+                                "skipped": skipped,
+                            },
+                        )
                     )
                     return self.get(request, *args, **kwargs)
 
@@ -280,18 +305,21 @@ class SettingsViews(TemplateView):
                     defect_code = (request.POST.get("defect_code") or "").strip()
                     defect_image = request.FILES.get("defect_image")
 
-                    scrap_items = request.POST.getlist("scrap_items[]")
-                    if not scrap_items:
-                        scrap_items = request.POST.getlist("scrap_items")
-                    scrap_items = [s.strip() for s in scrap_items if (s or "").strip()]
+                    component_parts = request.POST.getlist("component_parts[]")
+                    if not component_parts:
+                        component_parts = request.POST.getlist("component_parts")
+                    component_parts = [s.strip() for s in component_parts if (s or "").strip()]
 
                     if not line_code or not part_number or not defect_name:
                         messages.error(request, "กรุณากรอกข้อมูลที่จำเป็นให้ครบ (Production line / Part number / Defect mode)")
                         return self.get(request, *args, **kwargs)
 
-                    line, _ = ProductionLine.objects.get_or_create(code=line_code)
-                    part, _ = PartNumber.objects.get_or_create(production_line=line, number=part_number)
-                    defect, _ = DefectMode.objects.get_or_create(part=part, name=defect_name)
+                    line, line_created = ProductionLine.objects.get_or_create(code=line_code)
+                    part, part_created = PartNumber.objects.get_or_create(production_line=line, number=part_number)
+                    defect, defect_created = DefectMode.objects.get_or_create(part=part, name=defect_name)
+
+                    old_defect_code = defect.code or ""
+                    had_image_before = bool(defect.reference_image)
 
                     updated_fields = []
                     if defect_code and defect.code != defect_code:
@@ -304,20 +332,48 @@ class SettingsViews(TemplateView):
                         updated_fields.append("updated_at")
                         defect.save(update_fields=updated_fields)
 
-                    created_scraps = 0
-                    if scrap_items:
-                        for scrap_name in scrap_items:
-                            _, created = ScrapItem.objects.get_or_create(part_number=part, name=scrap_name)
+                    created_component_parts = 0
+                    if component_parts:
+                        for component_part_name in component_parts:
+                            _, created = ComponentPart.objects.get_or_create(
+                                part_number=part,
+                                name=component_part_name,
+                            )
                             if created:
-                                created_scraps += 1
+                                created_component_parts += 1
                     else:
-                        # Keep downstream pages usable even if no scrap was provided
-                        ScrapItem.objects.get_or_create(part_number=part, name="Component part")
+                        # Keep downstream pages usable even if no component part was provided
+                        ComponentPart.objects.get_or_create(part_number=part, name="Component part")
 
                     messages.success(
                         request,
                         f"บันทึก Master Data สำเร็จ: Line {line_code}, Part {part_number}, Defect {defect_name}"
-                        + (f" (+{created_scraps} scrap)" if created_scraps else ""),
+                        + (f" (+{created_component_parts} component part)" if created_component_parts else ""),
+                    )
+
+                    new_defect_code = defect.code or ""
+                    has_image_after = bool(defect.reference_image)
+                    transaction.on_commit(
+                        lambda: log_event(
+                            request,
+                            action="settings:save_master_data",
+                            message="บันทึก master data (settings)",
+                            metadata={
+                                "line_code": line_code,
+                                "part_number": part_number,
+                                "defect_id": defect.pk,
+                                "defect_name": defect_name,
+                                "line_created": line_created,
+                                "part_created": part_created,
+                                "defect_created": defect_created,
+                                "defect_code": {"from": old_defect_code, "to": new_defect_code}
+                                if old_defect_code != new_defect_code
+                                else None,
+                                "defect_image_changed": (had_image_before != has_image_after) or bool(defect_image),
+                                "component_parts_created": created_component_parts,
+                                "component_parts_count": len(component_parts),
+                            },
+                        )
                     )
 
                     return self.get(request, *args, **kwargs)
@@ -327,8 +383,16 @@ class SettingsViews(TemplateView):
                     if not line_code:
                         messages.error(request, "กรุณากรอก Production line code")
                         return self.get(request, *args, **kwargs)
-                    ProductionLine.objects.get_or_create(code=line_code)
+                    _, created = ProductionLine.objects.get_or_create(code=line_code)
                     messages.success(request, f"เพิ่ม Production line {line_code} สำเร็จ")
+                    transaction.on_commit(
+                        lambda: log_event(
+                            request,
+                            action="settings:add_line",
+                            message="เพิ่ม Production line",
+                            metadata={"line_code": line_code, "created": created},
+                        )
+                    )
 
                 elif action == "add_part":
                     line_code = (request.POST.get("line_for_part") or "").strip().upper()
@@ -336,9 +400,22 @@ class SettingsViews(TemplateView):
                     if not line_code or not part_number:
                         messages.error(request, "กรุณาเลือก Production line และกรอก Part number")
                         return self.get(request, *args, **kwargs)
-                    line, _ = ProductionLine.objects.get_or_create(code=line_code)
-                    PartNumber.objects.get_or_create(production_line=line, number=part_number)
+                    line, line_created = ProductionLine.objects.get_or_create(code=line_code)
+                    _, part_created = PartNumber.objects.get_or_create(production_line=line, number=part_number)
                     messages.success(request, f"เพิ่ม Part number {part_number} ใน {line_code} สำเร็จ")
+                    transaction.on_commit(
+                        lambda: log_event(
+                            request,
+                            action="settings:add_part",
+                            message="เพิ่ม Part number",
+                            metadata={
+                                "line_code": line_code,
+                                "part_number": part_number,
+                                "line_created": line_created,
+                                "part_created": part_created,
+                            },
+                        )
+                    )
 
                 elif action == "add_defect":
                     line_code = (request.POST.get("line_for_defect") or "").strip().upper()
@@ -347,21 +424,37 @@ class SettingsViews(TemplateView):
                     if not line_code or not part_number or not defect_name:
                         messages.error(request, "กรุณาเลือก Production line/Part number และกรอก Defect mode")
                         return self.get(request, *args, **kwargs)
-                    line, _ = ProductionLine.objects.get_or_create(code=line_code)
-                    part, _ = PartNumber.objects.get_or_create(production_line=line, number=part_number)
-                    defect, _ = DefectMode.objects.get_or_create(part=part, name=defect_name)
+                    line, line_created = ProductionLine.objects.get_or_create(code=line_code)
+                    part, part_created = PartNumber.objects.get_or_create(production_line=line, number=part_number)
+                    defect, defect_created = DefectMode.objects.get_or_create(part=part, name=defect_name)
 
                     # Ensure at least one scrap option exists for this part
-                    if not ScrapItem.objects.filter(part_number=part).exists():
-                        ScrapItem.objects.get_or_create(part_number=part, name="Component part")
+                    if not ComponentPart.objects.filter(part_number=part).exists():
+                        ComponentPart.objects.get_or_create(part_number=part, name="Component part")
                     messages.success(request, f"เพิ่ม Defect mode {defect_name} สำเร็จ")
+                    transaction.on_commit(
+                        lambda: log_event(
+                            request,
+                            action="settings:add_defect",
+                            message="เพิ่ม Defect mode",
+                            metadata={
+                                "line_code": line_code,
+                                "part_number": part_number,
+                                "defect_id": defect.pk,
+                                "defect_name": defect_name,
+                                "line_created": line_created,
+                                "part_created": part_created,
+                                "defect_created": defect_created,
+                            },
+                        )
+                    )
 
-                elif action == "add_scrap_item":
+                elif action == "add_component_part":
                     # Accept defect PK (preferred) or defect name
                     defect_key = (request.POST.get("defect_for_scrap") or "").strip()
-                    scrap_name = (request.POST.get("scrap_item") or "").strip()
-                    if not defect_key or not scrap_name:
-                        messages.error(request, "กรุณาระบุ Defect mode และ Scrap item")
+                    component_part_name = (request.POST.get("component_part") or "").strip()
+                    if not defect_key or not component_part_name:
+                        messages.error(request, "กรุณาระบุ Defect mode และ Component Part")
                         return self.get(request, *args, **kwargs)
                     defect = None
                     if defect_key.isdigit():
@@ -371,8 +464,23 @@ class SettingsViews(TemplateView):
                     if defect is None:
                         messages.error(request, "ไม่พบ Defect mode ที่ระบุ")
                         return self.get(request, *args, **kwargs)
-                    ScrapItem.objects.get_or_create(part_number=defect.part, name=scrap_name)
-                    messages.success(request, f"เพิ่ม Scrap item {scrap_name} สำเร็จ")
+                    obj, created = ComponentPart.objects.get_or_create(part_number=defect.part, name=component_part_name)
+                    messages.success(request, f"เพิ่ม Component Part {component_part_name} สำเร็จ")
+                    transaction.on_commit(
+                        lambda: log_event(
+                            request,
+                            action="settings:add_component_part",
+                            message="เพิ่ม Component Part",
+                            metadata={
+                                "component_part_id": obj.pk,
+                                "component_part_name": component_part_name,
+                                "defect_id": defect.pk,
+                                "line_code": defect.part.production_line.code if defect.part_id else "",
+                                "part_number": defect.part.number if defect.part_id else "",
+                                "created": created,
+                            },
+                        )
+                    )
 
                 else:
                     messages.error(request, "คำสั่งไม่ถูกต้อง")

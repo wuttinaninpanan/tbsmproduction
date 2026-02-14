@@ -9,47 +9,8 @@
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการข้อมูล Defect mode</h1>
-			<p class="text-sm text-slate-600 mt-1">ค้นหา เพิ่ม แก้ไข และลบข้อมูล Defect mode</p>
-		</div>
-		<div class="flex items-center gap-2">
-			<button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
-				<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-					<path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd" />
-				</svg>
-				เพิ่ม Defect mode
-			</button>
 		</div>
 	</header>
-
-	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-		<form method="post" enctype="multipart/form-data" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 flex-1">
-			{% csrf_token %}
-			<input type="hidden" name="action" value="import_master_data" />
-			<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-				<div class="md:col-span-6">
-					<label class="block text-sm font-semibold text-slate-700">นำเข้า Defect mode (Excel)</label>
-					<input type="file" name="excel_file" accept=".xlsx" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2" />
-				</div>
-				<div class="md:col-span-3 flex items-end">
-					<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
-						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-							<path fill-rule="evenodd" d="M3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75ZM10 2a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.75A.75.75 0 0 1 10 2Z" clip-rule="evenodd" />
-						</svg>
-						นำเข้า
-					</button>
-				</div>
-				<div class="md:col-span-3 flex items-end">
-					<a href="?action=download_template" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
-						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-							<path fill-rule="evenodd" d="M10 1.75a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.5a.75.75 0 0 1 .75-.75ZM3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
-						</svg>
-						ดาวน์โหลด Template
-					</a>
-				</div>
-			</div>
-			<div class="mt-2 text-xs text-slate-600">Template จะดาวน์โหลดเป็น .xlsx เท่านั้น</div>
-		</form>
-	</div>
 
 	{% if messages %}
 		<div class="space-y-2">
@@ -65,8 +26,8 @@
 		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
 			<div class="md:col-span-4">
 				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Part / Defect / Code"
-					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา DefectMode"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
 			<div class="md:col-span-2 flex items-end">
@@ -89,25 +50,61 @@
 		<div class="bg-slate-100 px-4 py-3">
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div class="font-extrabold text-slate-800">Defect Modes</div>
-				<form method="get" class="flex items-center gap-2">
-					<input type="hidden" name="q" value="{{ q|default:'' }}" />
-					<div class="flex items-center gap-2">
-						<span class="text-sm text-gray-700">Show</span>
-						<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
-							<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-							<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
-							<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-							<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
-						</select>
-						<span class="text-sm text-gray-700">entries</span>
-					</div>
-				</form>
+				<div class="flex items-center gap-2">
+					<form id="importForm" method="post" enctype="multipart/form-data" class="inline">
+						{% csrf_token %}
+						<input type="hidden" name="action" value="import_master_data" />
+						<input id="importFile" type="file" name="excel_file" accept=".xlsx" class="hidden" />
+					</form>
+					<a href="?action=download_template" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M4 2.75A1.75 1.75 0 0 1 5.75 1h6.19c.46 0 .9.18 1.23.51l2.32 2.32c.33.33.51.77.51 1.23v12.19A1.75 1.75 0 0 1 14.25 19H5.75A1.75 1.75 0 0 1 4 17.25V2.75Z" />
+							<path d="M12 1.5v2.25c0 .69.56 1.25 1.25 1.25H15.5" />
+						</svg>
+						Template Excel
+					</a>
+                    <button type="button" id="importBtn" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-green-600 text-white hover:bg-green-700 transition whitespace-nowrap">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M10 2a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.75A.75.75 0 0 1 10 2ZM3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+							</svg>
+							นำเข้าข้อมูล
+						</button>
+                    <button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd" />
+						</svg>
+						เพิ่มข้อมูล
+					</button>
+					<button type="button" id="bulkDeleteBtn" disabled class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+						<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+						<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>	
+						</svg>
+						ลบที่เลือก
+					</button>
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-gray-700">Show</span>
+							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							</select>
+							<span class="text-sm text-gray-700">entries</span>
+						</div>
+					</form>
+				</div>
 			</div>
 		</div>
 		<div class="overflow-x-auto">
 			<table class="min-w-full text-sm">
 				<thead class="bg-white text-slate-800">
 					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
+						</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Code</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
 						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
@@ -116,6 +113,9 @@
 				<tbody class="divide-y divide-slate-200">
 					{% for r in rows %}
 						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3">
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" />
+							</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.code|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700">{{ r.name|default:"-" }}</td>
 							<td class="px-4 py-3">
@@ -140,7 +140,7 @@
 							</td>
 						</tr>
 					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="3">ยังไม่มีข้อมูล Defect mode</td></tr>
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="4">ยังไม่มีข้อมูล Defect mode</td></tr>
 					{% endfor %}
 				</tbody>
 			</table>
@@ -310,6 +310,60 @@
 	const editModal = document.getElementById('editModal');
 	const deleteModal = document.getElementById('deleteModal');
 	const deleteLabel = document.getElementById('deleteLabel');
+
+	// Toolbar: import + bulk delete
+	const importBtn = document.getElementById('importBtn');
+	const importFile = document.getElementById('importFile');
+	const importForm = document.getElementById('importForm');
+	if (importBtn && importFile && importForm) {
+		importBtn.addEventListener('click', () => importFile.click());
+		importFile.addEventListener('change', () => {
+			if (importFile.files && importFile.files.length > 0) {
+				importForm.submit();
+			}
+		});
+	}
+
+	const selectAllRows = document.getElementById('selectAllRows');
+	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+	const rowCheckboxes = Array.from(document.querySelectorAll('.rowCheckbox'));
+
+	function selectedIds() {
+		return rowCheckboxes.filter(cb => cb.checked).map(cb => cb.dataset.id).filter(Boolean);
+	}
+	function syncBulkState() {
+		if (!bulkDeleteBtn) return;
+		bulkDeleteBtn.disabled = selectedIds().length === 0;
+	}
+	if (selectAllRows) {
+		selectAllRows.addEventListener('change', () => {
+			rowCheckboxes.forEach(cb => { cb.checked = !!selectAllRows.checked; });
+			syncBulkState();
+		});
+	}
+	rowCheckboxes.forEach(cb => cb.addEventListener('change', syncBulkState));
+	if (bulkDeleteBtn) {
+		bulkDeleteBtn.addEventListener('click', () => {
+			const ids = selectedIds();
+			if (ids.length === 0) return;
+			// Clear previous bulk inputs
+			Array.from(actionForm.querySelectorAll('input[name="bulk_id"]')).forEach(n => n.remove());
+			actionField.value = 'bulk_delete_defects';
+			idField.value = '';
+			lineField.value = '';
+			partField.value = '';
+			codeField.value = '';
+			nameField.value = '';
+			ids.forEach(id => {
+				const input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'bulk_id';
+				input.value = String(id);
+				actionForm.appendChild(input);
+			});
+			actionForm.submit();
+		});
+	}
 
 	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
 	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }

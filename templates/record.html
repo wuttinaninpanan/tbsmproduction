@@ -2,7 +2,7 @@
 
 {% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
-{% block title %}Production Scrap Record — TBSMRD{% endblock %}
+{% block title %}Production Component Part Record — TBSMRD{% endblock %}
 
 {% block content %}
 <section class="space-y-8">
@@ -316,7 +316,7 @@
 				refWrap.classList.add('hidden');
 			}
 
-			// Scrap name (read-only)
+			// Component Part name (read-only)
 			const scrapText = document.createElement('input');
 			scrapText.type = 'text';
 			scrapText.readOnly = true;
@@ -325,15 +325,15 @@
 			scrapCell.appendChild(scrapText);
 			const scrapHint = document.createElement('div');
 			scrapHint.className = 'text-xs text-slate-600 mt-2';
-			scrapHint.textContent = 'Scrap (มาจาก master data)';
+			scrapHint.textContent = 'Component Part (มาจาก master data)';
 			scrapCell.appendChild(scrapHint);
 
 			// Hidden fields
-			const scrapIdHidden = document.createElement('input');
-			scrapIdHidden.type = 'hidden';
-			scrapIdHidden.name = `blocks[${gi}][rows][${ri}][scrap_id]`;
-			scrapIdHidden.value = scrap?.id || '';
-			scrapCell.appendChild(scrapIdHidden);
+			const componentPartIdHidden = document.createElement('input');
+			componentPartIdHidden.type = 'hidden';
+			componentPartIdHidden.name = `blocks[${gi}][rows][${ri}][component_part_id]`;
+			componentPartIdHidden.value = scrap?.id || '';
+			scrapCell.appendChild(componentPartIdHidden);
 
 			const defectIdHidden = document.createElement('input');
 			defectIdHidden.type = 'hidden';
@@ -341,11 +341,11 @@
 			defectIdHidden.value = scrap?.defect_id || '';
 			scrapCell.appendChild(defectIdHidden);
 
-			const scrapNameHidden = document.createElement('input');
-			scrapNameHidden.type = 'hidden';
-			scrapNameHidden.name = `blocks[${gi}][rows][${ri}][scrap_name]`;
-			scrapNameHidden.value = scrap?.name || '';
-			scrapCell.appendChild(scrapNameHidden);
+			const componentPartNameHidden = document.createElement('input');
+			componentPartNameHidden.type = 'hidden';
+			componentPartNameHidden.name = `blocks[${gi}][rows][${ri}][component_part_name]`;
+			componentPartNameHidden.value = scrap?.name || '';
+			scrapCell.appendChild(componentPartNameHidden);
 
 			// Quantity (always selectable)
 			const qty = document.createElement('select');
@@ -372,8 +372,8 @@
 			}
 			if (!defectId) return;
 			const defect = defectByIdFor(lineId, partId, defectId);
-			const scraps = defect ? (defect.scraps || []) : [];
-			const normalized = scraps.length ? scraps : [{ id: '', name: 'Component part', defect_id: defectId, image_url: '' }];
+			const componentParts = defect ? (defect.component_parts || []) : [];
+			const normalized = componentParts.length ? componentParts : [{ id: '', name: 'Component part', defect_id: defectId, image_url: '' }];
 
 			if (headerRowEl) {
 				buildScrapCells({

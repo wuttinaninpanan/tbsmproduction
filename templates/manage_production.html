@@ -26,7 +26,7 @@
 		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
 			<div class="md:col-span-4">
 				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Part / Scrap"
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Part / Component Part"
 					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
@@ -50,6 +50,9 @@
 			</div>
 			<div class="md:col-span-1 flex items-end">
 				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+						<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
+					</svg>
 					ค้นหา
 				</button>
 			</div>
@@ -57,7 +60,7 @@
 
 		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
 			<div class="text-xs text-slate-600">
-				Line {{ counts.lines|default:0 }} / Part {{ counts.parts|default:0 }} / Scrap {{ counts.scraps|default:0 }}
+				Line {{ counts.lines|default:0 }} / Part {{ counts.parts|default:0 }} / Component Part {{ counts.scraps|default:0 }}
 			</div>
 			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
 		</div>
@@ -67,7 +70,7 @@
 	<div class="rounded-2xl border border-slate-200 overflow-hidden">
 		<div class="bg-slate-100 px-4 py-3">
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-				<div class="font-extrabold text-slate-800">Master Data (Line / Part / Scrap)</div>
+				<div class="font-extrabold text-slate-800">Master Data (Line / Part / Component Part)</div>
 				<div class="flex items-center gap-2">
 					<a href="?action=download_template" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition whitespace-nowrap">
 						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
@@ -105,7 +108,7 @@
 						<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
 						<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>	
 						</svg>
-						ลบรายการที่เลือก
+						ลบที่เลือก
 					</button>
 					<form method="get" class="flex items-center gap-2">
 						<input type="hidden" name="q" value="{{ q|default:'' }}" />
@@ -144,21 +147,21 @@
 					{% for r in rows %}
 						<tr class="hover:bg-slate-50">
 							<td class="px-4 py-3">
-								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-line-id="{{ r.line_id|default:'' }}" data-part-id="{{ r.part_id|default:'' }}" data-scrap-id="{{ r.scrap_id|default:'' }}" />
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-line-id="{{ r.line_id|default:'' }}" data-part-id="{{ r.part_id|default:'' }}" data-component-part-id="{{ r.component_part_id|default:'' }}" />
 							</td>
 							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.line_code|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
 							<td class="px-4 py-3">
-								{% if r.scrap_image_url %}
-									<a href="{{ r.scrap_image_url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
-										<img src="{{ r.scrap_image_url }}" alt="{{ r.scrap_name|default:'' }}" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
+								{% if r.component_part_image_url %}
+									<a href="{{ r.component_part_image_url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
+										<img src="{{ r.component_part_image_url }}" alt="{{ r.component_part_name|default:'' }}" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
 										<span class="text-xs text-blue-700 font-semibold hover:underline whitespace-nowrap">ดูรูป</span>
 									</a>
 								{% else %}
 									<span class="text-slate-500">-</span>
 								{% endif %}
 							</td>
-							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.scrap_name|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.component_part_name|default:"-" }}</td>
 							<td class="px-4 py-3 text-right text-slate-700">{{ r.record_count|default:0 }}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-end gap-2">
@@ -167,11 +170,11 @@
 										data-open-edit-row
 										data-line-id="{{ r.line_id|default:'' }}"
 										data-part-id="{{ r.part_id|default:'' }}"
-										data-scrap-id="{{ r.scrap_id|default:'' }}"
+										data-component-part-id="{{ r.component_part_id|default:'' }}"
 										data-line-code="{{ r.line_code|default:'' }}"
 										data-part-number="{{ r.part_number|default:'' }}"
-										data-scrap-name="{{ r.scrap_name|default:'' }}"
-										data-scrap-image-url="{{ r.scrap_image_url|default:'' }}">
+										data-component-part-name="{{ r.component_part_name|default:'' }}"
+										data-component-part-image-url="{{ r.component_part_image_url|default:'' }}">
 										แก้ไข
 									</button>
 									<button type="button"
@@ -179,8 +182,8 @@
 										data-open-delete-row
 										data-line-id="{{ r.line_id|default:'' }}"
 										data-part-id="{{ r.part_id|default:'' }}"
-										data-scrap-id="{{ r.scrap_id|default:'' }}"
-										data-label="{{ r.line_code|default:'' }} {{ r.part_number|default:'' }}{% if r.scrap_name %} / {{ r.scrap_name }}{% endif %}">
+										data-component-part-id="{{ r.component_part_id|default:'' }}"
+										data-label="{{ r.line_code|default:'' }} {{ r.part_number|default:'' }}{% if r.component_part_name %} / {{ r.component_part_name }}{% endif %}">
 										ลบ
 									</button>
 								</div>
@@ -268,21 +271,21 @@
 	<input type="hidden" name="value" id="valueField" value="" />
 	<input type="hidden" name="line_id" id="lineIdField" value="" />
 	<input type="hidden" name="part_id" id="partIdField" value="" />
-	<input type="hidden" name="scrap_id" id="scrapIdField" value="" />
+	<input type="hidden" name="component_part_id" id="componentPartIdField" value="" />
 	<input type="hidden" name="line_code" id="lineCodeField" value="" />
 	<input type="hidden" name="part_number" id="partNumberField" value="" />
-	<input type="hidden" name="scrap_name" id="scrapNameField" value="" />
+	<input type="hidden" name="component_part_name" id="componentPartNameField" value="" />
 </form>
 
-<!-- Add Modal (Line/Part/Scrap) -->
+<!-- Add Modal (Line/Part/Component Part) -->
 <div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
 	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
 	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
 		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
 			<span class="text-slate-700 text-xl leading-none">×</span>
 		</button>
-		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่ม Master Data</h2>
-		<p class="text-xs text-slate-600 mt-1">เพิ่ม Line / Part / Scrap (ไม่จัดการ Defect ในหน้านี้)</p>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่ม Production Master Data</h2>
+		<p class="text-xs text-slate-600 mt-1">เพิ่ม Line / Part / Component Part</p>
 		<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
 			<div>
 				<label class="block text-sm font-semibold text-slate-700">Line <span class="text-red-600">*</span></label>
@@ -293,18 +296,24 @@
 				<input id="addPart" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น DAR-54" />
 			</div>
 			<div>
-				<label class="block text-sm font-semibold text-slate-700">Scrap</label>
-				<input id="addScrap" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น Burr" />
+				<label class="block text-sm font-semibold text-slate-700">Component Part</label>
+				<div id="addComponentPartRows" class="mt-1 space-y-2">
+					<div class="flex items-center gap-2" data-add-component-part-row>
+						<input id="addComponentPartFirst" type="text" class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 addComponentPartItem" placeholder="เช่น Burr" />
+						<button type="button" class="px-3 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-remove-component-part-row disabled>ลบ</button>
+					</div>
+				</div>
+				<button type="button" id="addComponentPartRowBtn" class="mt-2 inline-flex items-center px-3 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">+ เพิ่ม Component Part</button>
 				<p class="mt-1 text-xs text-slate-500">ถ้าไม่กรอก จะเพิ่มเฉพาะ Line/Part</p>
 			</div>
 			<div class="sm:col-span-2">
-				<label class="block text-sm font-semibold text-slate-700">รูปภาพ Scrap (Reference Image)</label>
+				<label class="block text-sm font-semibold text-slate-700">รูปภาพ Component Part (Reference Image)</label>
 				<div class="mt-1 flex items-center gap-3">
-					<img id="addScrapImagePreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100 opacity-40" alt="Scrap image preview" />
-					<input id="addScrapImage" type="file" accept="image/*" name="scrap_image" form="actionForm"
+					<img id="addComponentPartImagePreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100 opacity-40" alt="Component Part image preview" />
+					<input id="addComponentPartImage" type="file" accept="image/*" name="component_part_image" form="actionForm"
 						class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
 				</div>
-				<p class="mt-1 text-xs text-slate-500">ถ้าอัปโหลดรูป ต้องกรอกชื่อ Scrap ด้วย</p>
+				<p class="mt-1 text-xs text-slate-500">ถ้าอัปโหลดรูป ต้องกรอกชื่อ Component Part ด้วย (รองรับการอัปโหลดรูปได้ครั้งละ 1 Component Part)</p>
 			</div>
 		</div>
 		<div class="mt-5 flex items-center justify-end gap-2">
@@ -333,17 +342,17 @@
 				<input id="editPart" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div>
-				<label class="block text-sm font-semibold text-slate-700">Scrap</label>
-				<input id="editScrap" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				<label class="block text-sm font-semibold text-slate-700">Component Part</label>
+				<input id="editComponentPart" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div class="sm:col-span-2">
-				<label class="block text-sm font-semibold text-slate-700">รูปภาพ Scrap (Reference Image)</label>
+				<label class="block text-sm font-semibold text-slate-700">รูปภาพ Component Part (Reference Image)</label>
 				<div class="mt-1 flex items-center gap-3">
-					<img id="editScrapImagePreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="Scrap image preview" />
-					<input id="editScrapImage" type="file" accept="image/*" name="scrap_image" form="actionForm"
+					<img id="editComponentPartImagePreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="Component Part image preview" />
+					<input id="editComponentPartImage" type="file" accept="image/*" name="component_part_image" form="actionForm"
 						class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
 				</div>
-				<p class="mt-1 text-xs text-slate-500">เลือกไฟล์ใหม่เพื่อแทนที่รูปเดิม (แก้ได้เฉพาะแถวที่มี Scrap)</p>
+				<p class="mt-1 text-xs text-slate-500">เลือกไฟล์ใหม่เพื่อแทนที่รูปเดิม (แก้ได้เฉพาะแถวที่มี Component Part)</p>
 			</div>
 		</div>
 		<div class="mt-5 flex items-center justify-end gap-2">
@@ -377,23 +386,25 @@
 	const valueField = document.getElementById('valueField');
 	const lineIdField = document.getElementById('lineIdField');
 	const partIdField = document.getElementById('partIdField');
-	const scrapIdField = document.getElementById('scrapIdField');
+	const componentPartIdField = document.getElementById('componentPartIdField');
 	const lineCodeField = document.getElementById('lineCodeField');
 	const partNumberField = document.getElementById('partNumberField');
-	const scrapNameField = document.getElementById('scrapNameField');
+	const componentPartNameField = document.getElementById('componentPartNameField');
 	const addModal = document.getElementById('addModal');
 	const addLine = document.getElementById('addLine');
 	const addPart = document.getElementById('addPart');
-	const addScrap = document.getElementById('addScrap');
-	const addScrapImage = document.getElementById('addScrapImage');
-	const addScrapImagePreview = document.getElementById('addScrapImagePreview');
+	const addComponentPartRows = document.getElementById('addComponentPartRows');
+	const addComponentPartFirst = document.getElementById('addComponentPartFirst');
+	const addComponentPartRowBtn = document.getElementById('addComponentPartRowBtn');
+	const addComponentPartImage = document.getElementById('addComponentPartImage');
+	const addComponentPartImagePreview = document.getElementById('addComponentPartImagePreview');
 
 	const editModal = document.getElementById('editModal');
 	const editLine = document.getElementById('editLine');
 	const editPart = document.getElementById('editPart');
-	const editScrap = document.getElementById('editScrap');
-	const editScrapImage = document.getElementById('editScrapImage');
-	const editScrapImagePreview = document.getElementById('editScrapImagePreview');
+	const editComponentPart = document.getElementById('editComponentPart');
+	const editComponentPartImage = document.getElementById('editComponentPartImage');
+	const editComponentPartImagePreview = document.getElementById('editComponentPartImagePreview');
 
 	const deleteModal = document.getElementById('deleteModal');
 	const deleteLabel = document.getElementById('deleteLabel');
@@ -407,6 +418,66 @@
 
 	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
 	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
+
+	function getAddComponentPartInputs() {
+		return Array.from(addComponentPartRows.querySelectorAll('input.addComponentPartItem'));
+	}
+
+	function clearAddComponentPartHiddenInputs() {
+		Array.from(actionForm.querySelectorAll('[data-add-component-part-name]')).forEach(el => el.remove());
+	}
+
+	function setAddComponentPartRows(values) {
+		// reset to exactly one row first
+		addComponentPartRows.innerHTML = '';
+		const firstRow = document.createElement('div');
+		firstRow.className = 'flex items-center gap-2';
+		firstRow.setAttribute('data-add-component-part-row', '1');
+		firstRow.innerHTML = `
+			<input id="addComponentPartFirst" type="text" class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 addComponentPartItem" placeholder="เช่น Burr" />
+			<button type="button" class="px-3 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-remove-component-part-row disabled>ลบ</button>
+		`;
+		addComponentPartRows.appendChild(firstRow);
+		const firstInput = addComponentPartRows.querySelector('#addComponentPartFirst');
+		if (firstInput) firstInput.value = (values && values[0]) ? String(values[0]) : '';
+
+		const extraValues = (values || []).slice(1);
+		extraValues.forEach(v => addComponentPartRow(String(v || '')));
+		wireRemoveButtons();
+	}
+
+	function addComponentPartRow(value) {
+		const row = document.createElement('div');
+		row.className = 'flex items-center gap-2';
+		row.setAttribute('data-add-component-part-row', '1');
+		row.innerHTML = `
+			<input type="text" class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 addComponentPartItem" placeholder="เช่น Burr" />
+			<button type="button" class="px-3 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-remove-component-part-row>ลบ</button>
+		`;
+		addComponentPartRows.appendChild(row);
+		const input = row.querySelector('input');
+		if (input) input.value = value || '';
+		wireRemoveButtons();
+		if (input) setTimeout(() => input.focus(), 0);
+	}
+
+	function wireRemoveButtons() {
+		const rows = Array.from(addComponentPartRows.querySelectorAll('[data-add-component-part-row]'));
+		rows.forEach((row, idx) => {
+			const btn = row.querySelector('[data-remove-component-part-row]');
+			if (!btn) return;
+			if (idx === 0) {
+				btn.disabled = true;
+				btn.addEventListener('click', (e) => e.preventDefault());
+				return;
+			}
+			btn.disabled = false;
+			btn.onclick = () => {
+				row.remove();
+				wireRemoveButtons();
+			};
+		});
+	}
 
 	function getRowCheckboxes() {
 		return Array.from(document.querySelectorAll('.rowCheckbox'));
@@ -427,7 +498,7 @@
 	function fillRowIds(btn) {
 		lineIdField.value = btn.dataset.lineId || '';
 		partIdField.value = btn.dataset.partId || '';
-		scrapIdField.value = btn.dataset.scrapId || '';
+		componentPartIdField.value = btn.dataset.componentPartId || '';
 	}
 
 	document.getElementById('openAddModal').addEventListener('click', () => {
@@ -436,17 +507,24 @@
 		valueField.value = '';
 		lineIdField.value = '';
 		partIdField.value = '';
-		scrapIdField.value = '';
-		scrapNameField.value = '';
+		componentPartIdField.value = '';
+		componentPartNameField.value = '';
 		addLine.value = '';
 		addPart.value = '';
-		addScrap.value = '';
-		addScrapImage.value = '';
-		addScrapImagePreview.src = '';
-		addScrapImagePreview.classList.add('opacity-40');
+		setAddComponentPartRows(['']);
+		addComponentPartImage.value = '';
+		addComponentPartImagePreview.src = '';
+		addComponentPartImagePreview.classList.add('opacity-40');
+		clearAddComponentPartHiddenInputs();
 		openModal(addModal);
 		setTimeout(() => addLine.focus(), 0);
 	});
+
+	if (addComponentPartRowBtn) {
+		addComponentPartRowBtn.addEventListener('click', () => {
+			addComponentPartRow('');
+		});
+	}
 
 	if (importBtn && importFile && importForm) {
 		importBtn.addEventListener('click', () => {
@@ -481,30 +559,30 @@
 		valueField.value = '';
 		lineIdField.value = '';
 		partIdField.value = '';
-		scrapIdField.value = '';
+		componentPartIdField.value = '';
 		lineCodeField.value = '';
 		partNumberField.value = '';
-		scrapNameField.value = '';
+		componentPartNameField.value = '';
 		selected.forEach(cb => {
 			const lineId = cb.dataset.lineId || '';
 			const partId = cb.dataset.partId || '';
-			const scrapId = cb.dataset.scrapId || '';
+			const componentPartId = cb.dataset.componentPartId || '';
 			const input = document.createElement('input');
 			input.type = 'hidden';
 			input.name = 'bulk_row';
-			input.value = `${lineId}|${partId}|${scrapId}`;
+			input.value = `${lineId}|${partId}|${componentPartId}`;
 			input.setAttribute('data-bulk-row', '1');
 			actionForm.appendChild(input);
 		});
 		actionForm.submit();
 	});
 
-	addScrapImage.addEventListener('change', () => {
-		const file = addScrapImage.files && addScrapImage.files[0];
+	addComponentPartImage.addEventListener('change', () => {
+		const file = addComponentPartImage.files && addComponentPartImage.files[0];
 		if (!file) return;
 		const url = URL.createObjectURL(file);
-		addScrapImagePreview.src = url;
-		addScrapImagePreview.classList.remove('opacity-40');
+		addComponentPartImagePreview.src = url;
+		addComponentPartImagePreview.classList.remove('opacity-40');
 	});
 
 	document.querySelectorAll('[data-open-edit-row]').forEach(btn => {
@@ -515,41 +593,41 @@
 
 			editLine.value = btn.dataset.lineCode || '';
 			editPart.value = btn.dataset.partNumber || '';
-			editScrap.value = btn.dataset.scrapName || '';
-			const scrapImageUrl = btn.dataset.scrapImageUrl || '';
+			editComponentPart.value = btn.dataset.componentPartName || '';
+			const componentPartImageUrl = btn.dataset.componentPartImageUrl || '';
 
-				// Allow editing existing objects in the row (Line/Part/Scrap)
+				// Allow editing existing objects in the row (Line/Part/Component Part)
 				const hasLine = !!lineIdField.value;
 				const hasPart = !!partIdField.value;
-				const hasScrap = !!scrapIdField.value;
+				const hasComponentPart = !!componentPartIdField.value;
 				editLine.disabled = !hasLine;
 				editPart.disabled = !hasPart;
-				editScrap.disabled = !hasScrap;
-				editScrapImage.disabled = !hasScrap;
-			editScrapImage.value = '';
-			if (scrapImageUrl) {
-				editScrapImagePreview.src = scrapImageUrl;
-				editScrapImagePreview.classList.remove('opacity-40');
+				editComponentPart.disabled = !hasComponentPart;
+				editComponentPartImage.disabled = !hasComponentPart;
+			editComponentPartImage.value = '';
+			if (componentPartImageUrl) {
+				editComponentPartImagePreview.src = componentPartImageUrl;
+				editComponentPartImagePreview.classList.remove('opacity-40');
 			} else {
-				editScrapImagePreview.src = '';
-				editScrapImagePreview.classList.add('opacity-40');
+				editComponentPartImagePreview.src = '';
+				editComponentPartImagePreview.classList.add('opacity-40');
 			}
 
 				openModal(editModal);
 				setTimeout(() => {
 					if (!editLine.disabled) return editLine.focus();
 					if (!editPart.disabled) return editPart.focus();
-					if (!editScrap.disabled) return editScrap.focus();
+					if (!editComponentPart.disabled) return editComponentPart.focus();
 				}, 0);
 		});
 	});
 
-	editScrapImage.addEventListener('change', () => {
-		const file = editScrapImage.files && editScrapImage.files[0];
+	editComponentPartImage.addEventListener('change', () => {
+		const file = editComponentPartImage.files && editComponentPartImage.files[0];
 		if (!file) return;
 		const url = URL.createObjectURL(file);
-		editScrapImagePreview.src = url;
-		editScrapImagePreview.classList.remove('opacity-40');
+		editComponentPartImagePreview.src = url;
+		editComponentPartImagePreview.classList.remove('opacity-40');
 	});
 
 	document.querySelectorAll('[data-open-delete-row]').forEach(btn => {
@@ -583,14 +661,30 @@
 	document.getElementById('addSubmit').addEventListener('click', () => {
 		lineCodeField.value = (addLine.value || '').trim().toUpperCase();
 		partNumberField.value = (addPart.value || '').trim();
-		scrapNameField.value = (addScrap.value || '').trim();
+		const names = getAddComponentPartInputs()
+			.map(el => (el.value || '').trim())
+			.filter(v => !!v);
+
+		// Keep the legacy single field populated with the first name (if any)
+		componentPartNameField.value = names[0] || '';
+
+		// Clear + add repeated list inputs
+		clearAddComponentPartHiddenInputs();
+		names.forEach((name) => {
+			const input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = 'component_part_names';
+			input.value = name;
+			input.setAttribute('data-add-component-part-name', '1');
+			actionForm.appendChild(input);
+		});
 		actionForm.submit();
 	});
 
 	document.getElementById('editSubmit').addEventListener('click', () => {
 		lineCodeField.value = editLine.disabled ? '' : (editLine.value || '').trim();
 		partNumberField.value = editPart.disabled ? '' : (editPart.value || '').trim();
-		scrapNameField.value = (editScrap.value || '').trim();
+		componentPartNameField.value = (editComponentPart.value || '').trim();
 		actionForm.submit();
 	});
 	document.getElementById('deleteSubmit').addEventListener('click', () => {

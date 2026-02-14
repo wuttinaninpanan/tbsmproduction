@@ -1,53 +1,64 @@
-<aside class="hidden md:block w-72 shrink-0">
-	<div class="sticky top-24">
-		<div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+<aside id="appSidebar" class="hidden md:block w-72 shrink-0 transition-[width] duration-200">
+	<div class="sticky top-16">
+		<div class="rounded-2xl border border-slate-800 bg-slate-900 shadow-sm p-4 relative">
+			<button id="sidebarToggle" type="button" class="absolute top-1/2 -translate-y-1/2 -right-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-sm" aria-label="Toggle sidebar" aria-pressed="false">
+				<span class="text-lg leading-none" data-sidebar-toggle-icon>‹</span>
+			</button>
+
 			<div class="flex items-center gap-3">
 				<span class="w-10 h-10 rounded-full bg-red-50 border border-red-100 text-red-600 font-extrabold flex items-center justify-center">
 					{{ user.get_full_name|default:user.username|slice:":1"|upper }}
 				</span>
-				<div class="min-w-0">
-					<div class="font-semibold text-slate-900 truncate">{{ user.get_full_name|default:user.username }}</div>
-					<div class="text-sm text-slate-500 truncate">@{{ user.username }}</div>
+				<div id="sidebarUserMeta" class="min-w-0">
+					<div class="font-semibold text-slate-200 truncate">{{ user.get_full_name|default:user.username }}</div>
+					<div class="text-sm text-slate-400 truncate">@{{ user.username }}</div>
 				</div>
 			</div>
 
 			<nav class="mt-4 space-y-1">
-				<div class="px-2 pt-2 pb-1 text-xs font-semibold text-slate-500">เมนูหลัก</div>
-				<a href="/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-800">
+				<div class="sidebar-section px-2 pt-2 pb-1 text-xs font-semibold text-slate-400">เมนูหลัก</div>
+				<a href="/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M3 10.5 12 3l9 7.5"></path>
 						<path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"></path>
 					</svg>
-					หน้าแรก
+					<span class="sidebar-label">หน้าแรก</span>
 				</a>
-				<a href="/about/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/dashboard/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/>
+  						<path fill-rule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A8 8 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3"/>
+					</svg>
+					<span class="sidebar-label">Dashboard</span>
+				</a>
+				<a href="/about/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<circle cx="12" cy="12" r="10"></circle>
 						<path d="M12 16v-4"></path>
 						<path d="M12 8h.01"></path>
 					</svg>
-					เกี่ยวกับ
+					<span class="sidebar-label">เกี่ยวกับ</span>
 				</a>
-				<a href="/contact/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/contact/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M4 4h16v12H5.17L4 17.17V4z"></path>
 						<path d="M7 8h10"></path>
 						<path d="M7 12h7"></path>
 					</svg>
-					ติดต่อ
+					<span class="sidebar-label">ติดต่อ</span>
 				</a>
-				<a href="/record/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/record/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M9 4h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path>
 						<path d="M9 4a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2"></path>
 						<path d="M9 13l2 2 4-4"></path>
 					</svg>
-					บันทึกข้อมูล Scrap
+					<span class="sidebar-label">บันทึกข้อมูล Scrap</span>
 				</a>
 
 				{% if user.is_staff or user.is_superuser %}
-				<div class="px-2 pt-4 pb-1 text-xs font-semibold text-slate-500">จัดการข้อมูล</div>
-				<a href="/manage-scrap/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<div class="sidebar-section px-2 pt-4 pb-1 text-xs font-semibold text-slate-400">จัดการข้อมูล</div>
+				<a href="/manage-component-part/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M8 6h13"></path>
 						<path d="M8 12h13"></path>
@@ -56,29 +67,29 @@
 						<path d="M3 12h.01"></path>
 						<path d="M3 18h.01"></path>
 					</svg>
-					จัดการข้อมูล Scrap
+					<span class="sidebar-label">จัดการข้อมูล Scrap</span>
 				</a>
-				<a href="/manage-defectmode/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/manage-defectmode/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<circle cx="12" cy="12" r="10"></circle>
 						<path d="M12 8v8"></path>
 						<path d="M8 12h8"></path>
 					</svg>
-					จัดการข้อมูล Defect mode
+					<span class="sidebar-label">จัดการข้อมูล Defect mode</span>
 				</a>
-				<a href="/manage-production/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/manage-production/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M12 2l10 6-10 6L2 8l10-6z"></path>
 						<path d="M2 12l10 6 10-6"></path>
 						<path d="M2 16l10 6 10-6"></path>
 					</svg>
-					จัดการข้อมูล Production Line
+					<span class="sidebar-label">จัดการข้อมูล Production Line</span>
 				</a>
 				{% endif %}
 
 				{% if user.is_staff or user.is_superuser %}
-				<div class="px-2 pt-4 pb-1 text-xs font-semibold text-slate-500">รายงานข้อมูล</div>
-				<a href="/report-scrap-monthly/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<div class="sidebar-section px-2 pt-4 pb-1 text-xs font-semibold text-slate-400">รายงานข้อมูล</div>
+				<a href="/report-component-part-monthly/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M8 6h13"></path>
 						<path d="M8 12h13"></path>
@@ -87,48 +98,46 @@
 						<path d="M3 12h.01"></path>
 						<path d="M3 18h.01"></path>
 					</svg>
-					รายงานข้อมูล Scrap
+					<span class="sidebar-label">รายงานข้อมูล Scrap</span>
 				</a>
 				{% endif %}
 
 
-				<div class="px-2 pt-4 pb-1 text-xs font-semibold text-slate-500">ตั้งค่า</div>
-				<a href="/profile/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<div class="sidebar-section px-2 pt-4 pb-1 text-xs font-semibold text-slate-400">ตั้งค่า</div>
+				<a href="/profile/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M20 21a8 8 0 1 0-16 0"></path>
 						<circle cx="12" cy="8" r="4"></circle>
 					</svg>
-					โปรไฟล์ผู้ใช้งาน
+					<span class="sidebar-label">โปรไฟล์ผู้ใช้งาน</span>
 				</a>
 				{% if user.is_superuser %}
-				<a href="/add-user/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
-					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-						<circle cx="8.5" cy="7" r="4"></circle>
-						<path d="M20 8v6"></path>
-						<path d="M23 11h-6"></path>
-					</svg>
-					เพิ่ม User
-				</a>
-				<a href="/manage-user/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700">
+				<a href="/manage-user/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
 						<circle cx="9" cy="7" r="4"></circle>
 						<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
 						<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
 					</svg>
-					จัดการข้อมูล ผู้ใช้งาน
+					<span class="sidebar-label">จัดการข้อมูล ผู้ใช้งาน</span>
+				</a>
+				<a href="/audit-log/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+  						<path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+					</svg>
+					<span class="sidebar-label">Audit Log</span>
 				</a>
 				{% endif %}
 
 				<div class="pt-3">
-					<a href="/logout/" class="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-red-50 text-red-600 font-semibold">
+					<a href="/logout/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 						<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 							<path d="M10 17l5-5-5-5"></path>
 							<path d="M15 12H3"></path>
 							<path d="M21 3v18"></path>
 						</svg>
-						Logout
+						<span class="sidebar-label">Logout</span>
 					</a>
 				</div>
 			</nav>

@@ -9,13 +9,15 @@ Keep importing from `core.models` (preferred) or `core.models.main` (legacy).
 from .defects import DefectMode
 from .production import PartNumber, ProductionLine
 from .profiles import UserProfile
-from .scrap import ScrapItem, ScrapRecord
+from .componentpart import ComponentPart, ComponentPartRecord
+from .audit import AuditLogEntry
 
 __all__ = [
 	"ProductionLine",
 	"PartNumber",
 	"DefectMode",
-	"ScrapItem",
-	"ScrapRecord",
+	"ComponentPart",
+	"ComponentPartRecord",
 	"UserProfile",
+	"AuditLogEntry",
 ]

@@ -9,7 +9,8 @@ from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 from django.core.paginator import Paginator
 
-from core.decorators import staff_required
+from core.services.auditlog import log_event
+from core.auth.decorators import staff_required
 from core.models import DefectMode
 
 try:
@@ -158,6 +159,67 @@ class ManageDefectModeViews(TemplateView):
 		defect_code = (request.POST.get("defect_code") or "").strip()
 		defect_name = (request.POST.get("defect_name") or "").strip()
 
+		if action == "bulk_delete_defects":
+			bulk_ids = request.POST.getlist("bulk_id")
+			ids: list[int] = []
+			for raw in bulk_ids:
+				raw = (raw or "").strip()
+				if raw.isdigit():
+					ids.append(int(raw))
+			if not ids:
+				messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
+				return self.get(request, *args, **kwargs)
+
+			deleted = 0
+			blocked = 0
+			not_found = 0
+			try:
+				with transaction.atomic():
+					for pk in ids:
+						obj = DefectMode.objects.filter(pk=pk, part__isnull=True).first()
+						if obj is None:
+							not_found += 1
+							continue
+						try:
+							obj.delete()
+							deleted += 1
+						except ProtectedError:
+							blocked += 1
+			except Exception as e:
+				log_event(
+					request,
+					action="defectmode:bulk_delete_defects",
+					status="failure",
+					message="ลบ defect mode แบบ bulk ไม่สำเร็จ",
+					metadata={"selected": len(ids), "error": str(e)},
+				)
+				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+				return self.get(request, *args, **kwargs)
+
+			transaction.on_commit(
+				lambda: log_event(
+					request,
+					action="defectmode:bulk_delete_defects",
+					message="ลบ defect mode แบบ bulk",
+					metadata={
+						"selected": len(ids),
+						"deleted": deleted,
+						"blocked": blocked,
+						"not_found": not_found,
+						"ids": ids[:50],
+					},
+				)
+			)
+
+			if blocked:
+				messages.warning(
+					request,
+					f"ลบสำเร็จ {deleted} รายการ, ลบไม่ได้ {blocked} รายการ (มี Component Part Record อ้างอิง), ไม่พบ {not_found}",
+				)
+			else:
+				messages.success(request, f"ลบสำเร็จ {deleted} รายการ" + (f" (ไม่พบ {not_found})" if not_found else ""))
+			return self.get(request, *args, **kwargs)
+
 		if action == "import_master_data":
 			if not uploaded:
 				messages.error(request, "กรุณาเลือกไฟล์ Excel/CSV ก่อนนำเข้า")
@@ -193,10 +255,30 @@ class ManageDefectModeViews(TemplateView):
 						DefectMode.objects.create(part=None, name=name, code=code or None)
 						created += 1
 			except Exception as e:
+				log_event(
+					request,
+					action="defectmode:import_master_data",
+					status="failure",
+					message="นำเข้า defect mode ไม่สำเร็จ",
+					metadata={"filename": getattr(uploaded, "name", ""), "error": str(e)},
+				)
 				messages.error(request, f"เกิดข้อผิดพลาดระหว่างนำเข้า: {e}")
 				return self.get(request, *args, **kwargs)
 
 			messages.success(request, f"นำเข้าสำเร็จ: +{created}, ซ้ำ {dup}, ข้าม {skipped}")
+			transaction.on_commit(
+				lambda: log_event(
+					request,
+					action="defectmode:import_master_data",
+					message="นำเข้า defect mode สำเร็จ",
+					metadata={
+						"filename": getattr(uploaded, "name", ""),
+						"created": created,
+						"dup": dup,
+						"skipped": skipped,
+					},
+				)
+			)
 			return self.get(request, *args, **kwargs)
 
 
@@ -209,13 +291,35 @@ class ManageDefectModeViews(TemplateView):
 					# Keep global defects unique by name (case-insensitive)
 					if DefectMode.objects.filter(part__isnull=True, name__iexact=defect_name).exists():
 						raise IntegrityError("Defect mode ซ้ำ (global): มีชื่อเดียวกันอยู่แล้ว")
-					DefectMode.objects.create(part=None, code=defect_code or None, name=defect_name)
+					obj = DefectMode.objects.create(part=None, code=defect_code or None, name=defect_name)
 					messages.success(request, "เพิ่ม Defect mode สำเร็จ")
+					transaction.on_commit(
+						lambda: log_event(
+							request,
+							action="defectmode:create_defect",
+							message="เพิ่ม defect mode (global)",
+							metadata={"defect_id": obj.pk, "name": defect_name, "code": defect_code or ""},
+						)
+					)
 					return self.get(request, *args, **kwargs)
 			except IntegrityError as e:
+				log_event(
+					request,
+					action="defectmode:create_defect",
+					status="failure",
+					message="เพิ่ม defect mode (global) ไม่สำเร็จ (IntegrityError)",
+					metadata={"name": defect_name, "code": defect_code or "", "error": str(e)},
+				)
 				messages.error(request, f"บันทึกไม่สำเร็จ (ข้อมูลซ้ำหรือผิดเงื่อนไข): {e}")
 				return self.get(request, *args, **kwargs)
 			except Exception as e:
+				log_event(
+					request,
+					action="defectmode:create_defect",
+					status="failure",
+					message="เพิ่ม defect mode (global) ไม่สำเร็จ",
+					metadata={"name": defect_name, "code": defect_code or "", "error": str(e)},
+				)
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 				return self.get(request, *args, **kwargs)
 
@@ -235,6 +339,8 @@ class ManageDefectModeViews(TemplateView):
 						return self.get(request, *args, **kwargs)
 
 					updated_fields = []
+					old_name = defect.name
+					old_code = defect.code or ""
 
 					new_code = defect_code or None
 					if defect.code != new_code:
@@ -252,16 +358,52 @@ class ManageDefectModeViews(TemplateView):
 						updated_fields.append("updated_at")
 						defect.save(update_fields=updated_fields)
 						messages.success(request, "บันทึกการแก้ไขสำเร็จ")
+						new_name = defect.name
+						new_code = defect.code or ""
+						transaction.on_commit(
+							lambda: log_event(
+								request,
+								action="defectmode:update_defect",
+								message="แก้ไข defect mode (global)",
+								metadata={
+									"defect_id": defect.pk,
+									"changed_fields": [f for f in updated_fields if f != "updated_at"],
+									"name": {"from": old_name, "to": new_name} if old_name != new_name else None,
+									"code": {"from": old_code, "to": new_code} if old_code != new_code else None,
+								},
+							)
+						)
 					else:
 						messages.info(request, "ไม่มีการเปลี่ยนแปลง")
 					return self.get(request, *args, **kwargs)
 			except ProtectedError:
-				messages.error(request, "บันทึกไม่สำเร็จ: มีข้อมูล Scrap Record อ้างอิงอยู่")
+				log_event(
+					request,
+					action="defectmode:update_defect",
+					status="failure",
+					message="แก้ไข defect mode (global) ไม่สำเร็จ (ProtectedError)",
+					metadata={"defect_id": obj_id},
+				)
+				messages.error(request, "บันทึกไม่สำเร็จ: มีข้อมูล Component Part Record อ้างอิงอยู่")
 				return self.get(request, *args, **kwargs)
 			except IntegrityError as e:
+				log_event(
+					request,
+					action="defectmode:update_defect",
+					status="failure",
+					message="แก้ไข defect mode (global) ไม่สำเร็จ (IntegrityError)",
+					metadata={"defect_id": obj_id, "error": str(e)},
+				)
 				messages.error(request, f"บันทึกไม่สำเร็จ (ข้อมูลซ้ำหรือผิดเงื่อนไข): {e}")
 				return self.get(request, *args, **kwargs)
 			except Exception as e:
+				log_event(
+					request,
+					action="defectmode:update_defect",
+					status="failure",
+					message="แก้ไข defect mode (global) ไม่สำเร็จ",
+					metadata={"defect_id": obj_id, "error": str(e)},
+				)
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 				return self.get(request, *args, **kwargs)
 
@@ -275,16 +417,39 @@ class ManageDefectModeViews(TemplateView):
 					if defect.part_id is not None:
 						messages.error(request, "หน้านี้ลบได้เฉพาะ Defect mode แบบ global เท่านั้น")
 						return self.get(request, *args, **kwargs)
+					meta = {"defect_id": defect.pk, "name": defect.name, "code": defect.code or ""}
 					defect.delete()
 					messages.success(request, "ลบ Defect mode สำเร็จ")
+					transaction.on_commit(
+						lambda: log_event(
+							request,
+							action="defectmode:delete_defect",
+							message="ลบ defect mode (global)",
+							metadata=meta,
+						)
+					)
 					return self.get(request, *args, **kwargs)
 			except ProtectedError:
+				log_event(
+					request,
+					action="defectmode:delete_defect",
+					status="failure",
+					message="ลบ defect mode (global) ไม่สำเร็จ (ProtectedError)",
+					metadata={"defect_id": obj_id},
+				)
 				messages.error(
 					request,
-					"ลบไม่ได้: มีข้อมูล Scrap Record อ้างอิงอยู่ (โปรดลบ/ย้ายรายการที่เกี่ยวข้องก่อน)",
+					"ลบไม่ได้: มีข้อมูล Component Part Record อ้างอิงอยู่ (โปรดลบ/ย้ายรายการที่เกี่ยวข้องก่อน)",
 				)
 				return self.get(request, *args, **kwargs)
 			except Exception as e:
+				log_event(
+					request,
+					action="defectmode:delete_defect",
+					status="failure",
+					message="ลบ defect mode (global) ไม่สำเร็จ",
+					metadata={"defect_id": obj_id, "error": str(e)},
+				)
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 				return self.get(request, *args, **kwargs)
 

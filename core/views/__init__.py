@@ -6,9 +6,9 @@ from .about import AboutViews
 from .profile import ProfileViews
 from .record import RecordViews
 from .settings import SettingsViews
-from .manage_scrap import ManageScrapViews
+from .manage_scrap import ManageComponentPartViews
 from .manage_production import ManageProductionViews
 from .manage_defectmode import ManageDefectModeViews
-from .add_user import AddUserViews
 from .manage_user import ManageUserViews
-from .report_scrap_monthly import MonthlyScrapReportViews
+from .report_scrap_monthly import MonthlyComponentPartReportViews
+from .auditlog import AuditLogViews

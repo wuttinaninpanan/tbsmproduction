@@ -27,8 +27,8 @@
     {% include "header.html" %}
 
     <!-- ✅ เนื้อหา -->
-    <main class="flex-1 {% if user.is_authenticated %}py-6{% else %}px-4 py-10{% endif %}">
-        <div class="{% if user.is_authenticated %}w-full flex gap-6{% else %}max-w-4xl mx-auto w-full{% endif %}">
+    <main class="flex-1 {% if user.is_authenticated %}pt-0 pb-6 pr-4 pl-0{% else %}px-4 py-10{% endif %}">
+        <div class="{% if user.is_authenticated %}w-full flex gap-2{% else %}max-w-4xl mx-auto w-full{% endif %}">
             {% if user.is_authenticated %}
                 {% include "sidebar.html" %}
             {% endif %}
@@ -100,6 +100,72 @@
         });
 
         toggle();
+    })();
+</script>
+
+<script>
+    (() => {
+        const sidebar = document.getElementById('appSidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        if (!sidebar || !toggleBtn) return;
+
+        const userMeta = document.getElementById('sidebarUserMeta');
+        const iconEl = toggleBtn.querySelector('[data-sidebar-toggle-icon]');
+        const labels = Array.from(sidebar.querySelectorAll('.sidebar-label'));
+        const sections = Array.from(sidebar.querySelectorAll('.sidebar-section'));
+        const links = Array.from(sidebar.querySelectorAll('a.sidebar-link'));
+
+        // Set a title tooltip for collapsed mode (once)
+        links.forEach(a => {
+            const label = a.querySelector('.sidebar-label');
+            const text = (label ? label.textContent : a.textContent || '').trim();
+            if (text && !a.getAttribute('title')) a.setAttribute('title', text);
+        });
+
+        const KEY = 'tbsm.sidebarCollapsed';
+        const readCollapsed = () => {
+            try { return localStorage.getItem(KEY) === '1'; } catch { return false; }
+        };
+        const writeCollapsed = (v) => {
+            try { localStorage.setItem(KEY, v ? '1' : '0'); } catch {}
+        };
+
+        const apply = (collapsed) => {
+            if (collapsed) {
+                sidebar.classList.remove('w-72');
+                sidebar.classList.add('w-20');
+                if (userMeta) userMeta.classList.add('hidden');
+                labels.forEach(el => el.classList.add('hidden'));
+                sections.forEach(el => el.classList.add('hidden'));
+                links.forEach(a => {
+                    a.classList.add('justify-center');
+                    a.classList.remove('gap-2');
+                });
+                if (iconEl) iconEl.textContent = '›';
+                toggleBtn.setAttribute('aria-pressed', 'true');
+            } else {
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-72');
+                if (userMeta) userMeta.classList.remove('hidden');
+                labels.forEach(el => el.classList.remove('hidden'));
+                sections.forEach(el => el.classList.remove('hidden'));
+                links.forEach(a => {
+                    a.classList.remove('justify-center');
+                    a.classList.add('gap-2');
+                });
+                if (iconEl) iconEl.textContent = '‹';
+                toggleBtn.setAttribute('aria-pressed', 'false');
+            }
+        };
+
+        apply(readCollapsed());
+
+        toggleBtn.addEventListener('click', () => {
+            const collapsed = sidebar.classList.contains('w-20');
+            const next = !collapsed;
+            writeCollapsed(next);
+            apply(next);
+        });
     })();
 </script>
 

@@ -7,8 +7,9 @@ from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 from django.db.models import Q
 
-from core.models import DefectMode, PartNumber, ProductionLine, ScrapItem, ScrapRecord
-from core.decorators import user_required
+from core.models import DefectMode, PartNumber, ProductionLine, ComponentPart, ComponentPartRecord
+from core.auth.decorators import user_required
+from core.services.auditlog import log_event
 
 
 @method_decorator(user_required, name='dispatch')
@@ -26,17 +27,19 @@ class RecordViews(TemplateView):
         )
         part_ids = [p.id for p in parts]
 
-        scraps_by_part: dict[int, list[dict]] = {pid: [] for pid in part_ids}
-        for scrap in (
-            ScrapItem.objects.filter(part_number_id__in=part_ids)
+        component_parts_by_part: dict[int, list[dict]] = {pid: [] for pid in part_ids}
+        for component_part in (
+            ComponentPart.objects.filter(part_number_id__in=part_ids)
             .only("id", "name", "reference_image", "part_number_id")
             .order_by("part_number__production_line__code", "part_number__number", "name")
         ):
-            scraps_by_part.setdefault(scrap.part_number_id, []).append(
+            component_parts_by_part.setdefault(component_part.part_number_id, []).append(
                 {
-                    "id": str(scrap.pk),
-                    "name": scrap.name,
-                    "image_url": scrap.reference_image.url if getattr(scrap, "reference_image", None) else "",
+                    "id": str(component_part.pk),
+                    "name": component_part.name,
+                    "image_url": component_part.reference_image.url
+                    if getattr(component_part, "reference_image", None)
+                    else "",
                 }
             )
 
@@ -61,9 +64,9 @@ class RecordViews(TemplateView):
         for line in lines:
             parts_payload = []
             for part in parts_by_line_id.get(line.id, []):
-                scraps_payload = scraps_by_part.get(part.id, [])
-                if not scraps_payload:
-                    scraps_payload = [{"id": "", "name": "Component part", "image_url": ""}]
+                component_parts_payload = component_parts_by_part.get(part.id, [])
+                if not component_parts_payload:
+                    component_parts_payload = [{"id": "", "name": "Component part", "image_url": ""}]
 
                 defects_payload = []
                 defects = defects_by_part.get(part.id, []) + global_defects
@@ -72,21 +75,27 @@ class RecordViews(TemplateView):
                         {
                             "id": str(defect.pk),
                             "name": defect.name,
-                            "scraps": [
+                            "component_parts": [
                                 {
                                     **s,
                                     "defect_id": str(defect.pk),
                                     "defect_name": defect.name,
                                 }
-                                for s in scraps_payload
+                                for s in component_parts_payload
                             ],
                         }
                     )
 
                 if not defects_payload:
-                    defects_payload = [{"id": "", "name": "", "scraps": scraps_payload}]
+                    defects_payload = [{"id": "", "name": "", "component_parts": component_parts_payload}]
 
-                parts_payload.append({"id": part.number, "defects": defects_payload, "scraps": scraps_payload})
+                parts_payload.append(
+                    {
+                        "id": part.number,
+                        "defects": defects_payload,
+                        "component_parts": component_parts_payload,
+                    }
+                )
             production_lines_payload.append({"id": line.code, "parts": parts_payload})
 
         # Always provide record_data so the page uses real DB data (no fallback demo data)
@@ -110,6 +119,13 @@ class RecordViews(TemplateView):
 
         if not enabled_rows:
             messages.error(request, "ไม่พบแถวที่เลือกให้บันทึก (ต้องติ๊ก checkbox และเลือก Quantity)")
+            log_event(
+                request,
+                action="record_create",
+                status="failure",
+                message="Record save failed: no enabled rows",
+                metadata={"created": 0, "skipped_missing_group": 0},
+            )
             return redirect("record")
 
         def group_line_part(gi: int) -> tuple[str, str]:
@@ -140,9 +156,13 @@ class RecordViews(TemplateView):
                     part_cache[part_key], _ = PartNumber.objects.get_or_create(production_line=line, number=part_number)
                 part = part_cache[part_key]
 
-                scrap_id = (request.POST.get(f"blocks[{gi}][rows][{ri}][scrap_id]") or "").strip()
+                component_part_id = (
+                    request.POST.get(f"blocks[{gi}][rows][{ri}][component_part_id]") or ""
+                ).strip()
                 defect_id = (request.POST.get(f"blocks[{gi}][rows][{ri}][defect_id]") or "").strip()
-                scrap_name = (request.POST.get(f"blocks[{gi}][rows][{ri}][scrap_name]") or "").strip()
+                component_part_name = (
+                    request.POST.get(f"blocks[{gi}][rows][{ri}][component_part_name]") or ""
+                ).strip()
                 qty_raw = (request.POST.get(f"blocks[{gi}][rows][{ri}][quantity]") or "").strip()
 
                 qty = 1
@@ -150,7 +170,7 @@ class RecordViews(TemplateView):
                 if m_qty:
                     qty = max(1, int(m_qty.group(1)))
 
-                scrap_item = None
+                component_part = None
                 defect = None
 
                 # Defect is still required on records
@@ -162,26 +182,29 @@ class RecordViews(TemplateView):
                 if defect is None:
                     continue
 
-                # Prefer scrap_id (from master data)
-                if scrap_id.isdigit():
-                    scrap_item = (
-                        ScrapItem.objects.select_related("part_number")
-                        .filter(pk=int(scrap_id), part_number=part)
+                # Prefer component_part_id (from master data)
+                if component_part_id.isdigit():
+                    component_part = (
+                        ComponentPart.objects.select_related("part_number")
+                        .filter(pk=int(component_part_id), part_number=part)
                         .first()
                     )
-                    if scrap_item is None:
+                    if component_part is None:
                         continue
                 else:
                     # Fallback: "Component part" case
-                    if not scrap_name:
+                    if not component_part_name:
                         continue
-                    scrap_item, _ = ScrapItem.objects.get_or_create(part_number=part, name=scrap_name)
+                    component_part, _ = ComponentPart.objects.get_or_create(
+                        part_number=part,
+                        name=component_part_name,
+                    )
 
-                ScrapRecord.objects.create(
+                ComponentPartRecord.objects.create(
                     production_line=line,
                     part_number=part,
                     defect_mode=defect,
-                    scrap_item=scrap_item,
+                    component_part=component_part,
                     quantity=qty,
                     photo=None,  # Record page no longer uploads photos; use master images instead
                     created_by=request.user if getattr(request, "user", None) is not None and request.user.is_authenticated else None,
@@ -193,7 +216,32 @@ class RecordViews(TemplateView):
                 messages.warning(request, f"บันทึกข้อมูลสำเร็จ {created} รายการ (ข้าม {skipped_missing_group} รายการ: ยังไม่กรอก Line/Part ในบางกรอบ)")
             else:
                 messages.success(request, f"บันทึกข้อมูลสำเร็จ {created} รายการ")
+
+            log_event(
+                request,
+                action="record_create",
+                status="success",
+                message=f"Created {created} component part record(s)",
+                metadata={
+                    "created": created,
+                    "skipped_missing_group": skipped_missing_group,
+                    "default_line_code": default_line_code,
+                    "default_part_number": default_part_number,
+                },
+            )
         else:
             messages.error(request, "ไม่สามารถบันทึกได้ (กรุณากรอก Line/Part ให้ครบ และเลือก Quantity)")
+            log_event(
+                request,
+                action="record_create",
+                status="failure",
+                message="Record save failed: validation/missing fields",
+                metadata={
+                    "created": 0,
+                    "skipped_missing_group": skipped_missing_group,
+                    "default_line_code": default_line_code,
+                    "default_part_number": default_part_number,
+                },
+            )
 
         return redirect("record")

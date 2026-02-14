@@ -10,12 +10,6 @@
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการผู้ใช้งาน</h1>
-			<p class="text-sm text-slate-600 mt-1">ค้นหา ดูสถานะ และจัดการบัญชีผู้ใช้</p>
-		</div>
-		<div class="flex items-center gap-2">
-			<a href="/add-user/" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
-				+ เพิ่มผู้ใช้งาน
-			</a>
 		</div>
 	</header>
 
@@ -54,7 +48,7 @@
 				</select>
 			</div>
 			<div class="md:col-span-1 flex items-end">
-				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition">
+				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-600 hover:bg-slate-700 transition">
 					ค้นหา
 				</button>
 			</div>
@@ -69,10 +63,67 @@
 	</form>
 
 	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="font-extrabold text-slate-800">Users</div>
+				<div class="flex items-center gap-2 flex-wrap">
+					<a href="?action=download_template&format=xlsx" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M4 2.75A1.75 1.75 0 0 1 5.75 1h6.19c.46 0 .9.18 1.23.51l2.32 2.32c.33.33.51.77.51 1.23v12.19A1.75 1.75 0 0 1 14.25 19H5.75A1.75 1.75 0 0 1 4 17.25V2.75Z" />
+							<path d="M12 1.5v2.25c0 .69.56 1.25 1.25 1.25H15.5" />
+						</svg>
+						Template Excel
+					</a>
+					<form id="importForm" method="post" enctype="multipart/form-data" class="inline">
+						{% csrf_token %}
+						<input type="hidden" name="action" value="import" />
+						<input id="importFile" type="file" name="excel_file" accept=".csv,.xlsx" class="hidden" />
+						<button type="button" id="importBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold border border-green-600 bg-green-600 text-white hover:bg-green-700 transition whitespace-nowrap">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M10 1.75a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.5a.75.75 0 0 1 .75-.75ZM3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+							</svg>
+							นำเข้าข้อมูล
+						</button>
+					</form>
+					<button type="button" data-open-add-user class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+						+ เพิ่มผู้ใช้งาน
+					</button>
+					<form id="bulkDeleteForm" method="post" class="inline">
+						{% csrf_token %}
+						<input type="hidden" name="action" value="bulk_delete" />
+						<button type="button" id="bulkDeleteBtn" disabled class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+							<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+								<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+								<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+							</svg>
+							ลบที่เลือก
+						</button>
+					</form>
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<input type="hidden" name="role" value="{{ role|default:'' }}" />
+						<input type="hidden" name="status" value="{{ status|default:'' }}" />
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-gray-700">Show</span>
+							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							</select>
+							<span class="text-sm text-gray-700">entries</span>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
 		<div class="overflow-x-auto">
 			<table class="min-w-full text-sm">
-				<thead class="bg-slate-100 text-slate-800">
+				<thead class="bg-white text-slate-800">
 					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
+						</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Username</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ชื่อ - นามสกุล</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Email</th>
@@ -80,12 +131,15 @@
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Shift</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">สถานะ</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">เข้าใช้งานล่าสุด</th>
-						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200">
 					{% for u in users %}
 						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3">
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ u.id|default:u.pk|default:'' }}" />
+							</td>
 							<td class="px-4 py-3 whitespace-nowrap font-semibold text-slate-900">{{ u.username|default:"-" }}</td>
 							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ u.get_full_name|default:u.username }}</td>
 							<td class="px-4 py-3 text-slate-700">{{ u.email|default:"-" }}</td>
@@ -149,12 +203,12 @@
 						</tr>
 					{% empty %}
 						<tr>
-							<td class="px-4 py-10 text-center text-slate-600" colspan="8">
-								ยังไม่มีข้อมูลผู้ใช้งาน หรือ backend ยังไม่ได้ส่ง `users` มา
+							<td class="px-4 py-10 text-center text-slate-600" colspan="9">
+								ยังไม่มีข้อมูลผู้ใช้งาน
 								<div class="mt-3">
-									<a href="/add-user/" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+									<button type="button" data-open-add-user class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
 										+ เพิ่มผู้ใช้งาน
-									</a>
+									</button>
 								</div>
 							</td>
 						</tr>
@@ -164,20 +218,167 @@
 		</div>
 	</div>
 
-	{% if page_obj %}
-		<div class="flex items-center justify-between text-sm text-slate-700 pt-2">
-			<div>หน้า {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</div>
-			<div class="flex items-center gap-2">
-				{% if page_obj.has_previous %}
-					<a class="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50" href="?page={{ page_obj.previous_page_number }}">ก่อนหน้า</a>
-				{% endif %}
-				{% if page_obj.has_next %}
-					<a class="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50" href="?page={{ page_obj.next_page_number }}">ถัดไป</a>
-				{% endif %}
+	{% if page_obj and paginator %}
+		<div class="flex flex-col gap-3 border border-slate-200 rounded-2xl bg-white px-4 py-3 sm:px-6">
+			<div class="text-sm text-gray-700">
+				Showing
+				<span class="font-medium">{{ page_obj.start_index }}</span>
+				to
+				<span class="font-medium">{{ page_obj.end_index }}</span>
+				of
+				<span class="font-medium">{{ rows_total }}</span>
+				results
 			</div>
+			{% if paginator.num_pages > 1 %}
+				<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-xs">
+					{% if page_obj.has_previous %}
+						<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+							<span class="sr-only">Previous</span>
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+							</svg>
+						</a>
+					{% else %}
+						<span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-300">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+							</svg>
+						</span>
+					{% endif %}
+
+					{% for item in page_items %}
+						{% if item is None %}
+							<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 inset-ring inset-ring-gray-300">…</span>
+						{% elif item == page_obj.number %}
+							<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ item }}" aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20">{{ item }}</a>
+						{% else %}
+							<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20">{{ item }}</a>
+						{% endif %}
+					{% endfor %}
+
+					{% if page_obj.has_next %}
+						<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+							<span class="sr-only">Next</span>
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L12.44 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+							</svg>
+						</a>
+					{% else %}
+						<span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-300">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L12.44 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+							</svg>
+						</span>
+					{% endif %}
+				</nav>
+			{% endif %}
 		</div>
 	{% endif %}
 </section>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-add-modal-backdrop></div>
+
+	<div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl bg-white">
+		<button type="button"
+			class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow"
+			aria-label="Close"
+			data-add-modal-close>
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+
+		<div class="grid grid-cols-1 md:grid-cols-5">
+			<div class="md:col-span-2 bg-indigo-700 text-white p-6 sm:p-7">
+				<div class="text-xs font-extrabold tracking-widest opacity-90">USER MANAGEMENT</div>
+				<div class="mt-3 text-2xl sm:text-3xl font-extrabold leading-tight">ADD USER</div>
+				<div class="mt-6 border-t border-white/30 pt-6">
+					<div class="text-5xl font-extrabold">TBSM</div>
+				</div>
+			</div>
+			<div class="md:col-span-3 p-6 sm:p-7">
+				<div class="pr-10">
+					<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่มผู้ใช้งาน</h2>
+					<p class="text-xs text-slate-600 mt-1">กรอกข้อมูล แล้วกดบันทึก</p>
+				</div>
+
+				<form method="post" class="mt-5 space-y-4" id="addUserForm">
+					{% csrf_token %}
+					<input type="hidden" name="action" value="create" />
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Username <span class="text-red-600">*</span></label>
+							<input name="username" type="text" placeholder="เช่น john.doe"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Email</label>
+							<input name="email" type="email" placeholder="name@example.com"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+					</div>
+
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">ชื่อ - นามสกุล</label>
+						<input name="full_name" type="text" placeholder="เช่น สมชาย ใจดี"
+							class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					</div>
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Role</label>
+							<select name="role" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="user">ผู้ใช้ทั่วไป</option>
+								<option value="staff">เจ้าหน้าที่</option>
+								<option value="admin">ผู้ดูแลระบบ</option>
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">กะการทำงาน</label>
+							<select name="shift" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="shift_a">กะ A</option>
+								<option value="shift_b">กะ B</option>
+								<option value="shift_day" selected>กะ Day</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">รหัสผ่าน <span class="text-red-600">*</span></label>
+							<input name="password" type="password" autocomplete="new-password"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">ยืนยันรหัสผ่าน <span class="text-red-600">*</span></label>
+							<input name="password_confirm" type="password" autocomplete="new-password"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+					</div>
+
+					<div class="flex items-center justify-between gap-4">
+						<label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+							<input type="checkbox" name="is_active" checked
+								class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+							<span>เปิดใช้งานบัญชี</span>
+						</label>
+						<div class="text-xs text-slate-500">ถ้าปิดใช้งาน ผู้ใช้จะล็อกอินไม่ได้</div>
+					</div>
+
+					<div class="flex items-center justify-end gap-2 pt-1">
+						<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-add-modal-close>
+							ยกเลิก
+						</button>
+						<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">
+							บันทึก
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
 
 <!-- Edit User Modal (Centered overlay) -->
 <div id="editUserModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
@@ -287,6 +488,22 @@
 </div>
 
 <script>
+	function openAddModal() {
+		const modal = document.getElementById('addUserModal');
+		if (!modal) return;
+		modal.classList.remove('hidden');
+		modal.classList.add('flex');
+		document.body.classList.add('overflow-hidden');
+	}
+
+	function closeAddModal() {
+		const modal = document.getElementById('addUserModal');
+		if (!modal) return;
+		modal.classList.add('hidden');
+		modal.classList.remove('flex');
+		document.body.classList.remove('overflow-hidden');
+	}
+
 	function openEditModal(data) {
 		const modal = document.getElementById('editUserModal');
 		if (!modal) return;
@@ -333,11 +550,85 @@
 	document.querySelectorAll('[data-modal-close]').forEach(el => {
 		el.addEventListener('click', closeEditModal);
 	});
+	document.querySelectorAll('[data-add-modal-close]').forEach(el => {
+		el.addEventListener('click', closeAddModal);
+	});
 	const backdrop = document.querySelector('#editUserModal [data-modal-backdrop]');
 	if (backdrop) backdrop.addEventListener('click', closeEditModal);
+	const addBackdrop = document.querySelector('#addUserModal [data-add-modal-backdrop]');
+	if (addBackdrop) addBackdrop.addEventListener('click', closeAddModal);
 	window.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape') closeEditModal();
+		if (e.key === 'Escape') {
+			closeEditModal();
+			closeAddModal();
+		}
 	});
+
+	// Open add modal
+	document.querySelectorAll('[data-open-add-user]').forEach(btn => {
+		btn.addEventListener('click', openAddModal);
+	});
+	try {
+		const params = new URLSearchParams(window.location.search);
+		if (params.get('open_add') === '1') openAddModal();
+	} catch (e) {}
+
+	// Import button
+	const importBtn = document.getElementById('importBtn');
+	const importFile = document.getElementById('importFile');
+	const importForm = document.getElementById('importForm');
+	if (importBtn && importFile && importForm) {
+		importBtn.addEventListener('click', () => importFile.click());
+		importFile.addEventListener('change', () => {
+			if (importFile.files && importFile.files.length > 0) importForm.submit();
+		});
+	}
+
+	// Bulk select/delete
+	const selectAll = document.getElementById('selectAllRows');
+	const bulkBtn = document.getElementById('bulkDeleteBtn');
+	const bulkForm = document.getElementById('bulkDeleteForm');
+	const rowCheckboxes = Array.from(document.querySelectorAll('.rowCheckbox'));
+
+	function selectedIds() {
+		return rowCheckboxes
+			.filter(cb => cb.checked)
+			.map(cb => cb.dataset.id)
+			.filter(Boolean);
+	}
+	function syncBulkState() {
+		const ids = selectedIds();
+		if (bulkBtn) bulkBtn.disabled = ids.length === 0;
+		if (selectAll) {
+			const allChecked = rowCheckboxes.length > 0 && rowCheckboxes.every(cb => cb.checked);
+			selectAll.checked = allChecked;
+			selectAll.indeterminate = ids.length > 0 && !allChecked;
+		}
+	}
+	if (selectAll) {
+		selectAll.addEventListener('change', () => {
+			rowCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
+			syncBulkState();
+		});
+	}
+	rowCheckboxes.forEach(cb => cb.addEventListener('change', syncBulkState));
+	if (bulkBtn && bulkForm) {
+		bulkBtn.addEventListener('click', () => {
+			const ids = selectedIds();
+			if (ids.length === 0) return;
+			if (!confirm(`ยืนยันการลบผู้ใช้งานที่เลือก ${ids.length} รายการ?`)) return;
+			bulkForm.querySelectorAll('input[name="bulk_id"]').forEach(n => n.remove());
+			ids.forEach(id => {
+				const input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'bulk_id';
+				input.value = id;
+				bulkForm.appendChild(input);
+			});
+			bulkForm.submit();
+		});
+	}
+	syncBulkState();
 
 	// Confirm before deleting (client-only; backend can ignore)
 	document.querySelectorAll('[data-confirm-delete]').forEach(form => {
