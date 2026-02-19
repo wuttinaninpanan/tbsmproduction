@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'theme',
 ]
 
+# Use our custom User model (do not use Django's default auth.User)
+AUTH_USER_MODEL = "core.User"
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -54,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.http.middleware.AuditLogMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -114,7 +118,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Display times in Thailand; datetimes are still stored in UTC when USE_TZ=True.
+TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Bangkok")
 
 USE_I18N = True
 
@@ -128,3 +133,7 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# Media (uploaded files)
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

@@ -2,43 +2,292 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title>{% block title %}TBSMRD{% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>{% block title %}TBSMRD{% endblock %}</title>
 
-	{% comment %} Use Tailwind CSS built from theme/static_src {% endcomment %}
-	{% tailwind_css %}
-    <!-- Inter font for cleaner UI -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23dc2626'/%3E%3Cstop offset='100%25' stop-color='%23ef4444'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='6' y='6' width='52' height='52' rx='14' fill='url(%23g)'/%3E%3Cpath d='M20 38c6-12 18-12 24 0' fill='none' stroke='white' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E" />
+
+    {% tailwind_css %}
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-	<!-- Fallback styles if Tailwind hasn't been built yet -->
-	<style>
-	.min-h-screen{min-height:100vh}
-	.flex{display:flex}
-	.flex-col{flex-direction:column}
-	.flex-1{flex:1 1 auto}
-	.container{max-width:960px;margin:0 auto;padding-left:1rem;padding-right:1rem}
-	/* Header: semi-transparent for depth over new page background */
-	header{padding:1rem;background:rgba(255,255,255,0.6);border-bottom:1px solid rgba(15,23,42,0.04);backdrop-filter:blur(6px)}
-	footer{padding:1rem;background:transparent;border-top:1px solid rgba(15,23,42,0.04);margin-top:auto}
-	.text-slate-700{color:#334155}
-	.text-slate-900{color:#0f172a}
-	/* Replace bright white page bg with subtle cool gradient */
-	.bg-slate-50{background: linear-gradient(180deg, #f5f7fb 0%, #eef2f7 100%)}
-	.no-underline{text-decoration:none}
 
-/* Use Inter as default for better typography */
-body { font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
-	</style>
+    <style>
+        body {
+            font-family: 'Inter', ui-sans-serif, system-ui;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased font-sans">
-	<div class="min-h-screen flex flex-col">
-		{% include "header.html" %}
 
-		<main class="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-			{% block content %}{% endblock %}
-		</main>
+<!-- ✅ พื้นหลังรอบนอก -->
+<body class="bg-slate-200 text-slate-800 antialiased">
 
-		{% include "footer.html" %}
-	</div>
+<div class="min-h-screen flex flex-col">
+
+    {% include "header.html" %}
+
+    <!-- ✅ เนื้อหา -->
+    <main class="flex-1 {% if user.is_authenticated %}pt-0 pb-0 pr-4 pl-0{% else %}px-4 py-10{% endif %}">
+        <div class="{% if user.is_authenticated %}w-full flex gap-2{% else %}max-w-4xl mx-auto w-full{% endif %}">
+            {% if user.is_authenticated %}
+                {% include "sidebar.html" %}
+            {% endif %}
+
+            <div class="{% if user.is_authenticated %}flex-1 min-w-0{% endif %}">
+                <div class="{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-8 py-10{% endblock %}">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {% include "footer.html" %}
+
+</div>
+
+{% if messages %}
+<div class="fixed top-20 left-0 right-0 z-50 px-4 pointer-events-none" aria-live="polite" aria-atomic="true">
+    <div class="mx-auto w-full max-w-3xl space-y-3">
+        {% for message in messages %}
+            {% if 'success' in message.tags %}
+                {% with box_class='bg-emerald-950/60 border-emerald-700/60 text-emerald-100' icon_class='text-emerald-300' is_success=True %}
+                    <div class="pointer-events-auto rounded-2xl border px-5 py-4 shadow-xl backdrop-blur {{ box_class }}" data-alert>
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5 {{ icon_class }}" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.78-9.72a.75.75 0 0 0-1.06-1.06L9 10.94 7.28 9.22a.75.75 0 0 0-1.06 1.06l2.25 2.25c.29.29.77.29 1.06 0l4.25-4.25Z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold leading-snug">
+                                    {{ message }}
+                                </div>
+                            </div>
+
+                            <button type="button" class="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30" aria-label="Dismiss" data-alert-dismiss>
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M6.28 5.22a.75.75 0 0 1 1.06 0L10 7.94l2.66-2.72a.75.75 0 1 1 1.08 1.04L11.06 9l2.68 2.74a.75.75 0 1 1-1.08 1.04L10 10.06l-2.66 2.72a.75.75 0 1 1-1.08-1.04L8.94 9 6.26 6.26a.75.75 0 0 1 .02-1.04Z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                {% endwith %}
+            {% elif 'error' in message.tags or 'danger' in message.tags %}
+                {% with box_class='bg-red-950/60 border-red-700/60 text-red-100' icon_class='text-red-300' %}
+                    <div class="pointer-events-auto rounded-2xl border px-5 py-4 shadow-xl backdrop-blur {{ box_class }}" data-alert>
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5 {{ icon_class }}" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0v-4.5Zm0 7.5a.75.75 0 0 0-1.5 0v.5a.75.75 0 0 0 1.5 0v-.5Z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold leading-snug">
+                                    {{ message }}
+                                </div>
+                            </div>
+
+                            <button type="button" class="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30" aria-label="Dismiss" data-alert-dismiss>
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M6.28 5.22a.75.75 0 0 1 1.06 0L10 7.94l2.66-2.72a.75.75 0 1 1 1.08 1.04L11.06 9l2.68 2.74a.75.75 0 1 1-1.08 1.04L10 10.06l-2.66 2.72a.75.75 0 1 1-1.08-1.04L8.94 9 6.26 6.26a.75.75 0 0 1 .02-1.04Z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                {% endwith %}
+            {% elif 'warning' in message.tags %}
+                {% with box_class='bg-amber-950/60 border-amber-700/60 text-amber-100' icon_class='text-amber-300' %}
+                    <div class="pointer-events-auto rounded-2xl border px-5 py-4 shadow-xl backdrop-blur {{ box_class }}" data-alert>
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5 {{ icon_class }}" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0v-4.5Zm0 7.5a.75.75 0 0 0-1.5 0v.5a.75.75 0 0 0 1.5 0v-.5Z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold leading-snug">
+                                    {{ message }}
+                                </div>
+                            </div>
+
+                            <button type="button" class="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30" aria-label="Dismiss" data-alert-dismiss>
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M6.28 5.22a.75.75 0 0 1 1.06 0L10 7.94l2.66-2.72a.75.75 0 1 1 1.08 1.04L11.06 9l2.68 2.74a.75.75 0 1 1-1.08 1.04L10 10.06l-2.66 2.72a.75.75 0 1 1-1.08-1.04L8.94 9 6.26 6.26a.75.75 0 0 1 .02-1.04Z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                {% endwith %}
+            {% else %}
+                {% with box_class='bg-slate-900/70 border-slate-700/60 text-slate-100' icon_class='text-slate-300' %}
+                    <div class="pointer-events-auto rounded-2xl border px-5 py-4 shadow-xl backdrop-blur {{ box_class }}" data-alert>
+                        <div class="flex items-start gap-3">
+                            <div class="mt-0.5 {{ icon_class }}" aria-hidden="true">
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0v-4.5Zm0 7.5a.75.75 0 0 0-1.5 0v.5a.75.75 0 0 0 1.5 0v-.5Z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold leading-snug">
+                                    {{ message }}
+                                </div>
+                            </div>
+
+                            <button type="button" class="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-xl hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30" aria-label="Dismiss" data-alert-dismiss>
+                                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M6.28 5.22a.75.75 0 0 1 1.06 0L10 7.94l2.66-2.72a.75.75 0 1 1 1.08 1.04L11.06 9l2.68 2.74a.75.75 0 1 1-1.08 1.04L10 10.06l-2.66 2.72a.75.75 0 1 1-1.08-1.04L8.94 9 6.26 6.26a.75.75 0 0 1 .02-1.04Z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                {% endwith %}
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    (() => {
+        const alerts = Array.from(document.querySelectorAll('[data-alert]'));
+        if (!alerts.length) return;
+
+        alerts.forEach(alertEl => {
+            const btn = alertEl.querySelector('[data-alert-dismiss]');
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                alertEl.remove();
+            });
+        });
+    })();
+</script>
+{% endif %}
+
+<!-- Back to top -->
+<button
+    id="back-to-top"
+    type="button"
+    class="hidden fixed bottom-6 right-6 z-50 h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white shadow-xl transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
+    aria-label="Back to top"
+    title="Back to top"
+>
+    <span class="text-xl leading-none">↑</span>
+</button>
+
+<script>
+    (() => {
+        const button = document.getElementById("back-to-top");
+        if (!button) return;
+
+        const toggle = () => {
+            const shouldShow = window.scrollY > 300;
+            if (shouldShow) {
+                button.classList.remove("hidden");
+                button.classList.add("flex");
+            } else {
+                button.classList.add("hidden");
+                button.classList.remove("flex");
+            }
+        };
+
+        let ticking = false;
+        window.addEventListener(
+            "scroll",
+            () => {
+                if (ticking) return;
+                ticking = true;
+                window.requestAnimationFrame(() => {
+                    toggle();
+                    ticking = false;
+                });
+            },
+            { passive: true }
+        );
+
+        button.addEventListener("click", () => {
+            window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        });
+
+        toggle();
+    })();
+</script>
+
+<script>
+    (() => {
+        const sidebar = document.getElementById('appSidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        if (!sidebar || !toggleBtn) return;
+
+        const userMeta = document.getElementById('sidebarUserMeta');
+        const iconEl = toggleBtn.querySelector('[data-sidebar-toggle-icon]');
+        const labels = Array.from(sidebar.querySelectorAll('.sidebar-label'));
+        const sections = Array.from(sidebar.querySelectorAll('.sidebar-section'));
+        const links = Array.from(sidebar.querySelectorAll('.sidebar-link'));
+        const submenus = Array.from(sidebar.querySelectorAll('.sidebar-submenu'));
+
+        // Set a title tooltip for collapsed mode (once)
+        links.forEach(el => {
+            if (!(el instanceof HTMLAnchorElement)) return;
+            const label = el.querySelector('.sidebar-label');
+            const text = (label ? label.textContent : el.textContent || '').trim();
+            if (text && !el.getAttribute('title')) el.setAttribute('title', text);
+        });
+
+        const KEY = 'tbsm.sidebarCollapsed';
+        const readCollapsed = () => {
+            try { return localStorage.getItem(KEY) === '1'; } catch { return false; }
+        };
+        const writeCollapsed = (v) => {
+            try { localStorage.setItem(KEY, v ? '1' : '0'); } catch {}
+        };
+
+        const apply = (collapsed) => {
+            if (collapsed) {
+                sidebar.classList.remove('w-72');
+                sidebar.classList.add('w-20');
+                if (userMeta) userMeta.classList.add('hidden');
+                labels.forEach(el => el.classList.add('hidden'));
+                sections.forEach(el => el.classList.add('hidden'));
+                submenus.forEach(el => {
+                    el.classList.remove('pl-6', 'ml-4', 'border-l');
+                });
+                links.forEach(a => {
+                    a.classList.add('justify-center');
+                    a.classList.remove('gap-2');
+                });
+                if (iconEl) iconEl.textContent = '›';
+                toggleBtn.setAttribute('aria-pressed', 'true');
+            } else {
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-72');
+                if (userMeta) userMeta.classList.remove('hidden');
+                labels.forEach(el => el.classList.remove('hidden'));
+                sections.forEach(el => el.classList.remove('hidden'));
+                submenus.forEach(el => {
+                    el.classList.add('pl-6', 'ml-4', 'border-l', 'border-slate-800');
+                });
+                links.forEach(a => {
+                    a.classList.remove('justify-center');
+                    a.classList.add('gap-2');
+                });
+                if (iconEl) iconEl.textContent = '‹';
+                toggleBtn.setAttribute('aria-pressed', 'false');
+            }
+        };
+
+        apply(readCollapsed());
+
+        toggleBtn.addEventListener('click', () => {
+            const collapsed = sidebar.classList.contains('w-20');
+            const next = !collapsed;
+            writeCollapsed(next);
+            apply(next);
+        });
+    })();
+</script>
+
 </body>
 </html>

@@ -1,0 +1,241 @@
+
+<aside id="appSidebar" class="hidden md:block w-72 shrink-0 transition-[width] duration-200 sticky top-16 self-start h-[calc(100vh-4rem)]">
+	<div class="rounded-2xl border border-slate-800 bg-slate-900 shadow-sm relative h-full overflow-visible">
+		<button id="sidebarToggle" type="button" class="absolute top-1/2 -translate-y-1/2 -right-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 shadow-sm" aria-label="Toggle sidebar" aria-pressed="false">
+			<span class="text-lg leading-none" data-sidebar-toggle-icon>‹</span>
+		</button>
+
+			<div class="h-full flex flex-col">
+				<div class="flex-1 overflow-y-auto p-4">
+			<nav class="mt-4 space-y-1">
+				<div class="sidebar-section px-2 pt-2 pb-1 text-xs font-semibold text-slate-400">เมนูหลัก</div>
+				<a href="/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					 	<path d="M3 10.5 12 3l9 7.5"></path>
+						<path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"></path>
+					</svg>
+					<span class="sidebar-label">หน้าแรก</span>
+				</a>
+				<a href="/about/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<circle cx="12" cy="12" r="10"></circle>
+						<path d="M12 16v-4"></path>
+						<path d="M12 8h.01"></path>
+					</svg>
+					<span class="sidebar-label">เกี่ยวกับ</span>
+				</a>
+				<a href="/contact/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M4 4h16v12H5.17L4 17.17V4z"></path>
+						<path d="M7 8h10"></path>
+						<path d="M7 12h7"></path>
+					</svg>
+					<span class="sidebar-label">ติดต่อ</span>
+				</a>
+				<a href="/dashboard/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M4 4h16v12H5.17L4 17.17V4z"></path>
+						<path d="M7 8h10"></path>
+						<path d="M7 12h7"></path>
+					</svg>
+					<span class="sidebar-label">Dashboard</span>
+				</a>
+				<a href="/record/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M9 11l3 3L22 4"></path>
+						<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+					</svg>
+					<span class="sidebar-label">บันทึก Scrap</span>
+				</a>
+
+					{% if user.is_staff %}
+					<details class="group">
+						<summary class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+							<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M12 3l10 6v6c0 5-4 8-10 9C6 23 2 20 2 15V9l10-6z"></path>
+								<path d="M9 12h6"></path>
+								<path d="M12 9v6"></path>
+							</svg>
+							<span class="sidebar-label flex-1">จัดการ</span>
+							<span class="sidebar-label" aria-hidden="true">
+								<svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+									<path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+								</svg>
+							</span>
+						</summary>
+
+						<div class="sidebar-submenu mt-1 space-y-1 pl-6 border-l border-slate-800 ml-4">
+							<a href="/manage-scrap/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 3l10 6v6c0 5-4 8-10 9C6 23 2 20 2 15V9l10-6z"></path>
+						<path d="M9 12h6"></path>
+						<path d="M12 9v6"></path>
+					</svg>
+					<span class="sidebar-label">จัดการ Scrap</span>
+				</a>
+				<a href="/manage-line/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M20 7h-9"></path>
+						<path d="M14 17H5"></path>
+						<circle cx="17" cy="17" r="3"></circle>
+						<circle cx="7" cy="7" r="3"></circle>
+					</svg>
+					<span class="sidebar-label">จัดการ Line</span>
+				</a>
+				<a href="/manage-item-line/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M20 7h-9"></path>
+						<path d="M14 17H5"></path>
+						<circle cx="17" cy="17" r="3"></circle>
+						<circle cx="7" cy="7" r="3"></circle>
+					</svg>
+					<span class="sidebar-label">จัดการ Item Line</span>
+				</a>
+				<a href="/manage-defectmode/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 3l10 6v6c0 5-4 8-10 9C6 23 2 20 2 15V9l10-6z"></path>
+						<path d="M9 12h6"></path>
+						<path d="M12 9v6"></path>
+					</svg>
+					<span class="sidebar-label">จัดการ Defect Mode</span>
+				</a>
+				<a href="/manage-defectmodecategory/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 3l10 6v6c0 5-4 8-10 9C6 23 2 20 2 15V9l10-6z"></path>
+						<path d="M9 12h6"></path>
+						<path d="M12 9v6"></path>
+					</svg>
+					<span class="sidebar-label">จัดการ Defect Mode Category</span>
+				</a>
+				<a href="/manage-item_list/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73z"></path>
+						<path d="M12 22V12"></path>
+						<path d="M3.27 6.96 12 12l8.73-5.04"></path>
+						<path d="M12 12 12 2"></path>
+					</svg>
+					<span class="sidebar-label">จัดการ Item List</span>
+				</a>
+				<a href="/manage-item-category/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73z"></path>
+						<path d="M12 22V12"></path>
+						<path d="M3.27 6.96 12 12l8.73-5.04"></path>
+						<path d="M12 12 12 2"></path>
+					</svg>
+					<span class="sidebar-label">จัดการ Item Category</span>
+				</a>
+				<a href="/manage-bill-of-material/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73z"></path>
+						<path d="M12 22V12"></path>
+						<path d="M3.27 6.96 12 12l8.73-5.04"></path>
+						<path d="M12 12 12 2"></path>
+					</svg>
+					<span class="sidebar-label">จัดการ Bill of Materials</span>
+				</a>
+				<a href="/manage-user/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+						<circle cx="9" cy="7" r="4"></circle>
+						<path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+						<path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+					</svg>
+					<span class="sidebar-label">จัดการข้อมูล ผู้ใช้งาน</span>
+				</a>
+				<a href="/admin/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 1l3 5 5 1-3.5 4 1 5-5.5-2.5L6.5 16l1-5L4 7l5-1 3-5z"></path>
+						<path d="M12 8v4"></path>
+						<path d="M12 16h.01"></path>
+					</svg>
+					<span class="sidebar-label">จัดการฐานข้อมูล (Admin)</span>
+				</a>
+						</div>
+					</details>
+				{% endif %}
+
+					{% if user.is_staff %}
+					<details class="group">
+						<summary class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+							<svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+								<path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+							</svg>
+							<span class="sidebar-label flex-1">รายงาน</span>
+							<span class="sidebar-label" aria-hidden="true">
+								<svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+									<path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+								</svg>
+							</span>
+						</summary>
+						<div class="sidebar-submenu mt-1 space-y-1 pl-6 border-l border-slate-800 ml-4">
+							<a href="/report_scrap_monthly/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+								<svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+									<path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+								</svg>
+								<span class="sidebar-label">รายงานประจำเดือน</span>
+							</a>
+						</div>
+					</details>
+					{% endif %}
+
+					{% if user.is_superuser %}
+					<details class="group">
+						<summary class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+							<svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+								<path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+							</svg>
+							<span class="sidebar-label flex-1">ตั้งค่า</span>
+							<span class="sidebar-label" aria-hidden="true">
+								<svg class="w-4 h-4 transition-transform duration-200 group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+									<path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+								</svg>
+							</span>
+						</summary>
+						<div class="sidebar-submenu mt-1 space-y-1 pl-6 border-l border-slate-800 ml-4">
+							<a href="/profile/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+								<svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+									<path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+								</svg>
+								<span class="sidebar-label">โปรไฟล์</span>
+							</a>
+							<a href="/audit-log/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+								<svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M5.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zM5 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0 2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5"/>
+									<path d="M9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5zm0 1v2A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1z"/>
+								</svg>
+								<span class="sidebar-label">Audit Log</span>
+							</a>
+						</div>
+					</details>
+					{% endif %}
+			</nav>
+			</div>
+
+			<!-- Footer pinned to bottom (Profile = user meta) -->
+			<div class="p-4 border-t border-slate-800">
+				<a href="/profile/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<span class="w-10 h-10 rounded-full bg-red-50 border border-red-100 text-red-600 font-extrabold flex items-center justify-center">
+						{{ user.get_full_name|default:user.username|slice:":1"|upper }}
+					</span>
+					<span class="sidebar-label min-w-0">
+						<span class="block font-semibold text-slate-200 truncate">{{ user.get_full_name|default:user.username }}</span>
+						<span class="block text-sm text-slate-400 truncate">@{{ user.username }}</span>
+					</span>
+				</a>
+				<a href="/logout/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M10 17l5-5-5-5"></path>
+						<path d="M15 12H3"></path>
+						<path d="M21 3v18"></path>
+					</svg>
+					<span class="sidebar-label">Logout</span>
+				</a>
+			</div>
+		</div>
+	</div>
+</aside>

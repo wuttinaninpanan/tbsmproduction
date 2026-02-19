@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+{% load tz %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Manage Scrap — TBSMRD{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการข้อมูล Scrap</h1>
+	</header>
+
+	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+		<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 flex-1">
+			<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+				<div class="md:col-span-4">
+					<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+					<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา ผู้ใช้งาน / กะ / Production line / SD number / Defect / Part name"
+						   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
+				<div class="md:col-span-2">
+					<label class="block text-sm font-semibold text-slate-700">วันที่เริ่ม</label>
+				<input type="text" id="date_from_picker" name="date_from" value="{{ date_from|default:'' }}" placeholder="เลือกวันที่"
+					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">วันที่สิ้นสุด</label>
+				<input type="text" id="date_to_picker" name="date_to" value="{{ date_to|default:'' }}" placeholder="เลือกวันที่"
+						   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div class="md:col-span-4 flex items-end gap-2">
+					<button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+						<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
+						</svg>
+						ค้นหา
+					</button>
+				</div>
+			</div>
+
+			<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+				<div class="text-xs text-slate-600">
+					{% if total_count %}ทั้งหมด {{ total_count }} รายการ{% else %}—{% endif %}
+				</div>
+				<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+			</div>
+		</form>
+	</div>
+	
+
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="font-extrabold text-slate-800">Scrap Records</div>
+				<div class="flex items-center gap-2">
+					<a href="?action=export_excel{% if q %}&q={{ q }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+  							<path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
+						</svg>
+						ส่งออกข้อมูล
+					</a>
+					<button type="button" id="bulkDeleteBtn" disabled class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+						<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+						<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>	
+						</svg>
+						ลบที่เลือก
+					</button>
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<input type="hidden" name="date_from" value="{{ date_from|default:'' }}" />
+						<input type="hidden" name="date_to" value="{{ date_to|default:'' }}" />
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-gray-700">Show</span>
+							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							</select>
+							<span class="text-sm text-gray-700">entries</span>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
+						</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Quantity</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Photo</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for r in component_part_records %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3">
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id|default:'' }}" />
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.username|default:"-" }}</td>
+							<td class="px-4 py-3 whitespace-nowrap">
+								{% if r.created_by.profile %}
+									{% if r.created_by.profile.shift == 'shift_a' %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">กะ A</span>
+									{% elif r.created_by.profile.shift == 'shift_b' %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">กะ B</span>
+									{% else %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-200">กะ Day</span>
+									{% endif %}
+								{% else %}
+									<span class="text-slate-400">—</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.production_line|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number.sd_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.defect_mode|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.component_part.part_name|default:"-" }}</td>
+							<td class="px-4 py-3 text-right font-semibold text-slate-900">{{ r.quantity|default:0 }}</td>
+							<td class="px-4 py-3">
+								{% if r.photo %}
+									<a href="{{ r.photo.url }}" rel="noreferrer" class="inline-flex items-center gap-2" data-image-popup>
+										<img src="{{ r.photo.url }}" alt="Photo" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
+										<span class="text-xs text-blue-700 font-semibold hover:underline whitespace-nowrap">ดูรูป</span>
+									</a>
+								{% elif r.component_part.reference_image %}
+									<a href="{{ r.component_part.reference_image.url }}" rel="noreferrer" class="inline-flex items-center gap-2" data-image-popup>
+										<img src="{{ r.component_part.reference_image.url }}" alt="Reference" class="w-10 h-10 rounded-lg object-cover border border-slate-300" />
+										<span class="text-xs text-blue-700 font-semibold hover:underline whitespace-nowrap">ดูรูป</span>
+									</a>
+								{% else %}
+									<span class="text-slate-500">-</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3">
+								<div class="flex items-center justify-end gap-2">
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap"
+										data-open-edit-row
+										data-id="{{ r.id|default:'' }}"
+										data-created-at="{{ r.created_at|localtime|date:"Y-m-d H:i"|default:"" }}"
+										data-username="{{ r.created_by.username|default:'' }}"
+										data-shift="{% if r.created_by.profile %}{{ r.created_by.profile.shift|default:'shift_day' }}{% else %}—{% endif %}"
+										data-line-code="{{ r.production_line.code|default:'' }}"
+										data-part-id="{{ r.part_number.id|default:'' }}"
+										data-defect-id="{{ r.defect_mode.id|default:'' }}"
+										data-component-part-id="{{ r.component_part.id|default:'' }}"
+										data-quantity="{{ r.quantity|default:1 }}"
+										data-photo-url="{% if r.photo %}{{ r.photo.url }}{% elif r.component_part.reference_image %}{{ r.component_part.reference_image.url }}{% endif %}"
+										data-label="{{ r.production_line|default:'' }} {{ r.part_number.sd_code|default:'' }} / {{ r.defect_mode|default:'' }} / {{ r.component_part.part_name|default:'' }}">
+										แก้ไข
+									</button>
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
+										data-open-delete-row
+										data-id="{{ r.id|default:'' }}"
+										data-label="{{ r.production_line|default:'' }} {{ r.part_number.sd_code|default:'' }} / {{ r.defect_mode|default:'' }} / {{ r.component_part.part_name|default:'' }}">
+										ลบ
+									</button>
+								</div>
+							</td>
+						</tr>
+					{% empty %}
+						<tr>
+							<td class="px-4 py-8 text-center text-slate-600" colspan="11">
+								ยังไม่มีรายการ Scrap Record (หน้านี้แสดงข้อมูลที่กด Save จากหน้า Record)
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	{% if page_obj and paginator %}
+		<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 dark:border-white/10 dark:bg-transparent sm:flex-row sm:items-center sm:justify-between">
+			<div>
+				<p class="text-sm text-gray-700 dark:text-gray-300">
+					Showing
+					<span class="font-medium">{{ page_obj.start_index }}</span>
+					to
+					<span class="font-medium">{{ page_obj.end_index }}</span>
+					of
+					<span class="font-medium">{{ rows_total }}</span>
+					results
+				</p>
+			</div>
+			{% if paginator.num_pages > 1 %}
+				<div class="flex items-center justify-between gap-3 sm:justify-end">
+					<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-xs dark:shadow-none">
+						{% if page_obj.has_previous %}
+							<a href="?q={{ q|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:inset-ring-gray-700 dark:hover:bg-white/5">
+								<span class="sr-only">Previous</span>
+								<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+									<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" fill-rule="evenodd" />
+								</svg>
+							</a>
+						{% else %}
+							<span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200 dark:text-gray-600 dark:inset-ring-gray-800">
+								<span class="sr-only">Previous</span>
+								<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+									<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" fill-rule="evenodd" />
+								</svg>
+							</span>
+						{% endif %}
+
+						{% for item in page_items %}
+							{% if item %}
+								{% if item == page_obj.number %}
+									<a href="?q={{ q|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&per_page={{ per_page }}&page={{ item }}" aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:focus-visible:outline-indigo-500">{{ item }}</a>
+								{% else %}
+									<a href="?q={{ q|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:text-gray-200 dark:inset-ring-gray-700 dark:hover:bg-white/5">{{ item }}</a>
+								{% endif %}
+							{% else %}
+								<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 inset-ring inset-ring-gray-300 focus:outline-offset-0 dark:text-gray-400 dark:inset-ring-gray-700">...</span>
+							{% endif %}
+						{% endfor %}
+
+						{% if page_obj.has_next %}
+							<a href="?q={{ q|urlencode }}&date_from={{ date_from|urlencode }}&date_to={{ date_to|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:inset-ring-gray-700 dark:hover:bg-white/5">
+								<span class="sr-only">Next</span>
+								<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+									<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+								</svg>
+							</a>
+						{% else %}
+							<span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200 dark:text-gray-600 dark:inset-ring-gray-800">
+								<span class="sr-only">Next</span>
+								<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+									<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+								</svg>
+							</span>
+						{% endif %}
+					</nav>
+				</div>
+			{% endif %}
+		</div>
+	{% endif %}
+</section>
+
+<!-- Single backend action form -->
+<form id="actionForm" method="post" enctype="multipart/form-data" class="hidden">
+	{% csrf_token %}
+	<input type="hidden" name="action" id="actionField" value="" />
+	<input type="hidden" name="id" id="idField" value="" />
+	<input type="hidden" name="line_code" id="lineField" value="" />
+	<input type="hidden" name="part_number" id="partField" value="" />
+	<input type="hidden" name="defect_id" id="defectField" value="" />
+	<input type="hidden" name="component_part_id" id="componentPartField" value="" />
+	<input type="hidden" name="quantity" id="qtyField" value="" />
+	<input type="hidden" name="clear_photo" id="clearPhotoField" value="0" />
+</form>
+
+{{ record_data|json_script:"recordData" }}
+
+<!-- Image Popup Modal -->
+<div id="imageModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6" aria-hidden="true">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-image-modal-backdrop></div>
+	<div class="relative w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl bg-white p-4 sm:p-5">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-image-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<img id="imageModalImg" class="w-full max-h-[25vh] object-contain rounded-xl bg-slate-50" alt="Photo" data-image-modal-img />
+	</div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Scrap Record</h2>
+		<p class="text-xs text-slate-600 mt-1" id="editLabel"></p>
+		<div class="mt-4 space-y-4">
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">วันที่/เวลา</label>
+					<p class="mt-1 text-sm text-slate-700" id="editDateTime">-</p>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">ผู้ใช้งาน</label>
+					<p class="mt-1 text-sm text-slate-700" id="editUser">-</p>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">กะ</label>
+					<p class="mt-1 text-sm text-slate-700" id="editShift">-</p>
+				</div>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Production line</label>
+					<select id="editLine" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">SD number</label>
+					<select id="editPart" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Defect mode</label>
+					<select id="editDefect" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Part name</label>
+					<select id="editComponentPart" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
+				</div>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Quantity</label>
+				<input id="editQty" type="number" min="1" step="1" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Photo</label>
+				<div class="mt-1 flex items-center gap-3">
+					<img id="editPhotoPreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="Photo preview" />
+					<input id="editPhoto" type="file" accept="image/*" name="photo" form="actionForm"
+						class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+				</div>
+				<div class="mt-2 flex items-center gap-2">
+					<input id="editClearPhoto" type="checkbox" class="h-4 w-4" />
+					<label for="editClearPhoto" class="text-sm text-slate-700">ลบรูปเดิม (ตั้งเป็นค่าว่าง)</label>
+				</div>
+				<p class="mt-1 text-xs text-slate-500">เลือกไฟล์ใหม่เพื่อแทนที่รูปเดิม หรือเลือก “ลบรูปเดิม”</p>
+			</div>
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+		</div>
+	</div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">ยืนยันการลบ</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบรายการนี้หรือไม่?</p>
+		<div class="mt-2 text-xs text-slate-500 break-words" id="deleteLabel"></div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="deleteSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</div>
+	</div>
+</div>
+
+<script>
+	const actionForm = document.getElementById('actionForm');
+	const actionField = document.getElementById('actionField');
+	const idField = document.getElementById('idField');
+	const lineField = document.getElementById('lineField');
+	const partField = document.getElementById('partField');
+	const defectField = document.getElementById('defectField');
+	const componentPartField = document.getElementById('componentPartField');
+	const qtyField = document.getElementById('qtyField');
+	const clearPhotoField = document.getElementById('clearPhotoField');
+
+	const recordDataEl = document.getElementById('recordData');
+	const recordData = recordDataEl ? JSON.parse(recordDataEl.textContent) : { productionLines: [] };
+
+	const editModal = document.getElementById('editModal');
+	const editLabel = document.getElementById('editLabel');
+	const editLine = document.getElementById('editLine');
+	const editPart = document.getElementById('editPart');
+	const editDefect = document.getElementById('editDefect');
+	const editComponentPart = document.getElementById('editComponentPart');
+	const editQty = document.getElementById('editQty');
+	const editPhoto = document.getElementById('editPhoto');
+	const editPhotoPreview = document.getElementById('editPhotoPreview');
+	const editClearPhoto = document.getElementById('editClearPhoto');
+	function setOptions(selectEl, options, placeholder) {
+		selectEl.innerHTML = '';
+		const opt0 = document.createElement('option');
+		opt0.value = '';
+		opt0.textContent = placeholder || 'เลือก';
+		selectEl.appendChild(opt0);
+		options.forEach(o => {
+			const opt = document.createElement('option');
+			opt.value = o.value;
+			opt.textContent = o.label;
+			selectEl.appendChild(opt);
+		});
+	}
+
+	function findLine(code) {
+		return (recordData.productionLines || []).find(l => (l.code || '') === (code || '')) || null;
+	}
+	function findPart(lineObj, partId) {
+		if (!lineObj) return null;
+		return (lineObj.parts || []).find(p => String(p.id || '') === String(partId || '')) || null;
+	}
+	function findDefect(partObj, defectId) {
+		if (!partObj) return null;
+		return (partObj.defects || []).find(d => String(d.id || '') === String(defectId || '')) || null;
+	}
+
+	function refreshParts() {
+		const lineObj = findLine(editLine.value);
+		const parts = (lineObj?.parts || []).map(p => ({ value: String(p.id), label: (p.sd_number || p.part_number || p.id) }));
+		setOptions(editPart, parts, 'เลือก SD number');
+		editPart.value = '';
+		refreshDefects();
+	}
+	function refreshDefects() {
+		const lineObj = findLine(editLine.value);
+		const partObj = findPart(lineObj, editPart.value);
+		const defects = (partObj?.defects || []).map(d => ({ value: String(d.id), label: d.name }));
+		setOptions(editDefect, defects, 'เลือก Defect');
+		editDefect.value = '';
+		refreshComponentParts();
+	}
+	function refreshComponentParts() {
+		const lineObj = findLine(editLine.value);
+		const partObj = findPart(lineObj, editPart.value);
+		const defectObj = findDefect(partObj, editDefect.value);
+		const componentParts = (defectObj?.component_parts || []).map(s => ({ value: String(s.id || ''), label: s.name }));
+		setOptions(editComponentPart, componentParts, 'เลือก Part name');
+		editComponentPart.value = '';
+	}
+
+	// Initial line options
+	setOptions(editLine, (recordData.productionLines || []).map(l => ({ value: l.code, label: l.code })), 'เลือก Line');
+	setOptions(editPart, [], 'เลือก SD number');
+	setOptions(editDefect, [], 'เลือก Defect');
+	setOptions(editComponentPart, [], 'เลือก Part name');
+
+	editLine.addEventListener('change', refreshParts);
+	editPart.addEventListener('change', refreshDefects);
+	editDefect.addEventListener('change', refreshComponentParts);
+
+	const deleteModal = document.getElementById('deleteModal');
+	const deleteLabel = document.getElementById('deleteLabel');
+
+	// Toolbar: bulk delete
+	const selectAllRows = document.getElementById('selectAllRows');
+	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+	const rowCheckboxes = Array.from(document.querySelectorAll('.rowCheckbox'));
+
+	function selectedIds() {
+		return rowCheckboxes.filter(cb => cb.checked).map(cb => cb.dataset.id).filter(Boolean);
+	}
+	function syncBulkState() {
+		if (!bulkDeleteBtn) return;
+		bulkDeleteBtn.disabled = selectedIds().length === 0;
+	}
+	if (selectAllRows) {
+		selectAllRows.addEventListener('change', () => {
+			rowCheckboxes.forEach(cb => { cb.checked = !!selectAllRows.checked; });
+			syncBulkState();
+		});
+	}
+	rowCheckboxes.forEach(cb => cb.addEventListener('change', syncBulkState));
+	if (bulkDeleteBtn) {
+		bulkDeleteBtn.addEventListener('click', () => {
+			const ids = selectedIds();
+			if (ids.length === 0) return;
+			Array.from(actionForm.querySelectorAll('input[name="bulk_id"]')).forEach(n => n.remove());
+			actionField.value = 'bulk_delete';
+			idField.value = '';
+			ids.forEach(id => {
+				const input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'bulk_id';
+				input.value = String(id);
+				actionForm.appendChild(input);
+			});
+			actionForm.submit();
+		});
+	}
+
+	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
+	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
+
+	// Image modal
+	const imageModal = document.getElementById('imageModal');
+	const imageModalImg = document.getElementById('imageModalImg');
+	function openImageModal(url) {
+		if (!url) return;
+		if (!imageModal || !imageModalImg) {
+			window.open(url, '_blank', 'noreferrer');
+			return;
+		}
+		imageModalImg.src = url;
+		imageModalImg.alt = 'Photo';
+		openModal(imageModal);
+		imageModal.setAttribute('aria-hidden', 'false');
+	}
+	function closeImageModal() {
+		if (!imageModal) return;
+		closeModal(imageModal);
+		imageModal.setAttribute('aria-hidden', 'true');
+		if (imageModalImg) imageModalImg.src = '';
+	}
+	if (imageModal) {
+		imageModal.querySelectorAll('[data-image-modal-close]').forEach(btn => btn.addEventListener('click', closeImageModal));
+		imageModal.querySelectorAll('[data-image-modal-backdrop]').forEach(bg => bg.addEventListener('click', closeImageModal));
+	}
+	const closeFromEvent = (e) => {
+		if (!imageModal || imageModal.classList.contains('hidden')) return;
+		const target = e.target;
+		if (!target || !target.closest) return;
+		const hit = target.closest('[data-image-modal-close], [data-image-modal-backdrop], [data-image-modal-img]');
+		if (!hit) return;
+		e.preventDefault();
+		closeImageModal();
+	};
+	document.addEventListener('pointerdown', closeFromEvent);
+	document.addEventListener('click', closeFromEvent);
+	// Delegate clicks for dynamically rendered rows too
+	document.addEventListener('click', (e) => {
+		const link = e.target && e.target.closest ? e.target.closest('a[data-image-popup]') : null;
+		if (!link) return;
+		e.preventDefault();
+		openImageModal(link.getAttribute('href'));
+	});
+
+	document.querySelectorAll('[data-open-edit-row]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			actionField.value = 'update';
+			idField.value = btn.dataset.id || '';
+			lineField.value = '';
+			partField.value = '';
+			defectField.value = '';
+			componentPartField.value = '';
+			qtyField.value = '';
+			clearPhotoField.value = '0';
+
+			editLabel.textContent = btn.dataset.label || '';
+
+			// Set datetime, user, and shift (read-only)
+			document.getElementById('editDateTime').textContent = btn.dataset.createdAt || '-';
+			document.getElementById('editUser').textContent = btn.dataset.username || '-';
+			
+			// Format shift display
+			const shiftValue = btn.dataset.shift || '-';
+			let shiftDisplay = '-';
+			if (shiftValue === 'shift_a') {
+				shiftDisplay = 'กะ A';
+			} else if (shiftValue === 'shift_b') {
+				shiftDisplay = 'กะ B';
+			} else if (shiftValue === 'shift_day') {
+				shiftDisplay = 'กะ Day';
+			}
+			document.getElementById('editShift').textContent = shiftDisplay;
+
+			// Preselect hierarchy
+			const lineCode = btn.dataset.lineCode || '';
+			const partId = btn.dataset.partId || '';
+			const defectId = btn.dataset.defectId || '';
+			const componentPartId = btn.dataset.componentPartId || '';
+			editLine.value = lineCode;
+			refreshParts();
+			editPart.value = partId;
+			refreshDefects();
+			editDefect.value = String(defectId);
+			refreshComponentParts();
+			editComponentPart.value = String(componentPartId);
+
+			editQty.value = btn.dataset.quantity || '1';
+			editClearPhoto.checked = false;
+			editPhoto.value = '';
+			const photoUrl = btn.dataset.photoUrl || '';
+			if (photoUrl) {
+				editPhotoPreview.src = photoUrl;
+				editPhotoPreview.classList.remove('opacity-40');
+			} else {
+				editPhotoPreview.src = '';
+				editPhotoPreview.classList.add('opacity-40');
+			}
+
+			openModal(editModal);
+			setTimeout(() => editQty.focus(), 0);
+		});
+	});
+
+	editPhoto.addEventListener('change', () => {
+		const file = editPhoto.files && editPhoto.files[0];
+		if (!file) return;
+		const url = URL.createObjectURL(file);
+		editPhotoPreview.src = url;
+		editPhotoPreview.classList.remove('opacity-40');
+	});
+
+	document.querySelectorAll('[data-open-delete-row]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			actionField.value = 'delete';
+			idField.value = btn.dataset.id || '';
+			deleteLabel.textContent = btn.dataset.label || '';
+			openModal(deleteModal);
+		});
+	});
+
+	document.querySelectorAll('[data-modal-close]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			closeModal(editModal);
+			closeModal(deleteModal);
+		});
+	});
+
+	document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
+		bg.addEventListener('click', () => {
+			closeModal(editModal);
+			closeModal(deleteModal);
+		});
+	});
+
+	document.getElementById('editSubmit').addEventListener('click', () => {
+		lineField.value = (editLine.value || '').trim();
+		partField.value = (editPart.value || '').trim();
+		defectField.value = (editDefect.value || '').trim();
+		componentPartField.value = (editComponentPart.value || '').trim();
+		qtyField.value = (editQty.value || '1').trim();
+		clearPhotoField.value = editClearPhoto.checked ? '1' : '0';
+		actionForm.submit();
+	});
+
+	document.getElementById('deleteSubmit').addEventListener('click', () => {
+		actionForm.submit();
+	});
+
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape') {
+			closeModal(editModal);
+			closeModal(deleteModal);
+			closeImageModal();
+		}
+	});
+
+	// Initialize Flatpickr datepickers
+	flatpickr('#date_from_picker', {
+		locale: 'th',
+		dateFormat: 'Y-m-d',
+		allowInput: true,
+		wrap: false,
+	});
+	flatpickr('#date_to_picker', {
+		locale: 'th',
+		dateFormat: 'Y-m-d',
+		allowInput: true,
+		wrap: false,
+	});
+</script>
+{% endblock %}

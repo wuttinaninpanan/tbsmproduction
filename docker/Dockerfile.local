@@ -43,7 +43,8 @@ RUN poetry config virtualenvs.in-project true
 # Python dependencies
 # =========================
 COPY pyproject.toml poetry.lock* /app/
-RUN poetry install --no-root --no-interaction --no-ansi
+RUN poetry lock --no-interaction --no-ansi \
+    && poetry install --no-root --no-interaction --no-ansi
 
 # =========================
 # App source

@@ -4,33 +4,72 @@
 
 {% block content %}
 <section class="py-12">
-	<div class="max-w-md mx-auto">
-		<div class="glass-card p-8 rounded-xl">
-			<h1 class="text-2xl font-bold text-slate-900 mb-4">เข้าสู่ระบบ</h1>
+    <div class="max-w-md mx-auto">
+        <!-- Glass Card -->
+        <div class="bg-white/80 backdrop-blur border border-slate-200
+                    p-8 rounded-2xl shadow-xl">
 
-			<form action="/login/" method="post" class="space-y-4">
-				{% csrf_token %}
-				<div>
-					<label class="block text-sm text-slate-700">ชื่อผู้ใช้</label>
-					<input name="username" class="mt-1 w-full rounded-md border-gray-200 p-2" />
-				</div>
+            <h1 class="text-2xl font-bold text-slate-900 mb-6 text-center">
+                เข้าสู่ระบบ
+            </h1>
 
-				<div>
-					<label class="block text-sm text-slate-700">รหัสผ่าน</label>
-					<input type="password" name="password" class="mt-1 w-full rounded-md border-gray-200 p-2" />
-				</div>
+            {% if error %}
+                <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {{ error }}
+                </div>
+            {% endif %}
 
-				<div class="flex items-center justify-between">
-					<label class="text-sm"><input type="checkbox" name="remember" class="mr-2"> จดจำฉัน</label>
-					<a href="/password-reset/" class="text-sm text-slate-700">ลืมรหัสผ่าน?</a>
-				</div>
+            <form action="{% url 'login' %}" method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next|default:'' }}" />
 
-				<div>
-					<button type="submit" class="inline-flex items-center px-4 py-2 rounded-md bg-gradient-to-r from-[#7c3aed] to-[#06b6d4] text-white">เข้าสู่ระบบ</button>
-				</div>
-			</form>
-		</div>
-	</div>
+                <!-- Username -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">
+                        ชื่อผู้ใช้
+                    </label>
+                    <input
+                        name="username"
+                        placeholder="username"
+                        class="w-full rounded-lg border border-slate-300
+                               px-3 py-2
+                               focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">
+                        รหัสผ่าน
+                    </label>
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="••••••••"
+                        class="w-full rounded-lg border border-slate-300
+                               px-3 py-2
+                               focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                </div>
+
+                <!-- Remember -->
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex items-center gap-2 text-slate-700">
+                        <input type="checkbox" name="remember" class="rounded">
+                        จดจำฉัน
+                    </label>
+                </div>
+
+                <!-- Submit -->
+                <button
+                    type="submit"
+                    class="w-full py-2 rounded-lg font-semibold text-white
+                           bg-gradient-to-r from-red-600 to-red-500
+                           hover:opacity-90 transition">
+                    เข้าสู่ระบบ
+                </button>
+            </form>
+        </div>
+    </div>
 </section>
 {% endblock %}
-

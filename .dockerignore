@@ -1,0 +1,13 @@
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.gitignore
+.vscode/
+node_modules/
+**/node_modules/
+media/

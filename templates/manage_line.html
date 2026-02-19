@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Manage Line — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการข้อมูล Production line</h1>
+			<p class="text-sm text-slate-600 mt-1">ตาราง Line (Production line) และ Process type</p>
+		</div>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">
+					{{ message }}
+				</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+			<div class="md:col-span-5">
+				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Description / Process"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
+			<div class="md:col-span-2 flex items-end">
+				<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+						<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
+					</svg>
+					ค้นหา
+				</button>
+			</div>
+		</div>
+
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+			<div class="text-xs text-slate-600">ทั้งหมด {{ total_count|default:0 }} รายการ</div>
+			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+		</div>
+	</form>
+
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="font-extrabold text-slate-800">Production lines</div>
+				<div class="flex items-center gap-2">
+					<form id="importForm" method="post" enctype="multipart/form-data" class="inline">
+						{% csrf_token %}
+						<input type="hidden" name="action" value="import_master_data" />
+						<input id="importFile" type="file" name="excel_file" accept=".xlsx" class="hidden" />
+					</form>
+					<a href="?action=download_template" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path d="M4 2.75A1.75 1.75 0 0 1 5.75 1h6.19c.46 0 .9.18 1.23.51l2.32 2.32c.33.33.51.77.51 1.23v12.19A1.75 1.75 0 0 1 14.25 19H5.75A1.75 1.75 0 0 1 4 17.25V2.75Z" />
+							<path d="M12 1.5v2.25c0 .69.56 1.25 1.25 1.25H15.5" />
+						</svg>
+						Template Excel
+					</a>
+					<button type="button" id="importBtn" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-green-600 text-white hover:bg-green-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path fill-rule="evenodd" d="M10 2a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.75A.75.75 0 0 1 10 2ZM3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+						</svg>
+						นำเข้าข้อมูล
+					</button>
+					<button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd" />
+						</svg>
+						เพิ่มข้อมูล
+					</button>
+					<button type="button" id="bulkDeleteBtn" disabled class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+							<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+							<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+						</svg>
+						ลบที่เลือก
+					</button>
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-gray-700">Show</span>
+							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							</select>
+							<span class="text-sm text-gray-700">entries</span>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
+						</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Process type</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for r in rows %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3">
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" />
+							</td>
+							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.line_name|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.process_type_name|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.description|default:"-" }}</td>
+							<td class="px-4 py-3">
+								<div class="flex items-center justify-center gap-2">
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap"
+										data-open-edit
+										data-id="{{ r.id }}"
+										data-line-name="{{ r.line_name|default:'' }}"
+										data-description="{{ r.description|default:'' }}"
+										data-process-type-id="{{ r.process_type_id|default:'' }}">
+										แก้ไข
+									</button>
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
+										data-open-delete
+										data-id="{{ r.id }}"
+										data-label="{{ r.line_name|default:'' }}">
+										ลบ
+									</button>
+								</div>
+							</td>
+						</tr>
+					{% empty %}
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="5">ยังไม่มีข้อมูล Production line</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+
+		{% if page_obj and paginator %}
+			<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 dark:border-white/10 dark:bg-transparent sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<p class="text-sm text-gray-700 dark:text-gray-300">
+						Showing
+						<span class="font-medium">{{ page_obj.start_index }}</span>
+						to
+						<span class="font-medium">{{ page_obj.end_index }}</span>
+						of
+						<span class="font-medium">{{ rows_total }}</span>
+						results
+					</p>
+				</div>
+				{% if paginator.num_pages > 1 %}
+					<div class="flex items-center justify-between gap-3 sm:justify-end">
+						<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-xs dark:shadow-none">
+							{% if page_obj.has_previous %}
+								<a href="?q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:inset-ring-gray-700 dark:hover:bg-white/5">
+									<span class="sr-only">Previous</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</a>
+							{% else %}
+								<span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200 dark:text-gray-600 dark:inset-ring-gray-800">
+									<span class="sr-only">Previous</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</span>
+							{% endif %}
+
+							{% for item in page_items %}
+								{% if item %}
+									{% if item == page_obj.number %}
+										<a href="?q={{ q|urlencode }}&per_page={{ per_page }}&page={{ item }}" aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:focus-visible:outline-indigo-500">{{ item }}</a>
+									{% else %}
+										<a href="?q={{ q|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:text-gray-200 dark:inset-ring-gray-700 dark:hover:bg-white/5">{{ item }}</a>
+									{% endif %}
+								{% else %}
+									<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 inset-ring inset-ring-gray-300 focus:outline-offset-0 dark:text-gray-400 dark:inset-ring-gray-700">...</span>
+								{% endif %}
+							{% endfor %}
+
+							{% if page_obj.has_next %}
+								<a href="?q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:inset-ring-gray-700 dark:hover:bg-white/5">
+									<span class="sr-only">Next</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</a>
+							{% else %}
+								<span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200 dark:text-gray-600 dark:inset-ring-gray-800">
+									<span class="sr-only">Next</span>
+									<svg viewBox="0 0 20 20" fill="currentColor" data-slot="icon" aria-hidden="true" class="size-5">
+										<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" fill-rule="evenodd" />
+									</svg>
+								</span>
+							{% endif %}
+						</nav>
+					</div>
+				{% endif %}
+			</div>
+		{% endif %}
+	</div>
+</section>
+
+<form id="actionForm" method="post" class="hidden">
+	{% csrf_token %}
+	<input type="hidden" name="action" id="actionField" value="" />
+	<input type="hidden" name="id" id="idField" value="" />
+	<input type="hidden" name="line_name" id="lineNameField" value="" />
+	<input type="hidden" name="description" id="descriptionField" value="" />
+	<input type="hidden" name="process_type_id" id="processTypeField" value="" />
+</form>
+
+<!-- Add Modal -->
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่ม Production line</h2>
+		<div class="mt-4 space-y-4">
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Production line</label>
+				<input id="addLineName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น LINE-01" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Process type</label>
+				<select id="addProcessType" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">เลือก Process</option>
+					{% for p in processes %}
+						<option value="{{ p.id }}">{{ p.display_name|default:p.name }}</option>
+					{% endfor %}
+				</select>
+				{% if not processes %}
+					<p class="mt-1 text-xs text-amber-700">ยังไม่มี Process type (LineProcess) กรุณาเพิ่มก่อน</p>
+				{% endif %}
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Description</label>
+				<input id="addDescription" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="addSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+		</div>
+	</div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Production line</h2>
+		<p class="text-xs text-slate-600 mt-1" id="editLabel"></p>
+		<div class="mt-4 space-y-4">
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Production line</label>
+				<input id="editLineName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Process type</label>
+				<select id="editProcessType" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">เลือก Process</option>
+					{% for p in processes %}
+						<option value="{{ p.id }}">{{ p.display_name|default:p.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Description</label>
+				<input id="editDescription" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+		</div>
+	</div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">ยืนยันการลบ</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบรายการนี้หรือไม่?</p>
+		<div class="mt-2 text-xs text-slate-500 break-words" id="deleteLabel"></div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="deleteSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</div>
+	</div>
+</div>
+
+<script>
+	const actionForm = document.getElementById('actionForm');
+	const actionField = document.getElementById('actionField');
+	const idField = document.getElementById('idField');
+	const lineNameField = document.getElementById('lineNameField');
+	const descriptionField = document.getElementById('descriptionField');
+	const processTypeField = document.getElementById('processTypeField');
+
+	// Toolbar: import
+	const importBtn = document.getElementById('importBtn');
+	const importFile = document.getElementById('importFile');
+	const importForm = document.getElementById('importForm');
+	if (importBtn && importFile && importForm) {
+		importBtn.addEventListener('click', () => importFile.click());
+		importFile.addEventListener('change', () => {
+			if (importFile.files && importFile.files.length > 0) {
+				importForm.submit();
+			}
+		});
+	}
+
+	const addModal = document.getElementById('addModal');
+	const editModal = document.getElementById('editModal');
+	const deleteModal = document.getElementById('deleteModal');
+
+	function openModal(el) {
+		if (!el) return;
+		el.classList.remove('hidden');
+		el.classList.add('flex');
+	}
+	function closeModal(el) {
+		if (!el) return;
+		el.classList.add('hidden');
+		el.classList.remove('flex');
+	}
+	document.querySelectorAll('[data-modal-close]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			closeModal(addModal);
+			closeModal(editModal);
+			closeModal(deleteModal);
+		});
+	});
+	document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
+		bg.addEventListener('click', () => {
+			closeModal(addModal);
+			closeModal(editModal);
+			closeModal(deleteModal);
+		});
+	});
+
+	// Bulk selection
+	const selectAll = document.getElementById('selectAllRows');
+	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+	function updateBulkState() {
+		const checked = Array.from(document.querySelectorAll('.rowCheckbox')).filter(cb => cb.checked);
+		bulkDeleteBtn.disabled = checked.length === 0;
+	}
+	if (selectAll) {
+		selectAll.addEventListener('change', () => {
+			document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = selectAll.checked);
+			updateBulkState();
+		});
+	}
+	document.querySelectorAll('.rowCheckbox').forEach(cb => cb.addEventListener('change', updateBulkState));
+	updateBulkState();
+
+	bulkDeleteBtn.addEventListener('click', () => {
+		const ids = Array.from(document.querySelectorAll('.rowCheckbox')).filter(cb => cb.checked).map(cb => cb.dataset.id);
+		if (!ids.length) return;
+		if (!confirm(`ต้องการลบ ${ids.length} รายการหรือไม่?`)) return;
+		actionField.value = 'bulk_delete_lines';
+		// remove existing bulk inputs
+		Array.from(actionForm.querySelectorAll('input[name="bulk_id"]')).forEach(n => n.remove());
+		ids.forEach(id => {
+			const inp = document.createElement('input');
+			inp.type = 'hidden';
+			inp.name = 'bulk_id';
+			inp.value = id;
+			actionForm.appendChild(inp);
+		});
+		actionForm.submit();
+	});
+
+	// Add
+	document.getElementById('openAddModal').addEventListener('click', () => openModal(addModal));
+	document.getElementById('addSubmit').addEventListener('click', () => {
+		actionField.value = 'create';
+		idField.value = '';
+		lineNameField.value = (document.getElementById('addLineName').value || '').trim();
+		descriptionField.value = (document.getElementById('addDescription').value || '').trim();
+		processTypeField.value = (document.getElementById('addProcessType').value || '').trim();
+		actionForm.submit();
+	});
+
+	// Edit
+	const editLabel = document.getElementById('editLabel');
+	document.querySelectorAll('[data-open-edit]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			idField.value = btn.dataset.id || '';
+			document.getElementById('editLineName').value = btn.dataset.lineName || '';
+			document.getElementById('editDescription').value = btn.dataset.description || '';
+			document.getElementById('editProcessType').value = btn.dataset.processTypeId || '';
+			editLabel.textContent = btn.dataset.lineName || '';
+			openModal(editModal);
+		});
+	});
+	document.getElementById('editSubmit').addEventListener('click', () => {
+		actionField.value = 'update';
+		lineNameField.value = (document.getElementById('editLineName').value || '').trim();
+		descriptionField.value = (document.getElementById('editDescription').value || '').trim();
+		processTypeField.value = (document.getElementById('editProcessType').value || '').trim();
+		actionForm.submit();
+	});
+
+	// Delete
+	const deleteLabel = document.getElementById('deleteLabel');
+	document.querySelectorAll('[data-open-delete]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			idField.value = btn.dataset.id || '';
+			deleteLabel.textContent = btn.dataset.label || '';
+			openModal(deleteModal);
+		});
+	});
+	document.getElementById('deleteSubmit').addEventListener('click', () => {
+		actionField.value = 'delete';
+		actionForm.submit();
+	});
+</script>
+{% endblock %}
