@@ -212,6 +212,7 @@ class ManageScrapViews(TemplateView):
             defect_id = (request.POST.get("defect_id") or "").strip()
             component_part_id = (request.POST.get("component_part_id") or "").strip()
             qty_raw = (request.POST.get("quantity") or "").strip()
+            comment = (request.POST.get("comment") or "").strip() or None
             clear_photo = (request.POST.get("clear_photo") or "").strip() in {"1", "true", "on", "yes"}
             photo = request.FILES.get("photo")
 
@@ -294,6 +295,10 @@ class ManageScrapViews(TemplateView):
                 if rec.quantity != quantity:
                     rec.quantity = quantity
                     updated_fields.append("quantity")
+
+                if rec.comment != comment:
+                    rec.comment = comment
+                    updated_fields.append("comment")
 
                 if clear_photo:
                     if rec.photo:
@@ -495,6 +500,7 @@ class ManageScrapViews(TemplateView):
             "Production line",
             "SD number",
             "Defect mode",
+            "Comment",
             "Part name",
             "Quantity",
         ]
@@ -526,6 +532,7 @@ class ManageScrapViews(TemplateView):
                     getattr(r.production_line, "code", "-"),
                     getattr(r.part_number, "sd_code", "-") or "-",
                     getattr(r.defect_mode, "name", "-"),
+                    r.comment or "-",
                     getattr(r.component_part, "part_name", "-") or "-",
                     r.quantity or 0,
                 ]
@@ -538,7 +545,8 @@ class ManageScrapViews(TemplateView):
         ws.column_dimensions["E"].width = 18
         ws.column_dimensions["F"].width = 22
         ws.column_dimensions["G"].width = 22
-        ws.column_dimensions["H"].width = 12
+        ws.column_dimensions["H"].width = 22
+        ws.column_dimensions["I"].width = 12
 
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

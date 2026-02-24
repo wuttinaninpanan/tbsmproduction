@@ -16,40 +16,6 @@
 				อัปเดตล่าสุด: <span class="font-semibold text-slate-800">{{ now|localtime|date:"d M Y H:i" }}</span>
 			</p>
 		</div>
-		<div class="flex flex-wrap gap-2">
-			<a href="/record/" class="inline-flex items-center bg-transparent hover:bg-slate-500 text-slate-700 font-semibold hover:text-white py-2 px-4 border border-slate-500 hover:border-transparent rounded">
-				<svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M9 4h6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path>
-					<path d="M9 4a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2"></path>
-					<path d="M9 13l2 2 4-4"></path>
-				</svg>
-                บันทึก Scrap
-			</a>
-			{% if is_staff %}
-				<a href="/manage-scrap/" class="inline-flex items-center bg-transparent hover:bg-red-500 text-red-700 font-semibold hover:text-white py-2 px-4 border border-red-500 hover:border-transparent rounded">
-					<svg class="w-4 h-4 mr-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<path d="M8 6h13"></path>
-						<path d="M8 12h13"></path>
-						<path d="M8 18h13"></path>
-						<path d="M3 6h.01"></path>
-						<path d="M3 12h.01"></path>
-						<path d="M3 18h.01"></path>
-					</svg>
-                    จัดการ Scrap
-				</a>
-				<a href="/report_scrap_monthly/" class="inline-flex items-center bg-transparent hover:bg-sky-500 text-sky-700 font-semibold hover:text-white py-2 px-4 border border-sky-500 hover:border-transparent rounded">
-					<svg class="w-4 h-4 mr-2" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<path d="M8 6h13"></path>
-						<path d="M8 12h13"></path>
-						<path d="M8 18h13"></path>
-						<path d="M3 6h.01"></path>
-						<path d="M3 12h.01"></path>
-						<path d="M3 18h.01"></path>
-					</svg>
-                    รายงานรายเดือน
-				</a>
-			{% endif %}
-		</div>
 	</header>
 
 	<!-- KPI cards -->
@@ -105,11 +71,7 @@
 					<span class="font-extrabold text-slate-900">{{ kpi.lines_total|default:0 }}</span>
 				</div>
 				<div class="flex items-center justify-between gap-3">
-					<span>Part number</span>
-					<span class="font-extrabold text-slate-900">{{ kpi.parts_total|default:0 }}</span>
-				</div>
-				<div class="flex items-center justify-between gap-3">
-					<span>Component part</span>
+					<span>Part Name</span>
 					<span class="font-extrabold text-slate-900">{{ kpi.component_parts_total|default:0 }}</span>
 				</div>
 				<div class="flex items-center justify-between gap-3">
@@ -120,7 +82,7 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 		<!-- Top lines this month -->
 		<div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
 			<div class="flex items-center justify-between">
@@ -149,35 +111,21 @@
 			</div>
 		</div>
 
-		<!-- Quick links -->
-		<div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5">
-			<div class="font-extrabold text-slate-800">ทางลัด</div>
-			<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-				<a href="/record/" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100 transition">
-					<div class="font-extrabold text-slate-900">บันทึกข้อมูล Scrap</div>
-					<div class="mt-1 text-sm text-slate-600">เพิ่มรายการใหม่สำหรับงานประจำวัน</div>
-				</a>
-				<a href="/profile/" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100 transition">
-					<div class="font-extrabold text-slate-900">โปรไฟล์ผู้ใช้งาน</div>
-					<div class="mt-1 text-sm text-slate-600">ดู/แก้ไขข้อมูลส่วนตัว</div>
-				</a>
+		<!-- Top defect modes this month — doughnut chart -->
+		<div class="rounded-2xl border border-slate-200 bg-white p-5">
+			<div class="flex items-center justify-between">
+				<div class="font-extrabold text-slate-800">Top Defect mode (เดือนนี้)</div>
 				{% if is_staff %}
-					<a href="/manage-scrap/" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100 transition">
-						<div class="font-extrabold text-slate-900">จัดการข้อมูล Scrap</div>
-						<div class="mt-1 text-sm text-slate-600">ค้นหา/แก้ไข/ส่งออกข้อมูล</div>
-					</a>
-					<a href="/manage-line/" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100 transition">
-						<div class="font-extrabold text-slate-900">จัดการ Production line</div>
-						<div class="mt-1 text-sm text-slate-600">จัดการ Line / Part / Component part</div>
-					</a>
-					<a href="/manage-defectmode/" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100 transition">
-						<div class="font-extrabold text-slate-900">จัดการ Defect mode</div>
-						<div class="mt-1 text-sm text-slate-600">กำหนด defect และรูปอ้างอิง</div>
-					</a>
-					<a href="/report_scrap_monthly/" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 hover:bg-slate-100 transition">
-						<div class="font-extrabold text-slate-900">รายงานรายเดือน</div>
-						<div class="mt-1 text-sm text-slate-600">สรุปผล Scrap รายเดือน</div>
-					</a>
+					<a href="/manage-defectmode/" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ดูทั้งหมด</a>
+				{% endif %}
+			</div>
+			<div class="mt-4">
+				{% if top_defect_modes_month %}
+					<div class="relative" style="height:220px;">
+						<canvas id="chartTopDefect" aria-label="Top defect mode chart"></canvas>
+					</div>
+				{% else %}
+					<div class="text-sm text-slate-600">ยังไม่มีข้อมูลของเดือนนี้</div>
 				{% endif %}
 			</div>
 		</div>
@@ -233,7 +181,7 @@
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part number</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Component part</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Name</th>
 						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Qty</th>
 					</tr>
 				</thead>
@@ -269,93 +217,8 @@
 
 <!-- Chart.js (CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-	(() => {
-		const chartsEl = document.getElementById('dashboard-charts');
-		const charts = chartsEl ? JSON.parse(chartsEl.textContent) : null;
-		if (!charts || typeof Chart === 'undefined') return;
 
-		const pickColor = (className) => {
-			const el = document.createElement('span');
-			el.className = className;
-			el.style.display = 'none';
-			document.body.appendChild(el);
-			const color = getComputedStyle(el).color;
-			document.body.removeChild(el);
-			return color;
-		};
-
-		const cPrimary = pickColor('text-red-600');
-		const cNeutral = pickColor('text-slate-700');
-		const cGrid = pickColor('text-slate-200');
-
-		const dailyCanvas = document.getElementById('chartDaily');
-		if (dailyCanvas && charts.daily && Array.isArray(charts.daily.labels)) {
-			new Chart(dailyCanvas, {
-				type: 'line',
-				data: {
-					labels: charts.daily.labels,
-					datasets: [{
-						label: 'Records',
-						data: charts.daily.data || [],
-						borderColor: cPrimary,
-						backgroundColor: cPrimary,
-						tension: 0.3,
-						fill: false,
-						pointRadius: 2,
-						pointHoverRadius: 4,
-					}]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: { legend: { display: false } },
-					scales: {
-						x: {
-							ticks: { color: cNeutral },
-							grid: { display: false },
-						},
-						y: {
-							beginAtZero: true,
-							ticks: { color: cNeutral, precision: 0 },
-							grid: { color: cGrid },
-						},
-					},
-				}
-			});
-		}
-
-		const topCanvas = document.getElementById('chartTopLines');
-		if (topCanvas && charts.top_lines && Array.isArray(charts.top_lines.labels)) {
-			new Chart(topCanvas, {
-				type: 'bar',
-				data: {
-					labels: charts.top_lines.labels,
-					datasets: [{
-						label: 'Qty',
-						data: charts.top_lines.data || [],
-						backgroundColor: cPrimary,
-					}]
-				},
-				options: {
-					responsive: true,
-					maintainAspectRatio: false,
-					plugins: { legend: { display: false } },
-					scales: {
-						x: {
-							ticks: { color: cNeutral },
-							grid: { display: false },
-						},
-						y: {
-							beginAtZero: true,
-							ticks: { color: cNeutral, precision: 0 },
-							grid: { color: cGrid },
-						},
-					},
-				}
-			});
-		}
-	})();
-</script>
+{% load static %}
+<script src="{% static 'js/dashboard.js' %}" defer></script>
 {% endblock %}
 

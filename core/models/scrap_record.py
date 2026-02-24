@@ -30,6 +30,8 @@ class ScrapRecord(BaseModel):
     )
     quantity = models.PositiveIntegerField(default=1)
 
+    comment = models.TextField(blank=True, null=True)
+
     photo = models.FileField(upload_to="scrap_photos/", blank=True, null=True)
 
     created_by = models.ForeignKey(

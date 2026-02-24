@@ -17,6 +17,7 @@ from .views import ManageScrapViews
 from .views import ManageLineViews
 from .views import DashboardViews
 from .views import MonthlyComponentPartReportViews
+from .views import ScrapWeightReportViews
 
 
 
@@ -38,6 +39,7 @@ urlpatterns = [
 	path('record/', RecordViews.as_view(), name="record"),
 	path('manage-scrap/', ManageScrapViews.as_view(), name="manage_scrap"),
     path('report_scrap_monthly/', MonthlyComponentPartReportViews.as_view(), name="report_scrap_monthly"),
+    path('report_scrap_weight/', ScrapWeightReportViews.as_view(), name="report_scrap_weight"),
     path('manage-line/', ManageLineViews.as_view(), name="manage_line"),
     path('manage-item-category/', ManageItemCategoryViews.as_view(), name="manage_item_category"),
     path('manage-item-line/', ManageItemLineViews.as_view(), name="manage_item_line"),

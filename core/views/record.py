@@ -253,6 +253,7 @@ class RecordViews(TemplateView):
                     request.POST.get(f"blocks[{gi}][rows][{ri}][component_part_id]") or ""
                 ).strip()
                 qty_raw = (request.POST.get(f"blocks[{gi}][rows][{ri}][quantity]") or "").strip()
+                comment = (request.POST.get(f"blocks[{gi}][rows][{ri}][comment]") or "").strip()
 
                 try:
                     qty = int(re.search(r"(\d+)", qty_raw).group(1)) if qty_raw else None  # type: ignore[union-attr]
@@ -285,6 +286,7 @@ class RecordViews(TemplateView):
                     defect_mode=defect,
                     component_part=component_part,
                     quantity=qty,
+                    comment=comment or None,
                     photo=None,
                     created_by=request.user if getattr(request, "user", None) is not None and request.user.is_authenticated else None,
                 )

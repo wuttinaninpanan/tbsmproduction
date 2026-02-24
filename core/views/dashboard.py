@@ -84,12 +84,31 @@ class DashboardViews(TemplateView):
         }
         daily_counts = [daily_counts_map.get(k, 0) for k in date_keys]
 
+        top_defect_raw = list(
+            scoped_qs.filter(created_at__year=current_year, created_at__month=current_month)
+            .values(defect_name=F("defect_mode__name_th"))
+            .annotate(total_qty=Sum("quantity"), total_records=Count("id"))
+            .order_by("-total_qty", "-total_records", "defect_name")[:5]
+        )
+        ctx["top_defect_modes_month"] = [
+            {
+                "name": (r.get("defect_name") or "-"),
+                "total_qty": r.get("total_qty") or 0,
+                "total_records": r.get("total_records") or 0,
+            }
+            for r in top_defect_raw
+        ]
+
         top_line_labels = [r.get("production_line__code") or "-" for r in ctx["top_lines_month"]]
         top_line_qty = [int(r.get("total_qty") or 0) for r in ctx["top_lines_month"]]
+
+        top_defect_labels = [r.get("name") or "-" for r in ctx["top_defect_modes_month"]]
+        top_defect_qty = [int(r.get("total_qty") or 0) for r in ctx["top_defect_modes_month"]]
 
         ctx["charts"] = {
             "daily": {"labels": date_labels, "data": daily_counts},
             "top_lines": {"labels": top_line_labels, "data": top_line_qty},
+            "top_defect": {"labels": top_defect_labels, "data": top_defect_qty},
         }
 
         ctx["recent_records"] = list(

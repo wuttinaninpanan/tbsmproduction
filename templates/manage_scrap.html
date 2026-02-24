@@ -17,27 +17,27 @@
 
 	<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 		<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5 flex-1">
-			<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-				<div class="md:col-span-4">
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+				<div class="sm:col-span-2 lg:col-span-4">
 					<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
 					<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา ผู้ใช้งาน / กะ / Production line / SD number / Defect / Part name"
 						   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 				</div>
 				<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
-				<div class="md:col-span-2">
+				<div class="lg:col-span-2">
 					<label class="block text-sm font-semibold text-slate-700">วันที่เริ่ม</label>
-				<input type="text" id="date_from_picker" name="date_from" value="{{ date_from|default:'' }}" placeholder="เลือกวันที่"
-					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-			</div>
-			<div class="md:col-span-2">
-				<label class="block text-sm font-semibold text-slate-700">วันที่สิ้นสุด</label>
-				<input type="text" id="date_to_picker" name="date_to" value="{{ date_to|default:'' }}" placeholder="เลือกวันที่"
+					<input type="text" id="date_from_picker" name="date_from" value="{{ date_from|default:'' }}" placeholder="เลือกวันที่"
 						   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 				</div>
-				<div class="md:col-span-4 flex items-end gap-2">
+				<div class="lg:col-span-2">
+					<label class="block text-sm font-semibold text-slate-700">วันที่สิ้นสุด</label>
+					<input type="text" id="date_to_picker" name="date_to" value="{{ date_to|default:'' }}" placeholder="เลือกวันที่"
+						   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div class="sm:col-span-2 lg:col-span-4 flex items-end gap-2">
 					<button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
 						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-						<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
+							<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
 						</svg>
 						ค้นหา
 					</button>
@@ -98,16 +98,17 @@
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
 							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
 						</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
-						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Quantity</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Photo</th>
-						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Quantity</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Comment</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Photo</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200">
@@ -133,9 +134,10 @@
 							</td>
 							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.production_line|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number.sd_code|default:"-" }}</td>
-							<td class="px-4 py-3 text-slate-700">{{ r.defect_mode|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700">{{ r.component_part.part_name|default:"-" }}</td>
 							<td class="px-4 py-3 text-right font-semibold text-slate-900">{{ r.quantity|default:0 }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.defect_mode|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 max-w-[12rem] break-words">{{ r.comment|default:"-" }}</td>
 							<td class="px-4 py-3">
 								{% if r.photo %}
 									<a href="{{ r.photo.url }}" rel="noreferrer" class="inline-flex items-center gap-2" data-image-popup>
@@ -165,6 +167,7 @@
 										data-defect-id="{{ r.defect_mode.id|default:'' }}"
 										data-component-part-id="{{ r.component_part.id|default:'' }}"
 										data-quantity="{{ r.quantity|default:1 }}"
+										data-comment="{{ r.comment|default:'' }}"
 										data-photo-url="{% if r.photo %}{{ r.photo.url }}{% elif r.component_part.reference_image %}{{ r.component_part.reference_image.url }}{% endif %}"
 										data-label="{{ r.production_line|default:'' }} {{ r.part_number.sd_code|default:'' }} / {{ r.defect_mode|default:'' }} / {{ r.component_part.part_name|default:'' }}">
 										แก้ไข
@@ -181,7 +184,7 @@
 						</tr>
 					{% empty %}
 						<tr>
-							<td class="px-4 py-8 text-center text-slate-600" colspan="11">
+							<td class="px-4 py-8 text-center text-slate-600" colspan="12">
 								ยังไม่มีรายการ Scrap Record (หน้านี้แสดงข้อมูลที่กด Save จากหน้า Record)
 							</td>
 						</tr>
@@ -267,6 +270,7 @@
 	<input type="hidden" name="defect_id" id="defectField" value="" />
 	<input type="hidden" name="component_part_id" id="componentPartField" value="" />
 	<input type="hidden" name="quantity" id="qtyField" value="" />
+	<input type="hidden" name="comment" id="commentField" value="" />
 	<input type="hidden" name="clear_photo" id="clearPhotoField" value="0" />
 </form>
 
@@ -330,6 +334,10 @@
 				<input id="editQty" type="number" min="1" step="1" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div>
+				<label class="block text-sm font-semibold text-slate-700">Comment</label>
+				<input id="editComment" type="text" placeholder="ระบุ defect อื่นๆ" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
 				<label class="block text-sm font-semibold text-slate-700">Photo</label>
 				<div class="mt-1 flex items-center gap-3">
 					<img id="editPhotoPreview" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="Photo preview" />
@@ -367,300 +375,7 @@
 	</div>
 </div>
 
-<script>
-	const actionForm = document.getElementById('actionForm');
-	const actionField = document.getElementById('actionField');
-	const idField = document.getElementById('idField');
-	const lineField = document.getElementById('lineField');
-	const partField = document.getElementById('partField');
-	const defectField = document.getElementById('defectField');
-	const componentPartField = document.getElementById('componentPartField');
-	const qtyField = document.getElementById('qtyField');
-	const clearPhotoField = document.getElementById('clearPhotoField');
+{% load static %}
+<script src="{% static 'js/manage_scrap.js' %}" defer></script>
 
-	const recordDataEl = document.getElementById('recordData');
-	const recordData = recordDataEl ? JSON.parse(recordDataEl.textContent) : { productionLines: [] };
-
-	const editModal = document.getElementById('editModal');
-	const editLabel = document.getElementById('editLabel');
-	const editLine = document.getElementById('editLine');
-	const editPart = document.getElementById('editPart');
-	const editDefect = document.getElementById('editDefect');
-	const editComponentPart = document.getElementById('editComponentPart');
-	const editQty = document.getElementById('editQty');
-	const editPhoto = document.getElementById('editPhoto');
-	const editPhotoPreview = document.getElementById('editPhotoPreview');
-	const editClearPhoto = document.getElementById('editClearPhoto');
-	function setOptions(selectEl, options, placeholder) {
-		selectEl.innerHTML = '';
-		const opt0 = document.createElement('option');
-		opt0.value = '';
-		opt0.textContent = placeholder || 'เลือก';
-		selectEl.appendChild(opt0);
-		options.forEach(o => {
-			const opt = document.createElement('option');
-			opt.value = o.value;
-			opt.textContent = o.label;
-			selectEl.appendChild(opt);
-		});
-	}
-
-	function findLine(code) {
-		return (recordData.productionLines || []).find(l => (l.code || '') === (code || '')) || null;
-	}
-	function findPart(lineObj, partId) {
-		if (!lineObj) return null;
-		return (lineObj.parts || []).find(p => String(p.id || '') === String(partId || '')) || null;
-	}
-	function findDefect(partObj, defectId) {
-		if (!partObj) return null;
-		return (partObj.defects || []).find(d => String(d.id || '') === String(defectId || '')) || null;
-	}
-
-	function refreshParts() {
-		const lineObj = findLine(editLine.value);
-		const parts = (lineObj?.parts || []).map(p => ({ value: String(p.id), label: (p.sd_number || p.part_number || p.id) }));
-		setOptions(editPart, parts, 'เลือก SD number');
-		editPart.value = '';
-		refreshDefects();
-	}
-	function refreshDefects() {
-		const lineObj = findLine(editLine.value);
-		const partObj = findPart(lineObj, editPart.value);
-		const defects = (partObj?.defects || []).map(d => ({ value: String(d.id), label: d.name }));
-		setOptions(editDefect, defects, 'เลือก Defect');
-		editDefect.value = '';
-		refreshComponentParts();
-	}
-	function refreshComponentParts() {
-		const lineObj = findLine(editLine.value);
-		const partObj = findPart(lineObj, editPart.value);
-		const defectObj = findDefect(partObj, editDefect.value);
-		const componentParts = (defectObj?.component_parts || []).map(s => ({ value: String(s.id || ''), label: s.name }));
-		setOptions(editComponentPart, componentParts, 'เลือก Part name');
-		editComponentPart.value = '';
-	}
-
-	// Initial line options
-	setOptions(editLine, (recordData.productionLines || []).map(l => ({ value: l.code, label: l.code })), 'เลือก Line');
-	setOptions(editPart, [], 'เลือก SD number');
-	setOptions(editDefect, [], 'เลือก Defect');
-	setOptions(editComponentPart, [], 'เลือก Part name');
-
-	editLine.addEventListener('change', refreshParts);
-	editPart.addEventListener('change', refreshDefects);
-	editDefect.addEventListener('change', refreshComponentParts);
-
-	const deleteModal = document.getElementById('deleteModal');
-	const deleteLabel = document.getElementById('deleteLabel');
-
-	// Toolbar: bulk delete
-	const selectAllRows = document.getElementById('selectAllRows');
-	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-	const rowCheckboxes = Array.from(document.querySelectorAll('.rowCheckbox'));
-
-	function selectedIds() {
-		return rowCheckboxes.filter(cb => cb.checked).map(cb => cb.dataset.id).filter(Boolean);
-	}
-	function syncBulkState() {
-		if (!bulkDeleteBtn) return;
-		bulkDeleteBtn.disabled = selectedIds().length === 0;
-	}
-	if (selectAllRows) {
-		selectAllRows.addEventListener('change', () => {
-			rowCheckboxes.forEach(cb => { cb.checked = !!selectAllRows.checked; });
-			syncBulkState();
-		});
-	}
-	rowCheckboxes.forEach(cb => cb.addEventListener('change', syncBulkState));
-	if (bulkDeleteBtn) {
-		bulkDeleteBtn.addEventListener('click', () => {
-			const ids = selectedIds();
-			if (ids.length === 0) return;
-			Array.from(actionForm.querySelectorAll('input[name="bulk_id"]')).forEach(n => n.remove());
-			actionField.value = 'bulk_delete';
-			idField.value = '';
-			ids.forEach(id => {
-				const input = document.createElement('input');
-				input.type = 'hidden';
-				input.name = 'bulk_id';
-				input.value = String(id);
-				actionForm.appendChild(input);
-			});
-			actionForm.submit();
-		});
-	}
-
-	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
-	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
-
-	// Image modal
-	const imageModal = document.getElementById('imageModal');
-	const imageModalImg = document.getElementById('imageModalImg');
-	function openImageModal(url) {
-		if (!url) return;
-		if (!imageModal || !imageModalImg) {
-			window.open(url, '_blank', 'noreferrer');
-			return;
-		}
-		imageModalImg.src = url;
-		imageModalImg.alt = 'Photo';
-		openModal(imageModal);
-		imageModal.setAttribute('aria-hidden', 'false');
-	}
-	function closeImageModal() {
-		if (!imageModal) return;
-		closeModal(imageModal);
-		imageModal.setAttribute('aria-hidden', 'true');
-		if (imageModalImg) imageModalImg.src = '';
-	}
-	if (imageModal) {
-		imageModal.querySelectorAll('[data-image-modal-close]').forEach(btn => btn.addEventListener('click', closeImageModal));
-		imageModal.querySelectorAll('[data-image-modal-backdrop]').forEach(bg => bg.addEventListener('click', closeImageModal));
-	}
-	const closeFromEvent = (e) => {
-		if (!imageModal || imageModal.classList.contains('hidden')) return;
-		const target = e.target;
-		if (!target || !target.closest) return;
-		const hit = target.closest('[data-image-modal-close], [data-image-modal-backdrop], [data-image-modal-img]');
-		if (!hit) return;
-		e.preventDefault();
-		closeImageModal();
-	};
-	document.addEventListener('pointerdown', closeFromEvent);
-	document.addEventListener('click', closeFromEvent);
-	// Delegate clicks for dynamically rendered rows too
-	document.addEventListener('click', (e) => {
-		const link = e.target && e.target.closest ? e.target.closest('a[data-image-popup]') : null;
-		if (!link) return;
-		e.preventDefault();
-		openImageModal(link.getAttribute('href'));
-	});
-
-	document.querySelectorAll('[data-open-edit-row]').forEach(btn => {
-		btn.addEventListener('click', () => {
-			actionField.value = 'update';
-			idField.value = btn.dataset.id || '';
-			lineField.value = '';
-			partField.value = '';
-			defectField.value = '';
-			componentPartField.value = '';
-			qtyField.value = '';
-			clearPhotoField.value = '0';
-
-			editLabel.textContent = btn.dataset.label || '';
-
-			// Set datetime, user, and shift (read-only)
-			document.getElementById('editDateTime').textContent = btn.dataset.createdAt || '-';
-			document.getElementById('editUser').textContent = btn.dataset.username || '-';
-			
-			// Format shift display
-			const shiftValue = btn.dataset.shift || '-';
-			let shiftDisplay = '-';
-			if (shiftValue === 'shift_a') {
-				shiftDisplay = 'กะ A';
-			} else if (shiftValue === 'shift_b') {
-				shiftDisplay = 'กะ B';
-			} else if (shiftValue === 'shift_day') {
-				shiftDisplay = 'กะ Day';
-			}
-			document.getElementById('editShift').textContent = shiftDisplay;
-
-			// Preselect hierarchy
-			const lineCode = btn.dataset.lineCode || '';
-			const partId = btn.dataset.partId || '';
-			const defectId = btn.dataset.defectId || '';
-			const componentPartId = btn.dataset.componentPartId || '';
-			editLine.value = lineCode;
-			refreshParts();
-			editPart.value = partId;
-			refreshDefects();
-			editDefect.value = String(defectId);
-			refreshComponentParts();
-			editComponentPart.value = String(componentPartId);
-
-			editQty.value = btn.dataset.quantity || '1';
-			editClearPhoto.checked = false;
-			editPhoto.value = '';
-			const photoUrl = btn.dataset.photoUrl || '';
-			if (photoUrl) {
-				editPhotoPreview.src = photoUrl;
-				editPhotoPreview.classList.remove('opacity-40');
-			} else {
-				editPhotoPreview.src = '';
-				editPhotoPreview.classList.add('opacity-40');
-			}
-
-			openModal(editModal);
-			setTimeout(() => editQty.focus(), 0);
-		});
-	});
-
-	editPhoto.addEventListener('change', () => {
-		const file = editPhoto.files && editPhoto.files[0];
-		if (!file) return;
-		const url = URL.createObjectURL(file);
-		editPhotoPreview.src = url;
-		editPhotoPreview.classList.remove('opacity-40');
-	});
-
-	document.querySelectorAll('[data-open-delete-row]').forEach(btn => {
-		btn.addEventListener('click', () => {
-			actionField.value = 'delete';
-			idField.value = btn.dataset.id || '';
-			deleteLabel.textContent = btn.dataset.label || '';
-			openModal(deleteModal);
-		});
-	});
-
-	document.querySelectorAll('[data-modal-close]').forEach(btn => {
-		btn.addEventListener('click', () => {
-			closeModal(editModal);
-			closeModal(deleteModal);
-		});
-	});
-
-	document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
-		bg.addEventListener('click', () => {
-			closeModal(editModal);
-			closeModal(deleteModal);
-		});
-	});
-
-	document.getElementById('editSubmit').addEventListener('click', () => {
-		lineField.value = (editLine.value || '').trim();
-		partField.value = (editPart.value || '').trim();
-		defectField.value = (editDefect.value || '').trim();
-		componentPartField.value = (editComponentPart.value || '').trim();
-		qtyField.value = (editQty.value || '1').trim();
-		clearPhotoField.value = editClearPhoto.checked ? '1' : '0';
-		actionForm.submit();
-	});
-
-	document.getElementById('deleteSubmit').addEventListener('click', () => {
-		actionForm.submit();
-	});
-
-	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape') {
-			closeModal(editModal);
-			closeModal(deleteModal);
-			closeImageModal();
-		}
-	});
-
-	// Initialize Flatpickr datepickers
-	flatpickr('#date_from_picker', {
-		locale: 'th',
-		dateFormat: 'Y-m-d',
-		allowInput: true,
-		wrap: false,
-	});
-	flatpickr('#date_to_picker', {
-		locale: 'th',
-		dateFormat: 'Y-m-d',
-		allowInput: true,
-		wrap: false,
-	});
-</script>
 {% endblock %}

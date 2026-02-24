@@ -1,6 +1,6 @@
 {% load static tailwind_tags %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -10,11 +10,11 @@
 
     {% tailwind_css %}
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <style>
         body {
-            font-family: 'Inter', ui-sans-serif, system-ui;
+            font-family: 'Sarabun', ui-sans-serif, system-ui;
         }
     </style>
 </head>
@@ -150,144 +150,22 @@
     </div>
 </div>
 
-<script>
-    (() => {
-        const alerts = Array.from(document.querySelectorAll('[data-alert]'));
-        if (!alerts.length) return;
-
-        alerts.forEach(alertEl => {
-            const btn = alertEl.querySelector('[data-alert-dismiss]');
-            if (!btn) return;
-            btn.addEventListener('click', () => {
-                alertEl.remove();
-            });
-        });
-    })();
-</script>
+<script src="{% static 'js/base_alerts.js' %}" defer></script>
 {% endif %}
 
 <!-- Back to top -->
 <button
     id="back-to-top"
     type="button"
-    class="hidden fixed bottom-6 right-6 z-50 h-12 w-12 items-center justify-center rounded-full bg-slate-900 text-white shadow-xl transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
+    class="hidden fixed bottom-6 right-6 z-50 h-12 w-12 items-center justify-center rounded-full bg-red-600 text-white shadow-xl transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
     aria-label="Back to top"
     title="Back to top"
 >
     <span class="text-xl leading-none">↑</span>
 </button>
 
-<script>
-    (() => {
-        const button = document.getElementById("back-to-top");
-        if (!button) return;
-
-        const toggle = () => {
-            const shouldShow = window.scrollY > 300;
-            if (shouldShow) {
-                button.classList.remove("hidden");
-                button.classList.add("flex");
-            } else {
-                button.classList.add("hidden");
-                button.classList.remove("flex");
-            }
-        };
-
-        let ticking = false;
-        window.addEventListener(
-            "scroll",
-            () => {
-                if (ticking) return;
-                ticking = true;
-                window.requestAnimationFrame(() => {
-                    toggle();
-                    ticking = false;
-                });
-            },
-            { passive: true }
-        );
-
-        button.addEventListener("click", () => {
-            window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
-        });
-
-        toggle();
-    })();
-</script>
-
-<script>
-    (() => {
-        const sidebar = document.getElementById('appSidebar');
-        const toggleBtn = document.getElementById('sidebarToggle');
-        if (!sidebar || !toggleBtn) return;
-
-        const userMeta = document.getElementById('sidebarUserMeta');
-        const iconEl = toggleBtn.querySelector('[data-sidebar-toggle-icon]');
-        const labels = Array.from(sidebar.querySelectorAll('.sidebar-label'));
-        const sections = Array.from(sidebar.querySelectorAll('.sidebar-section'));
-        const links = Array.from(sidebar.querySelectorAll('.sidebar-link'));
-        const submenus = Array.from(sidebar.querySelectorAll('.sidebar-submenu'));
-
-        // Set a title tooltip for collapsed mode (once)
-        links.forEach(el => {
-            if (!(el instanceof HTMLAnchorElement)) return;
-            const label = el.querySelector('.sidebar-label');
-            const text = (label ? label.textContent : el.textContent || '').trim();
-            if (text && !el.getAttribute('title')) el.setAttribute('title', text);
-        });
-
-        const KEY = 'tbsm.sidebarCollapsed';
-        const readCollapsed = () => {
-            try { return localStorage.getItem(KEY) === '1'; } catch { return false; }
-        };
-        const writeCollapsed = (v) => {
-            try { localStorage.setItem(KEY, v ? '1' : '0'); } catch {}
-        };
-
-        const apply = (collapsed) => {
-            if (collapsed) {
-                sidebar.classList.remove('w-72');
-                sidebar.classList.add('w-20');
-                if (userMeta) userMeta.classList.add('hidden');
-                labels.forEach(el => el.classList.add('hidden'));
-                sections.forEach(el => el.classList.add('hidden'));
-                submenus.forEach(el => {
-                    el.classList.remove('pl-6', 'ml-4', 'border-l');
-                });
-                links.forEach(a => {
-                    a.classList.add('justify-center');
-                    a.classList.remove('gap-2');
-                });
-                if (iconEl) iconEl.textContent = '›';
-                toggleBtn.setAttribute('aria-pressed', 'true');
-            } else {
-                sidebar.classList.remove('w-20');
-                sidebar.classList.add('w-72');
-                if (userMeta) userMeta.classList.remove('hidden');
-                labels.forEach(el => el.classList.remove('hidden'));
-                sections.forEach(el => el.classList.remove('hidden'));
-                submenus.forEach(el => {
-                    el.classList.add('pl-6', 'ml-4', 'border-l', 'border-slate-800');
-                });
-                links.forEach(a => {
-                    a.classList.remove('justify-center');
-                    a.classList.add('gap-2');
-                });
-                if (iconEl) iconEl.textContent = '‹';
-                toggleBtn.setAttribute('aria-pressed', 'false');
-            }
-        };
-
-        apply(readCollapsed());
-
-        toggleBtn.addEventListener('click', () => {
-            const collapsed = sidebar.classList.contains('w-20');
-            const next = !collapsed;
-            writeCollapsed(next);
-            apply(next);
-        });
-    })();
-</script>
+<script src="{% static 'js/base_back_to_top.js' %}" defer></script>
+<script src="{% static 'js/base_sidebar.js' %}" defer></script>
 
 </body>
 </html>

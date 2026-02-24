@@ -1,4 +1,0 @@
-username,email,full_name,role,is_active,password
-jane.doe,jane.doe@example.com,Jane Doe,user,TRUE,
-production.staff,staff@example.com,สมชาย ใจดี,staff,TRUE,
-admin01,admin@example.com,ผู้ดูแล ระบบ,admin,TRUE,ChangeMe123!

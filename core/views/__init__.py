@@ -17,3 +17,4 @@ from .manage_scrap import ManageScrapViews
 from .manage_line import ManageLineViews
 from .dashboard import DashboardViews
 from .report_scrap_monthly import MonthlyComponentPartReportViews
+from .report_scrap_weight import ScrapWeightReportViews

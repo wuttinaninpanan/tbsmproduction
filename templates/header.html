@@ -1,230 +1,105 @@
-<nav class="bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-50">
-    <style>
-        /* Fallback layout if Tailwind not loaded yet */
-        .nav-container{display:block}
-        .nav-center{display:none}
-        .nav-end{display:none}
-        .mobile-menu{display:block}
-        /* Hide default <details>/<summary> marker */
-        details > summary{list-style:none}
-        details > summary::-webkit-details-marker{display:none}
-        @media (min-width:768px){
-            .nav-container{display:flex;align-items:center;width:100%;gap:1rem}
-            .brand-wrap{flex:0 0 auto}
-            .nav-center{display:flex !important;flex:1 1 auto;justify-content:center;gap:1rem}
-            .nav-end{display:flex !important;flex:0 0 auto;align-items:center}
-            .mobile-menu{display:none}
-        }
-    </style>
+<nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="mx-auto flex h-14 items-center justify-between gap-4 px-4 sm:px-6">
 
-    <div class="w-full nav-container px-4 py-3">
-        <div class="brand-wrap">
-            <a href="/" class="flex items-center font-extrabold text-slate-900 no-underline">
-                <span class="w-9 h-9">
-                    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="4" y="4" width="40" height="40" rx="10" fill="url(#g)" />
-                        <path d="M14 28C18 20 30 20 34 28"
-                              stroke="#fff" stroke-width="2.5"
-                              stroke-linecap="round" stroke-linejoin="round" />
-                        <defs>
-                            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stop-color="#dc2626"/>
-                                <stop offset="100%" stop-color="#ef4444"/>
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                </span>
-                <span class="ml-2 text-lg">PROGRAM PRODUCTION</span>
-            </a>
+        <!-- Brand -->
+        <a href="/" class="flex shrink-0 items-center gap-2.5 no-underline group">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-red-600 to-red-500 shadow-sm">
+                <svg class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/>
+                </svg>
+            </span>
+            <span class="text-sm font-extrabold tracking-tight text-slate-900 group-hover:text-red-600 transition-colors">PROGRAM RECORD SCRAP</span>
+        </a>
+
+        <!-- Desktop nav links (guests only) -->
+        {% if not user.is_authenticated %}
+        <div class="hidden sm:flex items-center gap-1">
+            <a href="/" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">หน้าแรก</a>
+            <a href="/about/" class="px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors">เกี่ยวกับ</a>
+            <a href="/contact/" class="px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors">ติดต่อ</a>
         </div>
+        {% endif %}
 
-        <div class="nav-center hidden md:flex">
-            {% if not user.is_authenticated %}
-            <a href="/" class="px-3 py-2 rounded-md font-semibold text-slate-900 hover:bg-slate-100 inline-flex items-center gap-2 whitespace-nowrap">
-                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                     <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4z"/>
-                </svg>
-                หน้าแรก
-            </a>
-            <a href="/about/" class="px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100 inline-flex items-center gap-2 whitespace-nowrap">
-                <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 1a1 1 0 0 1 1 1v10.755S12 11 8 11s-5 1.755-5 1.755V2a1 1 0 0 1 1-1zM4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2z"/>
-                    <path d="M8 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
-                </svg>
-                เกี่ยวกับ
-            </a>
-            <a href="/contact/" class="px-3 py-2 rounded-md text-slate-700 hover:bg-slate-100 inline-flex items-center gap-2 whitespace-nowrap">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M4 4h16v12H5.17L4 17.17V4z"></path>
-                    <path d="M7 8h10"></path>
-                    <path d="M7 12h7"></path>
-                </svg>
-                ติดต่อ
-            </a>
-            {% endif %}
-        </div>
-
-        <div class="nav-end hidden md:flex">
+        <!-- Right side -->
+        <div class="flex items-center gap-2">
             {% if user.is_authenticated %}
-            <a href="/profile/" class="inline-flex items-center gap-2 mr-3 px-2 py-1.5 rounded-lg hover:bg-slate-100 no-underline max-w-xs">
-                <span class="w-9 h-9 rounded-full bg-red-50 border border-red-100 text-red-600 font-extrabold flex items-center justify-center">
-                    {{ user.get_full_name|default:user.username|slice:":1"|upper }}
-                </span>
-                <span class="leading-tight min-w-0">
-                    <span class="block text-sm font-semibold text-slate-900 truncate max-w-[12rem]">{{ user.get_full_name|default:user.username }}</span>
-                    <span class="block text-xs text-slate-500 truncate max-w-[12rem]">@{{ user.username }}</span>
-                </span>
-            </a>
-
-            <a href="/logout/"
-               class="inline-flex items-center px-4 py-2 rounded-lg text-white font-semibold
-                      bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90 no-underline">
-                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M10 17l5-5-5-5"></path>
-                    <path d="M15 12H3"></path>
-                    <path d="M21 3v18"></path>
-                </svg>
-                Logout
-            </a>
-            {% else %}
-            <a href="/login/"
-               class="inline-flex items-center px-4 py-2 rounded-lg text-white font-semibold
-                      bg-gradient-to-r from-red-600 to-red-500 hover:opacity-90 no-underline">
-                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M10 17l5-5-5-5"></path>
-                    <path d="M15 12H3"></path>
-                    <path d="M21 3v18"></path>
-                </svg>
-                Login
-            </a>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="mobile-menu md:hidden bg-white border-t border-slate-200">
-        <div class="w-full px-4 py-4 space-y-4">
-
-            {% if user.is_authenticated %}
-            <a href="/profile/" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 no-underline">
-                <span class="w-10 h-10 rounded-full bg-red-50 border border-red-100 text-red-600 font-extrabold flex items-center justify-center">
-                    {{ user.get_full_name|default:user.username|slice:":1"|upper }}
-                </span>
-                <span class="min-w-0">
-                    <span class="block font-semibold text-slate-900 truncate">{{ user.get_full_name|default:user.username }}</span>
-                    <span class="block text-sm text-slate-500 truncate">@{{ user.username }}</span>
-                </span>
-            </a>
-            {% endif %}
-            
-            <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
-                <a href="/" class="text-slate-800 font-medium whitespace-nowrap inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M3 10.5 12 3l9 7.5"></path>
-                        <path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10"></path>
-                    </svg>
-                    หน้าแรก
-                </a>
-                <a href="/about/" class="text-slate-700 whitespace-nowrap inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 16v-4"></path>
-                        <path d="M12 8h.01"></path>
-                    </svg>
-                    เกี่ยวกับ
-                </a>
-                <a href="/contact/" class="text-slate-700 whitespace-nowrap inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M4 4h16v12H5.17L4 17.17V4z"></path>
-                        <path d="M7 8h10"></path>
-                        <path d="M7 12h7"></path>
-                    </svg>
-                    ติดต่อ
-                </a>
-                
-                {% if user.is_authenticated %}
-                <a href="/logout/" class="text-red-600 font-semibold whitespace-nowrap inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M10 17l5-5-5-5"></path>
-                        <path d="M15 12H3"></path>
-                        <path d="M21 3v18"></path>
-                    </svg>
-                    Logout
-                </a>
-                {% else %}
-                <a href="/login/" class="text-red-600 font-semibold whitespace-nowrap inline-flex items-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M10 17l5-5-5-5"></path>
-                        <path d="M15 12H3"></path>
-                        <path d="M21 3v18"></path>
-                    </svg>
-                    Login
-                </a>
-                {% endif %}
-            </div>
-
-            
-
-            {% if user.is_authenticated %}
-            <details class="rounded-lg border border-slate-200 bg-slate-50">
-                <summary class="px-3 py-2 text-slate-800 font-medium cursor-pointer select-none flex items-center justify-between whitespace-nowrap">
-                    <span class="inline-flex items-center gap-2 whitespace-nowrap">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M12 2 13.5 5.5 17 7l-3.5 1.5L12 12l-1.5-3.5L7 7l3.5-1.5L12 2z"></path>
-                            <path d="M19 12l1 2.5L22.5 15l-2.5 1L19 18.5 18 16l-2.5-1L18 14.5 19 12z"></path>
-                            <path d="M5 12l1 2.5L8.5 15l-2.5 1L5 18.5 4 16l-2.5-1L4 14.5 5 12z"></path>
-                        </svg>
-                        ตั้งค่า
+                <a href="/profile/" class="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 hover:bg-slate-100 transition-colors no-underline">
+                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs font-extrabold text-white">
+                        {{ user.get_full_name|default:user.username|slice:":1"|upper }}
                     </span>
-                    <svg class="w-4 h-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" />
+                    <span class="leading-tight min-w-0">
+                        <span class="block text-xs font-semibold text-slate-900 truncate max-w-[10rem]">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="block text-xs text-slate-400 truncate max-w-[10rem]">@{{ user.username }}</span>
+                    </span>
+                </a>
+                <a href="/logout/" class="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors no-underline">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
                     </svg>
-                </summary>
-                <div class="px-2 pb-2 space-y-1">
-                    {% if user.is_superuser %}
-                    <details class="rounded-lg border border-slate-200 bg-white">
-                        <summary class="px-3 py-2 text-slate-800 font-medium cursor-pointer select-none flex items-center justify-between whitespace-nowrap">
-                            <span class="inline-flex items-center gap-2 whitespace-nowrap">
-                                <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M20 21a8 8 0 1 0-16 0"></path>
-                                    <circle cx="12" cy="8" r="4"></circle>
-                                </svg>
-                                จัดการผู้ใช้งาน
-                            </span>
-                            <svg class="w-4 h-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08Z" clip-rule="evenodd" />
-                            </svg>
-                        </summary>
-                        <div class="px-2 pb-2 space-y-1">
-                            <a href="/manage-user/?open_add=1" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 whitespace-nowrap inline-flex items-center gap-2 w-full">
-                                <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M20 21a8 8 0 1 0-16 0"></path>
-                                    <circle cx="12" cy="8" r="4"></circle>
-                                </svg>
-                                เพิ่ม User
-                            </a>
-                            <a href="/manage-user/" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 whitespace-nowrap inline-flex items-center gap-2 w-full">
-                                <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="9" cy="7" r="4"></circle>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                                </svg>
-                                จัดการข้อมูล ผู้ใช้งาน
-                            </a>
-                        </div>
-                    </details>
-                    {% endif %}
-
-                    <a href="/profile/" class="px-3 py-2 rounded-lg text-slate-700 hover:bg-white whitespace-nowrap inline-flex items-center gap-2">
-                        <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M20 21a8 8 0 1 0-16 0"></path>
-                            <circle cx="12" cy="8" r="4"></circle>
-                        </svg>
-                        โปรไฟล์ผู้ใช้งาน
-                    </a>
-                </div>
-            </details>
+                    ออกจากระบบ
+                </a>
+            {% else %}
+                <a href="/login/" class="hidden sm:inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-red-500 transition-colors no-underline">
+                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+                    </svg>
+                    เข้าสู่ระบบ
+                </a>
             {% endif %}
+            <!-- Hamburger -->
+            <button id="nav-toggle" type="button"
+                class="sm:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
+                aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-mobile">
+                <svg id="nav-icon-open" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                </svg>
+                <svg id="nav-icon-close" class="h-5 w-5 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
         </div>
     </div>
+
+    <!-- Mobile drawer -->
+    <div id="nav-mobile" class="hidden sm:hidden border-t border-slate-100 bg-white px-4 py-3 space-y-1">
+        {% if user.is_authenticated %}
+        <a href="/profile/" class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 no-underline mb-2">
+            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-600 text-sm font-extrabold text-white">
+                {{ user.get_full_name|default:user.username|slice:":1"|upper }}
+            </span>
+            <span class="min-w-0">
+                <span class="block text-sm font-semibold text-slate-900 truncate">{{ user.get_full_name|default:user.username }}</span>
+                <span class="block text-xs text-slate-400 truncate">@{{ user.username }}</span>
+            </span>
+        </a>
+        {% endif %}
+        <a href="/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">หน้าแรก</a>
+        <a href="/about/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">เกี่ยวกับ</a>
+        <a href="/contact/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">ติดต่อ</a>
+        {% if user.is_authenticated %}
+            {% if user.is_superuser %}
+            <a href="/manage-user/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">จัดการผู้ใช้งาน</a>
+            {% endif %}
+            <a href="/profile/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">โปรไฟล์</a>
+            <a href="/logout/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors">ออกจากระบบ</a>
+        {% else %}
+            <a href="/login/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50 transition-colors">เข้าสู่ระบบ</a>
+        {% endif %}
+    </div>
+
+    <script>
+        (function(){
+            var btn = document.getElementById('nav-toggle');
+            var drawer = document.getElementById('nav-mobile');
+            var iconOpen = document.getElementById('nav-icon-open');
+            var iconClose = document.getElementById('nav-icon-close');
+            if(!btn) return;
+            btn.addEventListener('click', function(){
+                var open = drawer.classList.toggle('hidden');
+                btn.setAttribute('aria-expanded', String(!open));
+                iconOpen.classList.toggle('hidden');
+                iconClose.classList.toggle('hidden');
+            });
+        })();
+    </script>
 </nav>
