@@ -5,6 +5,7 @@ import secrets
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
@@ -12,7 +13,7 @@ from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
-from core.auth.decorators import admin_required
+from core.auth.decorators import permission_required
 from core.models import UserProfile
 
 from core.services.auditlog import log_event
@@ -31,11 +32,20 @@ def download_user_import_template(request):
 	"""
 	fmt = (request.GET.get("format") or "xlsx").strip().lower()
 
-	headers = ["username", "email", "full_name", "role", "is_active", "password", "shift"]
+	headers = [
+		"username",
+		"email",
+		"full_name",
+		"role",
+		"is_active",
+		"password",
+		"shift",
+		"group",
+	]
 	rows = [
-		["jane.doe", "jane.doe@example.com", "Jane Doe", "user", "TRUE", "", "shift_day"],
-		["production.staff", "staff@example.com", "สมชาย ใจดี", "staff", "TRUE", "", "shift_a"],
-		["admin01", "admin@example.com", "ผู้ดูแล ระบบ", "admin", "TRUE", "ChangeMe123!", "shift_day"],
+		["jane.doe", "jane.doe@example.com", "Jane Doe", "user", "TRUE", "", "shift_day", "R&D"],
+		["production.staff", "staff@example.com", "สมชาย ใจดี", "staff", "TRUE", "", "shift_a", "Production"],
+		["admin01", "admin@example.com", "ผู้ดูแล ระบบ", "admin", "TRUE", "ChangeMe123!", "shift_day", "Accounting"],
 	]
 
 	if fmt == "xlsx":
@@ -111,6 +121,37 @@ def _normalized_key(key):
 	return (key or "").strip().lower().replace(" ", "_")
 
 
+def _parse_group_names(value) -> list[str]:
+	if value is None:
+		return []
+	s = str(value).strip()
+	if not s:
+		return []
+	# Allow: single group, or multiple separated by comma/semicolon/pipe/newline.
+	seps = [",", ";", "|", "\n", "\r"]
+	for sep in seps:
+		s = s.replace(sep, ",")
+	parts = [p.strip() for p in s.split(",")]
+	seen: set[str] = set()
+	out: list[str] = []
+	for p in parts:
+		if not p:
+			continue
+		if p in seen:
+			continue
+		seen.add(p)
+		out.append(p)
+	return out
+
+
+def _set_user_groups(user, group_names: list[str]):
+	groups = []
+	for name in group_names:
+		g, _ = Group.objects.get_or_create(name=name)
+		groups.append(g)
+	user.groups.set(groups)
+
+
 def _parse_csv(uploaded_file):
 	data = uploaded_file.read()
 	try:
@@ -143,13 +184,19 @@ def _parse_xlsx(uploaded_file):
 		yield row
 
 
-@method_decorator(admin_required, name='dispatch')
+@method_decorator(
+	permission_required("core.view_user", message="คุณไม่มีสิทธิ์เข้าถึงหน้าจัดการผู้ใช้งาน"),
+	name="dispatch",
+)
 class ManageUserViews(TemplateView):
 	template_name = "manage_user.html"
 
 	def get(self, request, *args, **kwargs):
 		action = (request.GET.get("action") or "").strip().lower()
 		if action == "download_template":
+			if not (request.user.is_superuser or request.user.has_perm("core.add_user")):
+				messages.error(request, "คุณไม่มีสิทธิ์ดาวน์โหลดไฟล์นำเข้าผู้ใช้งาน")
+				return super().get(request, *args, **kwargs)
 			return download_user_import_template(request)
 		return super().get(request, *args, **kwargs)
 
@@ -163,7 +210,12 @@ class ManageUserViews(TemplateView):
 		page = (request.GET.get("page") or "1").strip() or "1"
 
 		User = get_user_model()
-		qs = User.objects.select_related("profile").all().order_by("username")
+		qs = (
+			User.objects.select_related("profile")
+			.prefetch_related("groups")
+			.all()
+			.order_by("username")
+		)
 
 		if q:
 			qs = qs.filter(
@@ -237,13 +289,28 @@ class ManageUserViews(TemplateView):
 		ctx["per_page"] = per_page
 		ctx["rows_total"] = paginator.count
 		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
+		ctx["group_options"] = list(Group.objects.order_by("name").values_list("name", flat=True))
 		return ctx
 
 	def post(self, request, *args, **kwargs):
 		action = (request.POST.get("action") or "").strip().lower()
 		User = get_user_model()
 
+		def _deny(msg: str):
+			messages.error(request, msg)
+			return self.get(request, *args, **kwargs)
+
 		if action == "import":
+			# Import can create AND update users, so require both add+change.
+			if not (
+				request.user.is_superuser
+				or (
+					request.user.has_perm("core.add_user")
+					and request.user.has_perm("core.change_user")
+				)
+			):
+				return _deny("คุณไม่มีสิทธิ์นำเข้าข้อมูลผู้ใช้งาน")
+
 			uploaded = request.FILES.get("excel_file")
 			if not uploaded:
 				messages.error(request, "กรุณาเลือกไฟล์ Excel/CSV ก่อนนำเข้า")
@@ -282,6 +349,11 @@ class ManageUserViews(TemplateView):
 					is_active = _bool_from_any(row.get("is_active"), default=True)
 					shift = (row.get("shift") or "shift_day")
 					shift = (str(shift).strip() if shift is not None else "shift_day") or "shift_day"
+					# If header exists but blank => clear groups. If header missing => no change.
+					group_raw = row.get("group")
+					if group_raw is None:
+						group_raw = row.get("groups")
+					group_raw = ("" if group_raw is None else str(group_raw))
 					password = row.get("password")
 					password = (str(password).strip() if password is not None else "")
 					provided_password = bool(password)
@@ -311,15 +383,19 @@ class ManageUserViews(TemplateView):
 
 					UserProfile.objects.update_or_create(user=user, defaults={"shift": shift})
 
+					# Apply groups only when the column is present in import (including blank => clear).
+					if (row.get("group") is not None) or (row.get("groups") is not None):
+						_set_user_groups(user, _parse_group_names(group_raw))
+
 			messages.success(
 				request,
 				f"นำเข้าผู้ใช้งานสำเร็จ: เพิ่มใหม่ {created} | อัปเดต {updated} | ข้าม {skipped}",
 			)
 			log_event(
 				request,
-				action="user_import",
+				action="user:import",
 				status="success",
-				message=f"Imported users: created={created}, updated={updated}, skipped={skipped}",
+				message="นำเข้าผู้ใช้งาน",
 				metadata={
 					"created": created,
 					"updated": updated,
@@ -330,11 +406,15 @@ class ManageUserViews(TemplateView):
 			return self.get(request, *args, **kwargs)
 
 		if action == "create":
+			if not (request.user.is_superuser or request.user.has_perm("core.add_user")):
+				return _deny("คุณไม่มีสิทธิ์เพิ่มผู้ใช้งาน")
+
 			username = (request.POST.get("username") or "").strip()
 			email = (request.POST.get("email") or "").strip()
 			full_name = (request.POST.get("full_name") or "").strip()
 			role = (request.POST.get("role") or "user").strip().lower()
 			shift = (request.POST.get("shift") or "shift_day").strip() or "shift_day"
+			group_name = (request.POST.get("group") or "").strip()
 			is_active = (request.POST.get("is_active") or "") in {"1", "true", "on", "yes"}
 			password = request.POST.get("password") or ""
 			password_confirm = request.POST.get("password_confirm") or ""
@@ -360,17 +440,24 @@ class ManageUserViews(TemplateView):
 			_apply_role(user, role)
 			user.save()
 			UserProfile.objects.get_or_create(user=user, defaults={"shift": shift})
+			if group_name:
+				_set_user_groups(user, [group_name])
+			else:
+				user.groups.clear()
 			messages.success(request, "เพิ่มผู้ใช้งานสำเร็จ")
 			log_event(
 				request,
-				action="user_create",
+				action="user:create",
 				status="success",
-				message=f"Created user {user.username}",
+				message="เพิ่มผู้ใช้งาน",
 				metadata={"user_id": user.pk, "username": user.username},
 			)
 			return self.get(request, *args, **kwargs)
 
 		if action == "bulk_delete":
+			if not (request.user.is_superuser or request.user.has_perm("core.delete_user")):
+				return _deny("คุณไม่มีสิทธิ์ลบผู้ใช้งาน")
+
 			raw_ids = request.POST.getlist("bulk_id")
 			ids: list[int] = []
 			for raw in raw_ids:
@@ -391,9 +478,9 @@ class ManageUserViews(TemplateView):
 			messages.success(request, f"ลบสำเร็จ {deleted} ผู้ใช้งาน")
 			log_event(
 				request,
-				action="user_bulk_delete",
+				action="user:bulk_delete",
 				status="success",
-				message=f"Bulk deleted {deleted} user(s)",
+				message="ลบผู้ใช้งานแบบ bulk",
 				metadata={"deleted": deleted, "ids": ids},
 			)
 			return self.get(request, *args, **kwargs)
@@ -411,12 +498,16 @@ class ManageUserViews(TemplateView):
 			return self.get(request, *args, **kwargs)
 
 		if action == "update":
+			if not (request.user.is_superuser or request.user.has_perm("core.change_user")):
+				return _deny("คุณไม่มีสิทธิ์แก้ไขผู้ใช้งาน")
+
 			full_name = (request.POST.get("full_name") or "").strip()
 			first_name = (request.POST.get("first_name") or "").strip()
 			last_name = (request.POST.get("last_name") or "").strip()
 			email = (request.POST.get("email") or "").strip()
 			role = (request.POST.get("role") or "").strip().lower()
 			shift = (request.POST.get("shift") or "shift_day").strip()
+			group_name = (request.POST.get("group") or "").strip()
 			is_active = (request.POST.get("is_active") or "") == "on"
 			new_password = (request.POST.get("password") or "").strip()
 
@@ -451,24 +542,32 @@ class ManageUserViews(TemplateView):
 				target_user.set_password(new_password)
 
 			target_user.save()
-			
+
 			# Update UserProfile shift
-			from core.models import UserProfile
 			profile, _ = UserProfile.objects.get_or_create(user=target_user)
 			profile.shift = shift
 			profile.save()
-			
+
+			# Update groups (single-select in UI). Blank => clear.
+			if group_name:
+				_set_user_groups(target_user, [group_name])
+			else:
+				target_user.groups.clear()
+
 			messages.success(request, f"อัปเดตผู้ใช้งาน {target_user.username} สำเร็จ")
 			log_event(
 				request,
-				action="user_update",
+				action="user:update",
 				status="success",
-				message=f"Updated user {target_user.username}",
+				message="อัปเดตผู้ใช้งาน",
 				metadata={"user_id": target_user.pk, "username": target_user.username},
 			)
 			return self.get(request, *args, **kwargs)
 
 		if action == "delete":
+			if not (request.user.is_superuser or request.user.has_perm("core.delete_user")):
+				return _deny("คุณไม่มีสิทธิ์ลบผู้ใช้งาน")
+
 			# Safety: prevent deleting yourself (if authenticated)
 			if getattr(request, "user", None) is not None and request.user.is_authenticated:
 				if request.user.pk == target_user.pk:
@@ -480,9 +579,9 @@ class ManageUserViews(TemplateView):
 			messages.success(request, f"ลบผู้ใช้งาน {target_username} สำเร็จ")
 			log_event(
 				request,
-				action="user_delete",
+				action="user:delete",
 				status="success",
-				message=f"Deleted user {target_username}",
+				message="ลบผู้ใช้งาน",
 				metadata={"username": target_username},
 			)
 			return self.get(request, *args, **kwargs)

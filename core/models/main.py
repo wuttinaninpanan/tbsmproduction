@@ -6,18 +6,14 @@ dedicated modules under `core.models` for easier maintenance.
 Keep importing from `core.models` (preferred) or `core.models.main` (legacy).
 """
 
-from .defects import DefectMode
-from .production import PartNumber, ProductionLine
-from .profiles import UserProfile
-from .componentpart import ComponentPart, ComponentPartRecord
-from .audit import AuditLogEntry
+from .user import User
+from .defect_mode import DefectMode
+from .user_profile import UserProfile
+from .auditlog_entry import AuditLogEntry
 
 __all__ = [
-	"ProductionLine",
-	"PartNumber",
+	"User",
 	"DefectMode",
-	"ComponentPart",
-	"ComponentPartRecord",
 	"UserProfile",
 	"AuditLogEntry",
 ]

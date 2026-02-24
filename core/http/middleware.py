@@ -25,20 +25,29 @@ class AuditLogMiddleware:
     _SENSITIVE_KEY_HINTS = ("password", "pass", "secret", "token", "key", "authorization")
 
     _PAGE_OPEN_MESSAGES = {
-        "/": "Open Home",
-        "dashboard": "Open Dashboard",
-        "record": "Open Record",
-        "settings": "Open Settings",
-        "manage_component_part": "Open Manage Component Part",
-        "manage_defectmode": "Open Manage Defect Mode",
-        "manage_production": "Open Manage Production",
-        "manage_user": "Open Manage User",
-        "report_component_part_monthly": "Open Monthly Component Part Report",
-        "profile": "Open Profile",
-        "about": "Open About",
-        "contact": "Open Contact",
-        "audit-log": "Open Audit Log",
+        "home": "เปิดหน้า Home",
+        "dashboard": "เปิดหน้า Dashboard",
+        "record": "เปิดหน้า Record",
+        "settings": "เปิดหน้า Settings",
+        "manage_component_part": "เปิดหน้า Manage Component Part",
+        "manage_defectmode": "เปิดหน้า Manage Defect Mode",
+        "manage_production": "เปิดหน้า Manage Production",
+        "manage_user": "เปิดหน้า Manage User",
+        "report_component_part_monthly": "เปิดหน้า Monthly Component Part Report",
+        "profile": "เปิดหน้า Profile",
+        "about": "เปิดหน้า About",
+        "contact": "เปิดหน้า Contact",
+        "audit-log": "เปิดหน้า Audit Log",
+        "login": "เปิดหน้า Login",
     }
+
+    def _normalize_page_key(self, *, url_name: str, view_name: str, path: str) -> str:
+        key = (url_name or view_name or path or "").strip()
+        if key in {"", "/"}:
+            return "home"
+        if key.startswith("/"):
+            key = key.strip("/").replace("/", "_")
+        return key or "home"
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -138,9 +147,9 @@ class AuditLogMiddleware:
         path = (getattr(request, "path", "") or "").strip() or "/"
 
         if method == "GET" and status_code < 400 and error is None:
-            page_key = url_name or view_name or path
-            action = f"page:view:{page_key or 'unknown'}"
-            message = self._PAGE_OPEN_MESSAGES.get(url_name or path, "Open Page")
+            page_key = self._normalize_page_key(url_name=url_name, view_name=view_name, path=path)
+            action = f"page:view:{page_key}"
+            message = self._PAGE_OPEN_MESSAGES.get(page_key, f"เปิดหน้า {page_key}")
         else:
             action_parts = ["http", method.lower()]
             if url_name:
@@ -162,6 +171,8 @@ class AuditLogMiddleware:
             metadata["view_name"] = view_name
         if url_name:
             metadata["url_name"] = url_name
+        if method == "GET" and status_code < 400 and error is None:
+            metadata["page_key"] = page_key
 
         try:
             metadata["query"] = self._sanitize_querydict(getattr(request, "GET", {}))

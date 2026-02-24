@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'theme',
 ]
 
+# Use our custom User model (do not use Django's default auth.User)
+AUTH_USER_MODEL = "core.User"
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',

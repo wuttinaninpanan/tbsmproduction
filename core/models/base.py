@@ -1,11 +1,22 @@
+import uuid
 from django.db import models
 
+class BaseModel(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False
+    )
 
-# Create your models here.
-class BaseModels:
-    created_at = models.DateTimeField(auto_now_add=True)
-    Updated_at = models.DateField(auto_now=True)
-    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True
+    )
     
+    is_active = models.BooleanField(default=True)
+
     class Meta:
         abstract = True

@@ -8,11 +8,11 @@
 <section class="space-y-6">
 	<header class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 		<div>
-			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">รายงานข้อมูล Component Part รายเดือน</h1>
-			<p class="text-sm text-slate-600 mt-1">รวมข้อมูลทุกกะ (A / B / Day) โดยนับวันทำงานตามรอบ 08:00 - 08:00</p>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">รายงานข้อมูล Scrap รายเดือน</h1>
+			<p class="text-sm text-slate-600 mt-1">แสดงข้อมูลรายวันตามเดือนที่เลือก (นับตามปฏิทิน)</p>
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
-			<a href="{% url 'manage_component_part' %}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition whitespace-nowrap">
+			<a href="{% url 'manage_scrap' %}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition whitespace-nowrap">
 				<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
 					<path fill-rule="evenodd" d="M12.78 5.22a.75.75 0 0 1 0 1.06L9.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
 				</svg>
@@ -22,13 +22,13 @@
 	</header>
 
 	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
-		<div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-			<div class="md:col-span-4">
+		<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;align-items:end">
+			<div>
 				<label class="block text-sm font-semibold text-slate-700">เลือกเดือน</label>
 				<input type="month" name="month" value="{{ month_value }}"
 					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
-			<div class="md:col-span-4">
+			<div>
 				<label class="block text-sm font-semibold text-slate-700">Production line</label>
 				<select name="line" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
 					<option value="">ทั้งหมด</option>
@@ -37,7 +37,7 @@
 					{% endfor %}
 				</select>
 			</div>
-			<div class="md:col-span-4 flex flex-wrap items-center gap-2 md:justify-end">
+			<div class="flex flex-wrap items-center gap-2">
 				<button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition whitespace-nowrap">
 					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
 						<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
@@ -72,7 +72,8 @@
 				<thead class="text-slate-700">
 					<tr>
 						<th class="sticky top-0 bg-slate-100 border-b border-slate-200 px-3 py-2 text-left font-extrabold whitespace-nowrap">Production Line</th>
-						<th class="sticky top-0 bg-slate-100 border-b border-slate-200 px-3 py-2 text-left font-extrabold whitespace-nowrap">Part Number</th>
+						<th class="sticky top-0 bg-slate-100 border-b border-slate-200 px-3 py-2 text-left font-extrabold whitespace-nowrap">SD number</th>
+						<th class="sticky top-0 bg-slate-100 border-b border-slate-200 px-3 py-2 text-left font-extrabold whitespace-nowrap">Part name</th>
 						{% for d in days %}
 							<th class="sticky top-0 bg-slate-50 border-b border-slate-200 px-2 py-2 text-center font-extrabold">{{ d }}</th>
 						{% endfor %}
@@ -83,7 +84,8 @@
 					{% for r in rows %}
 						<tr class="hover:bg-slate-50">
 							<td class="px-3 py-2 whitespace-nowrap font-semibold text-slate-900">{{ r.production_line }}</td>
-							<td class="px-3 py-2 whitespace-nowrap text-slate-700">{{ r.part_number }}</td>
+							<td class="px-3 py-2 whitespace-nowrap text-slate-700">{{ r.sd_number }}</td>
+							<td class="px-3 py-2 whitespace-nowrap text-slate-700">{{ r.part_name }}</td>
 							{% for v in r.values %}
 								<td class="px-2 py-2 text-center text-slate-700">{{ v }}</td>
 							{% endfor %}
@@ -91,12 +93,13 @@
 						</tr>
 					{% empty %}
 						<tr>
-							<td class="px-3 py-10 text-center text-slate-500" colspan="{{ days|length|add:3 }}">ยังไม่มีข้อมูล Part/Line</td>
+							<td class="px-3 py-10 text-center text-slate-500" colspan="{{ days|length|add:4 }}">ยังไม่มีข้อมูล</td>
 						</tr>
 					{% endfor %}
 				</tbody>
 				<tfoot>
 					<tr class="text-white">
+						<td class="px-3 py-2 font-extrabold bg-slate-800"></td>
 						<td class="px-3 py-2 font-extrabold bg-slate-800"></td>
 						<td class="px-3 py-2 font-extrabold bg-slate-800 text-right whitespace-nowrap">Total</td>
 						{% for v in column_totals %}

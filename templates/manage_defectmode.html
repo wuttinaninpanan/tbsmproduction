@@ -105,9 +105,11 @@
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
 							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
 						</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Code</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
-						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">TH</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">EN</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">JP</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">รายละเอียด (TH)</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200">
@@ -116,16 +118,22 @@
 							<td class="px-4 py-3">
 								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" />
 							</td>
-							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.code|default:"-" }}</td>
-							<td class="px-4 py-3 text-slate-700">{{ r.name|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_th|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_en|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_jp|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.description_th|default:"-" }}</td>
 							<td class="px-4 py-3">
-								<div class="flex items-center justify-end gap-2">
+								<div class="flex items-center justify-center gap-2">
 									<button type="button"
 										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap"
 										data-open-edit
 										data-id="{{ r.id }}"
-										data-defect-code="{{ r.code|default:'' }}"
-										data-defect-name="{{ r.name|default:'' }}"
+										data-name-th="{{ r.name_th|default:'' }}"
+										data-name-en="{{ r.name_en|default:'' }}"
+										data-name-jp="{{ r.name_jp|default:'' }}"
+										data-description-th="{{ r.description_th|default:'' }}"
+										data-description-en="{{ r.description_en|default:'' }}"
+										data-description-jp="{{ r.description_jp|default:'' }}"
 										>
 										แก้ไข
 									</button>
@@ -133,14 +141,14 @@
 										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
 										data-open-delete
 										data-id="{{ r.id }}"
-										data-label="{{ r.name|default:'' }}">
+										data-label="{{ r.name_en|default:'' }}">
 										ลบ
 									</button>
 								</div>
 							</td>
 						</tr>
 					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="4">ยังไม่มีข้อมูล Defect mode</td></tr>
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="6">ยังไม่มีข้อมูล Defect mode</td></tr>
 					{% endfor %}
 				</tbody>
 			</table>
@@ -218,10 +226,12 @@
 	{% csrf_token %}
 	<input type="hidden" name="action" id="actionField" value="" />
 	<input type="hidden" name="id" id="idField" value="" />
-	<input type="hidden" name="line_code" id="lineField" value="" />
-	<input type="hidden" name="part_number" id="partField" value="" />
-	<input type="hidden" name="defect_code" id="codeField" value="" />
-	<input type="hidden" name="defect_name" id="nameField" value="" />
+	<input type="hidden" name="name_th" id="nameThField" value="" />
+	<input type="hidden" name="name_en" id="nameEnField" value="" />
+	<input type="hidden" name="name_jp" id="nameJpField" value="" />
+	<input type="hidden" name="description_th" id="descThField" value="" />
+	<input type="hidden" name="description_en" id="descEnField" value="" />
+	<input type="hidden" name="description_jp" id="descJpField" value="" />
 </form>
 
 <!-- Add Modal -->
@@ -232,16 +242,34 @@
 			<span class="text-slate-700 text-xl leading-none">×</span>
 		</button>
 		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่ม Defect mode</h2>
-		<p class="text-xs text-slate-600 mt-1">เพิ่ม Defect mode แบบ global (ไม่ผูกกับ Line/Part)</p>
+		<p class="text-xs text-slate-600 mt-1">กรอกชื่อ TH/EN/JP ให้ครบ แล้วกดเพิ่ม</p>
 		<div class="mt-4 space-y-4">
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 				<div>
-					<label class="block text-sm font-semibold text-slate-700">Code</label>
-					<input id="addCode" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="(ไม่บังคับ)" />
+					<label class="block text-sm font-semibold text-slate-700">TH <span class="text-red-600">*</span></label>
+					<input id="addNameTh" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น รอยแตก" />
 				</div>
 				<div>
-					<label class="block text-sm font-semibold text-slate-700">Defect mode <span class="text-red-600">*</span></label>
-					<input id="addName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น Crack" />
+					<label class="block text-sm font-semibold text-slate-700">EN <span class="text-red-600">*</span></label>
+					<input id="addNameEn" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="เช่น Crack" />
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">JP <span class="text-red-600">*</span></label>
+					<input id="addNameJp" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="例: ひび割れ" />
+				</div>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">รายละเอียด (TH)</label>
+					<textarea id="addDescTh" rows="3" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="(ไม่บังคับ)"></textarea>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">รายละเอียด (EN)</label>
+					<textarea id="addDescEn" rows="3" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="(ไม่บังคับ)"></textarea>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">รายละเอียด (JP)</label>
+					<textarea id="addDescJp" rows="3" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="(ไม่บังคับ)"></textarea>
 				</div>
 			</div>
 		</div>
@@ -262,14 +290,32 @@
 		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Defect mode</h2>
 		<p class="text-xs text-slate-600 mt-1">แก้ไขข้อมูล แล้วกดบันทึก</p>
 		<div class="mt-4 space-y-4">
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 				<div>
-					<label class="block text-sm font-semibold text-slate-700">Code</label>
-					<input id="editCode" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					<label class="block text-sm font-semibold text-slate-700">TH <span class="text-red-600">*</span></label>
+					<input id="editNameTh" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 				</div>
 				<div>
-					<label class="block text-sm font-semibold text-slate-700">Defect mode <span class="text-red-600">*</span></label>
-					<input id="editName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					<label class="block text-sm font-semibold text-slate-700">EN <span class="text-red-600">*</span></label>
+					<input id="editNameEn" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">JP <span class="text-red-600">*</span></label>
+					<input id="editNameJp" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">รายละเอียด (TH)</label>
+					<textarea id="editDescTh" rows="3" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">รายละเอียด (EN)</label>
+					<textarea id="editDescEn" rows="3" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">รายละเอียด (JP)</label>
+					<textarea id="editDescJp" rows="3" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
 				</div>
 			</div>
 		</div>
@@ -297,159 +343,6 @@
 	</div>
 </div>
 
-<script>
-	const actionForm = document.getElementById('actionForm');
-	const actionField = document.getElementById('actionField');
-	const idField = document.getElementById('idField');
-	const lineField = document.getElementById('lineField');
-	const partField = document.getElementById('partField');
-	const codeField = document.getElementById('codeField');
-	const nameField = document.getElementById('nameField');
-
-	const addModal = document.getElementById('addModal');
-	const editModal = document.getElementById('editModal');
-	const deleteModal = document.getElementById('deleteModal');
-	const deleteLabel = document.getElementById('deleteLabel');
-
-	// Toolbar: import + bulk delete
-	const importBtn = document.getElementById('importBtn');
-	const importFile = document.getElementById('importFile');
-	const importForm = document.getElementById('importForm');
-	if (importBtn && importFile && importForm) {
-		importBtn.addEventListener('click', () => importFile.click());
-		importFile.addEventListener('change', () => {
-			if (importFile.files && importFile.files.length > 0) {
-				importForm.submit();
-			}
-		});
-	}
-
-	const selectAllRows = document.getElementById('selectAllRows');
-	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-	const rowCheckboxes = Array.from(document.querySelectorAll('.rowCheckbox'));
-
-	function selectedIds() {
-		return rowCheckboxes.filter(cb => cb.checked).map(cb => cb.dataset.id).filter(Boolean);
-	}
-	function syncBulkState() {
-		if (!bulkDeleteBtn) return;
-		bulkDeleteBtn.disabled = selectedIds().length === 0;
-	}
-	if (selectAllRows) {
-		selectAllRows.addEventListener('change', () => {
-			rowCheckboxes.forEach(cb => { cb.checked = !!selectAllRows.checked; });
-			syncBulkState();
-		});
-	}
-	rowCheckboxes.forEach(cb => cb.addEventListener('change', syncBulkState));
-	if (bulkDeleteBtn) {
-		bulkDeleteBtn.addEventListener('click', () => {
-			const ids = selectedIds();
-			if (ids.length === 0) return;
-			// Clear previous bulk inputs
-			Array.from(actionForm.querySelectorAll('input[name="bulk_id"]')).forEach(n => n.remove());
-			actionField.value = 'bulk_delete_defects';
-			idField.value = '';
-			lineField.value = '';
-			partField.value = '';
-			codeField.value = '';
-			nameField.value = '';
-			ids.forEach(id => {
-				const input = document.createElement('input');
-				input.type = 'hidden';
-				input.name = 'bulk_id';
-				input.value = String(id);
-				actionForm.appendChild(input);
-			});
-			actionForm.submit();
-		});
-	}
-
-	function openModal(el){ el.classList.remove('hidden'); el.classList.add('flex'); }
-	function closeModal(el){ el.classList.add('hidden'); el.classList.remove('flex'); }
-
-	function setOptions(selectEl, options, placeholder) {
-		selectEl.innerHTML = '';
-		const opt0 = document.createElement('option');
-		opt0.value = '';
-		opt0.textContent = placeholder || 'เลือก';
-		selectEl.appendChild(opt0);
-		options.forEach(o => {
-			const opt = document.createElement('option');
-			opt.value = o.value;
-			opt.textContent = o.label;
-			selectEl.appendChild(opt);
-		});
-	}
-
-	const addCode = document.getElementById('addCode');
-	const addName = document.getElementById('addName');
-	const editCode = document.getElementById('editCode');
-	const editName = document.getElementById('editName');
-
-	document.getElementById('openAddModal').addEventListener('click', () => {
-		addCode.value = '';
-		addName.value = '';
-		openModal(addModal);
-		setTimeout(() => addName.focus(), 0);
-	});
-
-	document.querySelectorAll('[data-open-edit]').forEach(btn => {
-		btn.addEventListener('click', () => {
-			idField.value = btn.dataset.id || '';
-			editCode.value = btn.dataset.defectCode || '';
-			editName.value = btn.dataset.defectName || '';
-			openModal(editModal);
-			setTimeout(() => editName.focus(), 0);
-		});
-	});
-
-	document.querySelectorAll('[data-open-delete]').forEach(btn => {
-		btn.addEventListener('click', () => {
-			idField.value = btn.dataset.id || '';
-			deleteLabel.textContent = btn.dataset.label || '';
-			openModal(deleteModal);
-		});
-	});
-
-	document.querySelectorAll('[data-modal-close]').forEach(btn => {
-		btn.addEventListener('click', () => {
-			closeModal(addModal);
-			closeModal(editModal);
-			closeModal(deleteModal);
-		});
-	});
-	document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
-		bg.addEventListener('click', () => {
-			closeModal(addModal);
-			closeModal(editModal);
-			closeModal(deleteModal);
-		});
-	});
-
-	document.getElementById('addSubmit').addEventListener('click', () => {
-		actionField.value = 'create_defect';
-		idField.value = '';
-		lineField.value = '';
-		partField.value = '';
-		codeField.value = (addCode.value || '').trim();
-		nameField.value = (addName.value || '').trim();
-		actionForm.submit();
-	});
-
-	document.getElementById('editSubmit').addEventListener('click', () => {
-		actionField.value = 'update_defect';
-		lineField.value = '';
-		partField.value = '';
-		codeField.value = (editCode.value || '').trim();
-		nameField.value = (editName.value || '').trim();
-		actionForm.submit();
-	});
-
-	document.getElementById('deleteSubmit').addEventListener('click', () => {
-		actionField.value = 'delete_defect';
-		actionForm.submit();
-	});
-</script>
+{% load static %}
+<script src="{% static 'js/manage_defectmode.js' %}" defer></script>
 {% endblock %}
-

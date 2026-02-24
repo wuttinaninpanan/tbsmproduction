@@ -1,23 +1,72 @@
+from __future__ import annotations
+
+import uuid
+
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
-from django.utils.dateparse import parse_date
+from django.http import HttpResponse
 from django.utils import timezone
-from django.views.generic import TemplateView
+from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
-from django.core.paginator import Paginator
+from django.views.generic import TemplateView
 
-from core.services.auditlog import log_event
-from core.models import DefectMode, PartNumber, ProductionLine, ComponentPart, ComponentPartRecord
 from core.auth.decorators import staff_required
+from core.models.bill_of_material import BillOfMaterial
+from core.models.bill_of_material_item_master import BillOfMaterialItemMater
+from core.models.defect_by_category import DefectByCategory
+from core.models.defect_mode import DefectMode
+from core.models.item_line import ItemLine
+from core.models.item_list import Item_list
+from core.models.line import Line
+from core.models.scrap_record import ScrapRecord
+from core.services.auditlog import log_event
 
 
-@method_decorator(staff_required, name='dispatch')
-class ManageComponentPartViews(TemplateView):
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(str(value))
+    except Exception:
+        return False
+    return True
+
+
+def _page_items(num_pages: int, current: int) -> list[int | None]:
+    if num_pages <= 0:
+        return []
+    if num_pages <= 10:
+        return list(range(1, num_pages + 1))
+    items: list[int | None] = [1]
+    if current > 4:
+        items.append(None)
+    start = max(2, current - 1)
+    end = min(num_pages - 1, current + 1)
+    if current <= 4:
+        start, end = 2, 4
+    if current >= num_pages - 3:
+        start, end = num_pages - 3, num_pages - 1
+    for n in range(start, end + 1):
+        if 1 < n < num_pages:
+            items.append(n)
+    if current < num_pages - 3:
+        items.append(None)
+    items.append(num_pages)
+    compressed: list[int | None] = []
+    for it in items:
+        if compressed and compressed[-1] == it:
+            continue
+        if it is None and compressed and compressed[-1] is None:
+            continue
+        compressed.append(it)
+    return compressed
+
+
+@method_decorator(staff_required, name="dispatch")
+class ManageScrapViews(TemplateView):
     template_name = "manage_scrap.html"
 
     def get(self, request, *args, **kwargs):
-        # Handle Excel export
         export_action = (request.GET.get("action") or "").strip().lower()
         if export_action == "export_excel":
             return self._export_excel(request)
@@ -25,16 +74,17 @@ class ManageComponentPartViews(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        request = self.request
 
-        q = (self.request.GET.get("q") or "").strip()
-        date_from_raw = (self.request.GET.get("date_from") or "").strip()
-        date_to_raw = (self.request.GET.get("date_to") or "").strip()
-        per_page_raw = (self.request.GET.get("per_page") or "").strip()
-        page = (self.request.GET.get("page") or "1").strip() or "1"
+        q = (request.GET.get("q") or "").strip()
+        date_from_raw = (request.GET.get("date_from") or "").strip()
+        date_to_raw = (request.GET.get("date_to") or "").strip()
+        per_page_raw = (request.GET.get("per_page") or "").strip()
+        page = (request.GET.get("page") or "1").strip() or "1"
         date_from = parse_date(date_from_raw) if date_from_raw else None
         date_to = parse_date(date_to_raw) if date_to_raw else None
 
-        qs = ComponentPartRecord.objects.select_related(
+        qs = ScrapRecord.objects.select_related(
             "production_line",
             "part_number",
             "defect_mode",
@@ -50,10 +100,14 @@ class ManageComponentPartViews(TemplateView):
 
         if q:
             qs = qs.filter(
-                Q(production_line__code__icontains=q)
-                | Q(part_number__number__icontains=q)
-                | Q(defect_mode__name__icontains=q)
-                | Q(component_part__name__icontains=q)
+                Q(production_line__line_name__icontains=q)
+                | Q(part_number__part_number__icontains=q)
+                | Q(part_number__sd_code__icontains=q)
+                | Q(part_number__sku__icontains=q)
+                | Q(defect_mode__name_th__icontains=q)
+                | Q(defect_mode__name_en__icontains=q)
+                | Q(component_part__part_name__icontains=q)
+                | Q(component_part__part_number__icontains=q)
                 | Q(created_by__username__icontains=q)
                 | Q(created_by__profile__shift__icontains=q)
             )
@@ -69,95 +123,8 @@ class ManageComponentPartViews(TemplateView):
         qs = qs.order_by("-created_at")
         paginator = Paginator(qs, per_page)
         page_obj = paginator.get_page(page)
+
         ctx["component_part_records"] = list(page_obj.object_list)
-        ctx["production_lines"] = list(ProductionLine.objects.order_by("code").values_list("code", flat=True))
-
-        def _page_items(num_pages: int, current: int) -> list[int | None]:
-            if num_pages <= 0:
-                return []
-            if num_pages <= 10:
-                return list(range(1, num_pages + 1))
-            items: list[int | None] = [1]
-            if current > 4:
-                items.append(None)
-            start = max(2, current - 1)
-            end = min(num_pages - 1, current + 1)
-            if current <= 4:
-                start, end = 2, 4
-            if current >= num_pages - 3:
-                start, end = num_pages - 3, num_pages - 1
-            for n in range(start, end + 1):
-                if 1 < n < num_pages:
-                    items.append(n)
-            if current < num_pages - 3:
-                items.append(None)
-            items.append(num_pages)
-            compressed: list[int | None] = []
-            for it in items:
-                if compressed and compressed[-1] == it:
-                    continue
-                if it is None and compressed and compressed[-1] is None:
-                    continue
-                compressed.append(it)
-            return compressed
-
-        # Provide full master-data for edit modal dropdowns (bulk-loaded to avoid N+1).
-        lines = list(ProductionLine.objects.all().order_by("code"))
-        parts = list(
-            PartNumber.objects.select_related("production_line")
-            .filter(production_line__in=lines)
-            .order_by("production_line__code", "number")
-        )
-        part_ids = [p.id for p in parts]
-
-        component_parts_by_part: dict[int, list[dict]] = {pid: [] for pid in part_ids}
-        for component_part in (
-            ComponentPart.objects.filter(part_number_id__in=part_ids)
-            .only("id", "name", "part_number_id")
-            .order_by("part_number__production_line__code", "part_number__number", "name")
-        ):
-            component_parts_by_part.setdefault(component_part.part_number_id, []).append(
-                {"id": str(component_part.pk), "name": component_part.name}
-            )
-
-        global_defects = list(
-            DefectMode.objects.filter(part__isnull=True)
-            .only("id", "name")
-            .order_by("name")
-        )
-        defects_by_part: dict[int, list[DefectMode]] = {pid: [] for pid in part_ids}
-        for defect in (
-            DefectMode.objects.filter(part_id__in=part_ids)
-            .only("id", "name", "part_id")
-            .order_by("name")
-        ):
-            defects_by_part.setdefault(defect.part_id, []).append(defect)
-
-        parts_by_line_id: dict[int, list[PartNumber]] = {}
-        for p in parts:
-            parts_by_line_id.setdefault(p.production_line_id, []).append(p)
-
-        production_lines_payload = []
-        for line in lines:
-            parts_payload = []
-            for part in parts_by_line_id.get(line.id, []):
-                defects_payload = []
-                defects = defects_by_part.get(part.id, []) + global_defects
-                component_parts = component_parts_by_part.get(part.id, [])
-                if not component_parts:
-                    component_parts = [{"id": "", "name": "Component part"}]
-                for defect in defects:
-                    defects_payload.append(
-                        {
-                            "id": str(defect.pk),
-                            "name": defect.name,
-                            "component_parts": component_parts,
-                        }
-                    )
-                parts_payload.append({"number": part.number, "defects": defects_payload})
-            production_lines_payload.append({"code": line.code, "parts": parts_payload})
-
-        ctx["record_data"] = {"productionLines": production_lines_payload}
         ctx["q"] = q
         ctx["date_from"] = date_from_raw
         ctx["date_to"] = date_to_raw
@@ -168,6 +135,8 @@ class ManageComponentPartViews(TemplateView):
         ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
         ctx["total_count"] = paginator.count
         ctx.setdefault("delete_action", "")
+
+        ctx["record_data"] = self._build_record_data_payload()
         return ctx
 
     def post(self, request, *args, **kwargs):
@@ -176,49 +145,45 @@ class ManageComponentPartViews(TemplateView):
 
         if action == "bulk_delete":
             raw_ids = request.POST.getlist("bulk_id")
-            ids = []
-            for raw in raw_ids:
-                raw = (raw or "").strip()
-                if raw.isdigit():
-                    ids.append(int(raw))
-
+            ids = [rid for rid in raw_ids if _is_uuid((rid or "").strip())]
             if not ids:
                 messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
                 return self.get(request, *args, **kwargs)
 
             with transaction.atomic():
-                deleted, _ = ComponentPartRecord.objects.filter(pk__in=ids).delete()
+                deleted, _ = ScrapRecord.objects.filter(pk__in=ids).delete()
+
             messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
             transaction.on_commit(
                 lambda: log_event(
                     request,
                     action="scrap:bulk_delete",
-                    message="ลบ ComponentPartRecord แบบ bulk",
+                    message="ลบ ScrapRecord แบบ bulk",
                     metadata={"selected": len(ids), "deleted": deleted, "ids": ids[:50]},
                 )
             )
             return self.get(request, *args, **kwargs)
 
         if action in {"delete", "update"}:
-            if not rec_id.isdigit():
+            if not _is_uuid(rec_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
                 return self.get(request, *args, **kwargs)
 
         if action == "delete":
             obj = (
-                ComponentPartRecord.objects.select_related(
+                ScrapRecord.objects.select_related(
                     "production_line",
                     "part_number",
                     "defect_mode",
                     "component_part",
                 )
-                .filter(pk=int(rec_id))
+                .filter(pk=rec_id)
                 .first()
             )
-            deleted, _ = ComponentPartRecord.objects.filter(pk=int(rec_id)).delete()
+            deleted, _ = ScrapRecord.objects.filter(pk=rec_id).delete()
             if deleted:
                 messages.success(request, "ลบรายการสำเร็จ")
-                meta = {"record_id": int(rec_id)}
+                meta = {"record_id": rec_id}
                 if obj is not None:
                     meta.update(
                         {
@@ -233,7 +198,7 @@ class ManageComponentPartViews(TemplateView):
                     lambda: log_event(
                         request,
                         action="scrap:delete",
-                        message="ลบ ComponentPartRecord",
+                        message="ลบ ScrapRecord",
                         metadata=meta,
                     )
                 )
@@ -242,12 +207,12 @@ class ManageComponentPartViews(TemplateView):
             return self.get(request, *args, **kwargs)
 
         if action == "update":
-            line_code = (request.POST.get("line_code") or "").strip().upper()
-            part_number = (request.POST.get("part_number") or "").strip()
+            line_code = (request.POST.get("line_code") or "").strip()
+            part_ref = (request.POST.get("part_number") or "").strip()
             defect_id = (request.POST.get("defect_id") or "").strip()
             component_part_id = (request.POST.get("component_part_id") or "").strip()
-
             qty_raw = (request.POST.get("quantity") or "").strip()
+            comment = (request.POST.get("comment") or "").strip() or None
             clear_photo = (request.POST.get("clear_photo") or "").strip() in {"1", "true", "on", "yes"}
             photo = request.FILES.get("photo")
 
@@ -260,62 +225,80 @@ class ManageComponentPartViews(TemplateView):
                 messages.error(request, "กรุณาระบุ Quantity เป็นตัวเลข (>= 1)")
                 return self.get(request, *args, **kwargs)
 
-            if not line_code or not part_number or not defect_id.isdigit() or not component_part_id.isdigit():
-                messages.error(request, "กรุณาเลือก Line / Part / Defect / Component Part ให้ครบ")
+            if not line_code or not part_ref or not _is_uuid(defect_id) or not _is_uuid(component_part_id):
+                messages.error(request, "กรุณาเลือก Line / SD number / Defect / Part name ให้ครบ")
                 return self.get(request, *args, **kwargs)
 
-            rec = ComponentPartRecord.objects.filter(pk=int(rec_id)).first()
+            rec = ScrapRecord.objects.filter(pk=rec_id).first()
             if rec is None:
                 messages.error(request, "ไม่พบรายการ")
                 return self.get(request, *args, **kwargs)
 
             old_snapshot = {
-                "line_id": rec.production_line_id,
-                "part_id": rec.part_number_id,
-                "defect_id": rec.defect_mode_id,
-                "component_part_id": rec.component_part_id,
+                "line_id": str(rec.production_line_id),
+                "part_id": str(rec.part_number_id),
+                "defect_id": str(rec.defect_mode_id),
+                "component_part_id": str(rec.component_part_id),
                 "quantity": rec.quantity,
                 "had_photo": bool(rec.photo),
             }
 
-            line = ProductionLine.objects.filter(code=line_code).first()
+            line = Line.objects.filter(line_name__iexact=line_code).first()
             if line is None:
                 messages.error(request, "ไม่พบ Production line")
                 return self.get(request, *args, **kwargs)
-            part = PartNumber.objects.filter(production_line=line, number=part_number).first()
+
+            if _is_uuid(part_ref):
+                part = (
+                    Item_list.objects.filter(pk=part_ref)
+                    .filter(item_lines__line=line)
+                    .distinct()
+                    .first()
+                )
+            else:
+                # Backward compat: accept part_number text
+                part = (
+                    Item_list.objects.filter(part_number__iexact=part_ref)
+                    .filter(item_lines__line=line)
+                    .distinct()
+                    .first()
+                )
             if part is None:
-                messages.error(request, "ไม่พบ Part number ใน Production line ที่เลือก")
+                messages.error(request, "ไม่พบ SD number ใน Production line ที่เลือก")
                 return self.get(request, *args, **kwargs)
-            defect = DefectMode.objects.filter(pk=int(defect_id)).filter(
-                Q(part=part) | Q(part__isnull=True)
-            ).first()
+
+            defect = DefectMode.objects.filter(pk=defect_id).first()
             if defect is None:
-                messages.error(request, "ไม่พบ Defect mode ใน Part ที่เลือก")
+                messages.error(request, "ไม่พบ Defect mode")
                 return self.get(request, *args, **kwargs)
-            component_part = ComponentPart.objects.filter(pk=int(component_part_id), part_number=part).first()
+
+            component_part = Item_list.objects.filter(pk=component_part_id).first()
             if component_part is None:
-                messages.error(request, "ไม่พบ Component Part ใน Part ที่เลือก")
+                messages.error(request, "ไม่พบ Component Part")
                 return self.get(request, *args, **kwargs)
 
             with transaction.atomic():
-                updated_fields = []
-
-                if rec.production_line_id != line.id:
+                updated_fields: list[str] = []
+                if str(rec.production_line_id) != str(line.id):
                     rec.production_line = line
                     updated_fields.append("production_line")
-                if rec.part_number_id != part.id:
+                if str(rec.part_number_id) != str(part.id):
                     rec.part_number = part
                     updated_fields.append("part_number")
-                if rec.defect_mode_id != defect.id:
+                if str(rec.defect_mode_id) != str(defect.id):
                     rec.defect_mode = defect
                     updated_fields.append("defect_mode")
-                if rec.component_part_id != component_part.id:
+                if str(rec.component_part_id) != str(component_part.id):
                     rec.component_part = component_part
                     updated_fields.append("component_part")
 
                 if rec.quantity != quantity:
                     rec.quantity = quantity
                     updated_fields.append("quantity")
+
+                if rec.comment != comment:
+                    rec.comment = comment
+                    updated_fields.append("comment")
 
                 if clear_photo:
                     if rec.photo:
@@ -331,22 +314,21 @@ class ManageComponentPartViews(TemplateView):
                     messages.success(request, "แก้ไขรายการสำเร็จ")
 
                     new_snapshot = {
-                        "line_id": rec.production_line_id,
-                        "part_id": rec.part_number_id,
-                        "defect_id": rec.defect_mode_id,
-                        "component_part_id": rec.component_part_id,
+                        "line_id": str(rec.production_line_id),
+                        "part_id": str(rec.part_number_id),
+                        "defect_id": str(rec.defect_mode_id),
+                        "component_part_id": str(rec.component_part_id),
                         "quantity": rec.quantity,
                         "had_photo": bool(rec.photo),
                     }
-                    changed = [f for f in updated_fields if f not in {"updated_at"}]
                     transaction.on_commit(
                         lambda: log_event(
                             request,
                             action="scrap:update",
-                            message="แก้ไข ComponentPartRecord",
+                            message="แก้ไข ScrapRecord",
                             metadata={
-                                "record_id": int(rec_id),
-                                "changed_fields": changed,
+                                "record_id": rec_id,
+                                "changed_fields": [f for f in updated_fields if f != "updated_at"],
                                 "old": old_snapshot,
                                 "new": new_snapshot,
                                 "clear_photo": clear_photo,
@@ -361,13 +343,119 @@ class ManageComponentPartViews(TemplateView):
 
         return self.get(request, *args, **kwargs)
 
+    def _build_record_data_payload(self) -> dict:
+        lines = list(Line.objects.all().order_by("line_name"))
+        line_names = [l.code for l in lines]
+
+        item_lines = list(
+            ItemLine.objects.select_related("item", "line")
+            .filter(line__line_name__in=line_names)
+            .order_by("line__line_name", "item__sd_code", "item__part_number")
+        )
+
+        items_by_line: dict[str, list[Item_list]] = {ln: [] for ln in line_names}
+        item_ids: set[str] = set()
+        for il in item_lines:
+            items_by_line.setdefault(il.line.code, []).append(il.item)
+            item_ids.add(str(il.item_id))
+
+        parts = list(Item_list.objects.filter(pk__in=list(item_ids)))
+        parts_by_id = {str(p.id): p for p in parts}
+
+        all_defects = list(DefectMode.objects.all().order_by("name_th", "name_en"))
+
+        category_ids = {str(p.category_id) for p in parts if getattr(p, "category_id", None)}
+        cat_to_defects: dict[str, list[DefectMode]] = {}
+        if category_ids:
+            dbc_qs = (
+                DefectByCategory.objects.filter(category_id__in=list(category_ids))
+                .select_related("defect_mode")
+                .order_by("defect_mode__name_th", "defect_mode__name_en")
+            )
+            grouped: dict[str, list[DefectMode]] = {}
+            grouped_inlist: dict[str, list[DefectMode]] = {}
+            for dbc in dbc_qs:
+                cat_key = str(dbc.category_id)
+                dm = dbc.defect_mode
+                grouped.setdefault(cat_key, []).append(dm)
+                if getattr(dbc, "is_inlist", False):
+                    grouped_inlist.setdefault(cat_key, []).append(dm)
+            for cat_key, defects_for_cat in grouped.items():
+                preferred = grouped_inlist.get(cat_key) or defects_for_cat
+                seen: set[str] = set()
+                uniq: list[DefectMode] = []
+                for dm in preferred:
+                    dm_id = str(dm.id)
+                    if dm_id in seen:
+                        continue
+                    seen.add(dm_id)
+                    uniq.append(dm)
+                cat_to_defects[cat_key] = uniq
+
+        boms = list(
+            BillOfMaterial.objects.filter(item__in=parts)
+            .select_related("item")
+            .prefetch_related(
+                "items_master",
+                "items_master__component",
+            )
+            .order_by("-updated_at")
+        )
+        components_by_item_id: dict[str, list[dict]] = {}
+        for bom in boms:
+            key = str(bom.item_id)
+            if key in components_by_item_id:
+                continue
+            comps: list[dict] = []
+            for it in getattr(bom, "items_master", []).all():
+                comp = getattr(it, "component", None)
+                if comp is None:
+                    continue
+                comps.append({"id": str(comp.id), "name": comp.part_name or comp.part_number or comp.sku})
+            components_by_item_id[key] = comps
+
+        production_lines_payload = []
+        for line in lines:
+            parts_payload = []
+            for part_ref in items_by_line.get(line.code, []):
+                part = parts_by_id.get(str(part_ref.id), part_ref)
+                # UX requirement: Part name comes from selected SD number (the part itself).
+                part_display_name = (getattr(part, "part_name", "") or getattr(part, "part_number", "") or getattr(part, "sku", "") or "").strip()
+                comps = [{"id": str(part.id), "name": part_display_name}]
+
+                defect_list = cat_to_defects.get(str(getattr(part, "category_id", ""))) or all_defects
+
+                defects_payload = []
+                for defect in defect_list:
+                    defects_payload.append(
+                        {
+                            "id": str(defect.id),
+                            "name": defect.name,
+                            "component_parts": comps,
+                        }
+                    )
+
+                parts_payload.append(
+                    {
+                        "id": str(part.id),
+                        "sd_number": (getattr(part, "sd_code", "") or "").strip(),
+                        "part_number": (getattr(part, "part_number", "") or "").strip(),
+                        "part_name": (getattr(part, "part_name", "") or "").strip(),
+                        "defects": defects_payload,
+                        "component_parts": comps,
+                    }
+                )
+            production_lines_payload.append({"code": line.code, "parts": parts_payload})
+
+        return {"productionLines": production_lines_payload}
+
     def _export_excel(self, request):
-        """Export Component Part records to Excel file"""
         try:
             from openpyxl import Workbook
-        except ImportError:
+            from openpyxl.styles import Font, PatternFill
+        except Exception:
             messages.error(request, "ไม่สามารถ export Excel ได้เนื่องจากไม่มี openpyxl")
-            return self.get(request, *args, **kwargs)
+            return self.get(request)
 
         q = (request.GET.get("q") or "").strip()
         date_from_raw = (request.GET.get("date_from") or "").strip()
@@ -375,7 +463,7 @@ class ManageComponentPartViews(TemplateView):
         date_from = parse_date(date_from_raw) if date_from_raw else None
         date_to = parse_date(date_to_raw) if date_to_raw else None
 
-        qs = ComponentPartRecord.objects.select_related(
+        qs = ScrapRecord.objects.select_related(
             "production_line",
             "part_number",
             "defect_mode",
@@ -388,76 +476,86 @@ class ManageComponentPartViews(TemplateView):
             qs = qs.filter(created_at__date__gte=date_from)
         if date_to:
             qs = qs.filter(created_at__date__lte=date_to)
-
         if q:
             qs = qs.filter(
-                Q(production_line__code__icontains=q)
-                | Q(part_number__number__icontains=q)
-                | Q(defect_mode__name__icontains=q)
-                | Q(component_part__name__icontains=q)
+                Q(production_line__line_name__icontains=q)
+                | Q(part_number__part_number__icontains=q)
+                | Q(defect_mode__name_th__icontains=q)
+                | Q(defect_mode__name_en__icontains=q)
+                | Q(component_part__part_name__icontains=q)
                 | Q(created_by__username__icontains=q)
                 | Q(created_by__profile__shift__icontains=q)
             )
 
         qs = qs.order_by("-created_at")
 
-        # Create workbook
         wb = Workbook()
         ws = wb.active
-        ws.title = "Component Part Records"
+        ws.title = "Scrap Records"
 
-        # Headers
-        headers = ["วันที่/เวลา", "ผู้ใช้งาน", "กะ", "Production line", "Part number", "Defect mode", "Component Part", "Quantity"]
+        headers = [
+            "วันที่/เวลา",
+            "ผู้ใช้งาน",
+            "กะ",
+            "Production line",
+            "SD number",
+            "Defect mode",
+            "Comment",
+            "Part name",
+            "Quantity",
+        ]
         ws.append(headers)
 
-        # Style header row
-        from openpyxl.styles import Font, PatternFill
         header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
         header_font = Font(color="FFFFFF", bold=True)
         for cell in ws[1]:
             cell.fill = header_fill
             cell.font = header_font
 
-        # Add data rows
         for r in qs:
             shift_display = "-"
-            if r.created_by and hasattr(r.created_by, 'profile') and r.created_by.profile:
+            if r.created_by and hasattr(r.created_by, "profile") and r.created_by.profile:
                 shift_value = r.created_by.profile.shift
-                if shift_value == 'shift_a':
+                if shift_value == "shift_a":
                     shift_display = "กะ A"
-                elif shift_value == 'shift_b':
+                elif shift_value == "shift_b":
                     shift_display = "กะ B"
                 else:
                     shift_display = "กะ Day"
 
             created_at_local = timezone.localtime(r.created_at) if r.created_at else None
+            ws.append(
+                [
+                    created_at_local.strftime("%d/%m/%Y %H:%M") if created_at_local else "-",
+                    r.created_by.username if r.created_by else "-",
+                    shift_display,
+                    getattr(r.production_line, "code", "-"),
+                    getattr(r.part_number, "sd_code", "-") or "-",
+                    getattr(r.defect_mode, "name", "-"),
+                    r.comment or "-",
+                    getattr(r.component_part, "part_name", "-") or "-",
+                    r.quantity or 0,
+                ]
+            )
 
-            row_data = [
-                created_at_local.strftime("%d/%m/%Y %H:%M") if created_at_local else "-",
-                r.created_by.username if r.created_by else "-",
-                shift_display,
-                r.production_line.code if r.production_line else "-",
-                r.part_number.number if r.part_number else "-",
-                r.defect_mode.name if r.defect_mode else "-",
-                r.component_part.name if r.component_part else "-",
-                r.quantity if r.quantity else 0,
-            ]
-            ws.append(row_data)
+        ws.column_dimensions["A"].width = 18
+        ws.column_dimensions["B"].width = 15
+        ws.column_dimensions["C"].width = 12
+        ws.column_dimensions["D"].width = 18
+        ws.column_dimensions["E"].width = 18
+        ws.column_dimensions["F"].width = 22
+        ws.column_dimensions["G"].width = 22
+        ws.column_dimensions["H"].width = 22
+        ws.column_dimensions["I"].width = 12
 
-        # Adjust column widths
-        ws.column_dimensions['A'].width = 18
-        ws.column_dimensions['B'].width = 15
-        ws.column_dimensions['C'].width = 12
-        ws.column_dimensions['D'].width = 18
-        ws.column_dimensions['E'].width = 15
-        ws.column_dimensions['F'].width = 18
-        ws.column_dimensions['G'].width = 15
-        ws.column_dimensions['H'].width = 12
-
-        # Prepare response
-        from django.http import HttpResponse
-        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
         filename_ts = timezone.localtime(timezone.now()).strftime("%Y%m%d_%H%M%S")
-        response['Content-Disposition'] = f'attachment; filename="ComponentPartRecords_{filename_ts}.xlsx"'
+        response["Content-Disposition"] = f'attachment; filename="ScrapRecords_{filename_ts}.xlsx"'
         wb.save(response)
         return response
+
+
+# Backward compatible name (older code referenced this class name)
+ManageComponentPartViews = ManageScrapViews

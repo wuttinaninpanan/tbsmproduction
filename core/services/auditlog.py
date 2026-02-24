@@ -4,7 +4,7 @@ from typing import Any
 
 from django.http import HttpRequest
 
-from core.models.audit import AuditLogEntry
+from core.models import AuditLogEntry
 
 
 def _get_client_ip(request: HttpRequest) -> str | None:

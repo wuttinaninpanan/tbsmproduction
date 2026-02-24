@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 from django.contrib import messages
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -45,9 +47,33 @@ def _parse_xlsx(uploaded_file):
 
 
 def download_manage_defectmode_import_template(request):
-	"""Download a template for importing global defect modes."""
-	headers = ["defect_name", "defect_code"]
-	rows = [["Crack", "DEF-001"], ["Scratch", ""], ["Color uneven", "DEF-100"]]
+	"""Download a template for importing defect modes."""
+	headers = [
+		"name_th",
+		"name_en",
+		"name_jp",
+		"description_th",
+		"description_en",
+		"description_jp",
+	]
+	rows = [
+		[
+			"รอยแตก",
+			"Crack",
+			"ひび割れ",
+			"",
+			"",
+			"",
+		],
+		[
+			"รอยขีดข่วน",
+			"Scratch",
+			"傷",
+			"",
+			"",
+			"",
+		],
+	]
 	if openpyxl is None:
 		return HttpResponse(
 			"XLSX format is not available (openpyxl is not installed).",
@@ -89,11 +115,15 @@ class ManageDefectModeViews(TemplateView):
 		per_page_raw = (request.GET.get("per_page") or "").strip()
 		page = (request.GET.get("page") or "1").strip() or "1"
 
-		qs = DefectMode.objects.filter(part__isnull=True).all()
+		qs = DefectMode.objects.all()
 		if q:
 			qs = qs.filter(
-				Q(name__icontains=q)
-				| Q(code__icontains=q)
+				Q(name_th__icontains=q)
+				| Q(name_en__icontains=q)
+				| Q(name_jp__icontains=q)
+				| Q(description_th__icontains=q)
+				| Q(description_en__icontains=q)
+				| Q(description_jp__icontains=q)
 			)
 
 		allowed_per_page = {20, 50, 100, 200}
@@ -104,12 +134,22 @@ class ManageDefectModeViews(TemplateView):
 		if per_page not in allowed_per_page:
 			per_page = 20
 
-		qs = qs.order_by("name")
+		qs = qs.order_by("name_en", "name_th")
 		paginator = Paginator(qs, per_page)
 		page_obj = paginator.get_page(page)
 		rows = []
 		for d in page_obj.object_list:
-			rows.append({"id": d.id, "code": d.code or "", "name": d.name})
+			rows.append(
+				{
+					"id": str(d.id),
+					"name_th": d.name_th,
+					"name_en": d.name_en,
+					"name_jp": d.name_jp,
+					"description_th": d.description_th or "",
+					"description_en": d.description_en or "",
+					"description_jp": d.description_jp or "",
+				}
+			)
 
 		def _page_items(num_pages: int, current: int) -> list[int | None]:
 			if num_pages <= 0:
@@ -156,16 +196,27 @@ class ManageDefectModeViews(TemplateView):
 		obj_id = (request.POST.get("id") or "").strip()
 		uploaded = request.FILES.get("excel_file")
 
-		defect_code = (request.POST.get("defect_code") or "").strip()
-		defect_name = (request.POST.get("defect_name") or "").strip()
+		name_th = (request.POST.get("name_th") or "").strip()
+		name_en = (request.POST.get("name_en") or "").strip()
+		name_jp = (request.POST.get("name_jp") or "").strip()
+		description_th = (request.POST.get("description_th") or "").strip()
+		description_en = (request.POST.get("description_en") or "").strip()
+		description_jp = (request.POST.get("description_jp") or "").strip()
+
+		def _is_uuid(value: str) -> bool:
+			try:
+				uuid.UUID(str(value))
+			except Exception:
+				return False
+			return True
 
 		if action == "bulk_delete_defects":
 			bulk_ids = request.POST.getlist("bulk_id")
-			ids: list[int] = []
+			ids: list[str] = []
 			for raw in bulk_ids:
 				raw = (raw or "").strip()
-				if raw.isdigit():
-					ids.append(int(raw))
+				if _is_uuid(raw):
+					ids.append(raw)
 			if not ids:
 				messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
 				return self.get(request, *args, **kwargs)
@@ -176,7 +227,7 @@ class ManageDefectModeViews(TemplateView):
 			try:
 				with transaction.atomic():
 					for pk in ids:
-						obj = DefectMode.objects.filter(pk=pk, part__isnull=True).first()
+						obj = DefectMode.objects.filter(pk=pk).first()
 						if obj is None:
 							not_found += 1
 							continue
@@ -242,17 +293,29 @@ class ManageDefectModeViews(TemplateView):
 			try:
 				with transaction.atomic():
 					for row in rows_iter:
-						name = (row.get("defect_name") or row.get("defect") or row.get("name") or "")
-						name = str(name).strip()
-						code = (row.get("defect_code") or row.get("code") or "")
-						code = str(code).strip() if code is not None else ""
-						if not name:
+						row_name_th = str(row.get("name_th") or "").strip()
+						row_name_en = str(row.get("name_en") or "").strip()
+						row_name_jp = str(row.get("name_jp") or "").strip()
+						row_desc_th = str(row.get("description_th") or "").strip()
+						row_desc_en = str(row.get("description_en") or "").strip()
+						row_desc_jp = str(row.get("description_jp") or "").strip()
+
+						if not row_name_th or not row_name_en or not row_name_jp:
 							skipped += 1
 							continue
-						if DefectMode.objects.filter(part__isnull=True, name__iexact=name).exists():
+						# Prevent obvious duplicates by EN name (case-insensitive)
+						if DefectMode.objects.filter(name_en__iexact=row_name_en).exists():
 							dup += 1
 							continue
-						DefectMode.objects.create(part=None, name=name, code=code or None)
+						DefectMode.objects.create(
+							name_th=row_name_th,
+							name_en=row_name_en,
+							name_jp=row_name_jp,
+							description_th=row_desc_th,
+							description_en=row_desc_en,
+							description_jp=row_desc_jp,
+							user=request.user,
+						)
 						created += 1
 			except Exception as e:
 				log_event(
@@ -283,22 +346,34 @@ class ManageDefectModeViews(TemplateView):
 
 
 		if action == "create_defect":
-			if not defect_name:
-				messages.error(request, "กรุณากรอก Defect name")
+			if not name_th or not name_en or not name_jp:
+				messages.error(request, "กรุณากรอกชื่อ Defect mode ให้ครบทั้ง TH/EN/JP")
 				return self.get(request, *args, **kwargs)
 			try:
 				with transaction.atomic():
-					# Keep global defects unique by name (case-insensitive)
-					if DefectMode.objects.filter(part__isnull=True, name__iexact=defect_name).exists():
-						raise IntegrityError("Defect mode ซ้ำ (global): มีชื่อเดียวกันอยู่แล้ว")
-					obj = DefectMode.objects.create(part=None, code=defect_code or None, name=defect_name)
+					if DefectMode.objects.filter(name_en__iexact=name_en).exists():
+						raise IntegrityError("Defect mode ซ้ำ: name_en มีอยู่แล้ว")
+					obj = DefectMode.objects.create(
+						name_th=name_th,
+						name_en=name_en,
+						name_jp=name_jp,
+						description_th=description_th,
+						description_en=description_en,
+						description_jp=description_jp,
+						user=request.user,
+					)
 					messages.success(request, "เพิ่ม Defect mode สำเร็จ")
 					transaction.on_commit(
 						lambda: log_event(
 							request,
 							action="defectmode:create_defect",
-							message="เพิ่ม defect mode (global)",
-							metadata={"defect_id": obj.pk, "name": defect_name, "code": defect_code or ""},
+							message="เพิ่ม defect mode",
+							metadata={
+								"defect_id": str(obj.pk),
+								"name_th": name_th,
+								"name_en": name_en,
+								"name_jp": name_jp,
+							},
 						)
 					)
 					return self.get(request, *args, **kwargs)
@@ -307,8 +382,8 @@ class ManageDefectModeViews(TemplateView):
 					request,
 					action="defectmode:create_defect",
 					status="failure",
-					message="เพิ่ม defect mode (global) ไม่สำเร็จ (IntegrityError)",
-					metadata={"name": defect_name, "code": defect_code or "", "error": str(e)},
+					message="เพิ่ม defect mode ไม่สำเร็จ (IntegrityError)",
+					metadata={"name_en": name_en, "error": str(e)},
 				)
 				messages.error(request, f"บันทึกไม่สำเร็จ (ข้อมูลซ้ำหรือผิดเงื่อนไข): {e}")
 				return self.get(request, *args, **kwargs)
@@ -317,59 +392,72 @@ class ManageDefectModeViews(TemplateView):
 					request,
 					action="defectmode:create_defect",
 					status="failure",
-					message="เพิ่ม defect mode (global) ไม่สำเร็จ",
-					metadata={"name": defect_name, "code": defect_code or "", "error": str(e)},
+					message="เพิ่ม defect mode ไม่สำเร็จ",
+					metadata={"name_en": name_en, "error": str(e)},
 				)
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 				return self.get(request, *args, **kwargs)
 
 		if action == "update_defect":
-			if not obj_id.isdigit():
+			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
 				return self.get(request, *args, **kwargs)
-			if not defect_name:
-				messages.error(request, "กรุณากรอก Defect name")
+			if not name_th or not name_en or not name_jp:
+				messages.error(request, "กรุณากรอกชื่อ Defect mode ให้ครบทั้ง TH/EN/JP")
 				return self.get(request, *args, **kwargs)
 			try:
 				with transaction.atomic():
-					defect = DefectMode.objects.get(pk=int(obj_id))
-					# Only allow editing global defects in this page
-					if defect.part_id is not None:
-						messages.error(request, "หน้านี้แก้ไขได้เฉพาะ Defect mode แบบ global เท่านั้น")
-						return self.get(request, *args, **kwargs)
+					defect = DefectMode.objects.get(pk=obj_id)
 
 					updated_fields = []
-					old_name = defect.name
-					old_code = defect.code or ""
+					old_name_th = defect.name_th
+					old_name_en = defect.name_en
+					old_name_jp = defect.name_jp
+					old_desc_th = defect.description_th or ""
+					old_desc_en = defect.description_en or ""
+					old_desc_jp = defect.description_jp or ""
 
-					new_code = defect_code or None
-					if defect.code != new_code:
-						defect.code = new_code
-						updated_fields.append("code")
+					if defect.name_en != name_en and DefectMode.objects.filter(name_en__iexact=name_en).exclude(pk=defect.pk).exists():
+						raise IntegrityError("Defect mode ซ้ำ: name_en มีอยู่แล้ว")
 
-					if defect.name != defect_name:
-						# Prevent duplicate global names
-						if DefectMode.objects.filter(part__isnull=True, name__iexact=defect_name).exclude(pk=defect.pk).exists():
-							raise IntegrityError("Defect mode ซ้ำ (global): มีชื่อเดียวกันอยู่แล้ว")
-						defect.name = defect_name
-						updated_fields.append("name")
+					if defect.name_th != name_th:
+						defect.name_th = name_th
+						updated_fields.append("name_th")
+					if defect.name_en != name_en:
+						defect.name_en = name_en
+						updated_fields.append("name_en")
+					if defect.name_jp != name_jp:
+						defect.name_jp = name_jp
+						updated_fields.append("name_jp")
+
+					if (defect.description_th or "") != description_th:
+						defect.description_th = description_th
+						updated_fields.append("description_th")
+					if (defect.description_en or "") != description_en:
+						defect.description_en = description_en
+						updated_fields.append("description_en")
+					if (defect.description_jp or "") != description_jp:
+						defect.description_jp = description_jp
+						updated_fields.append("description_jp")
 
 					if updated_fields:
 						updated_fields.append("updated_at")
 						defect.save(update_fields=updated_fields)
 						messages.success(request, "บันทึกการแก้ไขสำเร็จ")
-						new_name = defect.name
-						new_code = defect.code or ""
 						transaction.on_commit(
 							lambda: log_event(
 								request,
 								action="defectmode:update_defect",
-								message="แก้ไข defect mode (global)",
+								message="แก้ไข defect mode",
 								metadata={
-									"defect_id": defect.pk,
+									"defect_id": str(defect.pk),
 									"changed_fields": [f for f in updated_fields if f != "updated_at"],
-									"name": {"from": old_name, "to": new_name} if old_name != new_name else None,
-									"code": {"from": old_code, "to": new_code} if old_code != new_code else None,
+									"name_th": {"from": old_name_th, "to": defect.name_th} if old_name_th != defect.name_th else None,
+									"name_en": {"from": old_name_en, "to": defect.name_en} if old_name_en != defect.name_en else None,
+									"name_jp": {"from": old_name_jp, "to": defect.name_jp} if old_name_jp != defect.name_jp else None,
+									"description_th": {"from": old_desc_th, "to": defect.description_th} if old_desc_th != (defect.description_th or "") else None,
+									"description_en": {"from": old_desc_en, "to": defect.description_en} if old_desc_en != (defect.description_en or "") else None,
+									"description_jp": {"from": old_desc_jp, "to": defect.description_jp} if old_desc_jp != (defect.description_jp or "") else None,
 								},
 							)
 						)
@@ -408,23 +496,25 @@ class ManageDefectModeViews(TemplateView):
 				return self.get(request, *args, **kwargs)
 
 		if action == "delete_defect":
-			if not obj_id.isdigit():
+			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
 				return self.get(request, *args, **kwargs)
 			try:
 				with transaction.atomic():
-					defect = DefectMode.objects.get(pk=int(obj_id))
-					if defect.part_id is not None:
-						messages.error(request, "หน้านี้ลบได้เฉพาะ Defect mode แบบ global เท่านั้น")
-						return self.get(request, *args, **kwargs)
-					meta = {"defect_id": defect.pk, "name": defect.name, "code": defect.code or ""}
+					defect = DefectMode.objects.get(pk=obj_id)
+					meta = {
+						"defect_id": str(defect.pk),
+						"name_th": defect.name_th,
+						"name_en": defect.name_en,
+						"name_jp": defect.name_jp,
+					}
 					defect.delete()
 					messages.success(request, "ลบ Defect mode สำเร็จ")
 					transaction.on_commit(
 						lambda: log_event(
 							request,
 							action="defectmode:delete_defect",
-							message="ลบ defect mode (global)",
+							message="ลบ defect mode",
 							metadata=meta,
 						)
 					)

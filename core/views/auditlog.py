@@ -10,11 +10,14 @@ from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView  # type:ignore
 
-from core.auth.decorators import admin_required
+from core.auth.decorators import permission_required
 from core.models import AuditLogEntry
 
 
-@method_decorator(admin_required, name="dispatch")
+@method_decorator(
+    permission_required("core.view_auditlogentry", message="คุณไม่มีสิทธิ์เข้าถึง Audit Log"),
+    name="dispatch",
+)
 class AuditLogViews(TemplateView):
     template_name = "auditlog.html"
 
