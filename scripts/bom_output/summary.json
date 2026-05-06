@@ -1,0 +1,258 @@
+{
+  "processed_files": 38,
+  "skipped_files": 1,
+  "total_unique_items": 1147,
+  "total_unique_relationships": 2513,
+  "fg_count": 112,
+  "files_detail": [
+    {
+      "file": "Format_BOM (P'Jib)_2025.08.30.xlsx",
+      "sheet": "BOM Update",
+      "items": 259,
+      "relationships": 510
+    },
+    {
+      "file": "Format_BOM 71103-X7V06 (IFJR1).xlsx",
+      "sheet": "BOM Update",
+      "items": 35,
+      "relationships": 50
+    },
+    {
+      "file": "Format_BOM 71103-X7V36 (TFL1).xlsx",
+      "sheet": "BOM Update",
+      "items": 15,
+      "relationships": 16
+    },
+    {
+      "file": "Format_BOM 71104-X7A00 (IFJL3).xlsx",
+      "sheet": "BOM Update",
+      "items": 35,
+      "relationships": 50
+    },
+    {
+      "file": "Format_BOM 71104-X7A17 (IFJL3).xlsx",
+      "sheet": "BOM Update",
+      "items": 38,
+      "relationships": 53
+    },
+    {
+      "file": "Format_BOM 71104-X7V55 (TFL1).xlsx",
+      "sheet": "BOM Update",
+      "items": 13,
+      "relationships": 12
+    },
+    {
+      "file": "Format_BOM 72041-X7V44 (HAM) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 28,
+      "relationships": 30
+    },
+    {
+      "file": "Format_BOM 72056-X7A02 (ITI6) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 47,
+      "relationships": 50
+    },
+    {
+      "file": "Format_BOM 72071-X7V02 (TT1) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 47,
+      "relationships": 46
+    },
+    {
+      "file": "Format_BOM 72110-X1V15 (ETO6) OK.xlsx",
+      "sheet": "BOM ",
+      "items": 50,
+      "relationships": 64
+    },
+    {
+      "file": "Format_BOM 72110-X7A05 (ITO6) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 51,
+      "relationships": 64
+    },
+    {
+      "file": "Format_BOM 72110-X7A18 (IOT) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 28,
+      "relationships": 27
+    },
+    {
+      "file": "Format_BOM 72120-X1V14 (ETO6) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 43,
+      "relationships": 55
+    },
+    {
+      "file": "Format_BOM 72130-X7V72 (ITA) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 59,
+      "relationships": 64
+    },
+    {
+      "file": "Format_BOM 72140-BZ460 (DTA-2) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 37,
+      "relationships": 37
+    },
+    {
+      "file": "Format_BOM 72140-X7V17 (TT1) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 54,
+      "relationships": 54
+    },
+    {
+      "file": "Format_BOM 72140-X7V18 (TT2) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 48,
+      "relationships": 49
+    },
+    {
+      "file": "Format_BOM 72140-X7V91 (IT8) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 46,
+      "relationships": 47
+    },
+    {
+      "file": "Format_BOM 72160-0K160 (IT1) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 35,
+      "relationships": 40
+    },
+    {
+      "file": "Format_BOM 721B0-X7V66 (IT8).xlsx",
+      "sheet": "BOM Update",
+      "items": 50,
+      "relationships": 51
+    },
+    {
+      "file": "Format_BOM 72309-X7V22 (OK).xlsx",
+      "sheet": "BOM Update",
+      "items": 6,
+      "relationships": 5
+    },
+    {
+      "file": "Format_BOM 72406-X7V17 (OK).xlsx",
+      "sheet": "BOM Update",
+      "items": 3,
+      "relationships": 2
+    },
+    {
+      "file": "Format_BOM 72503-X1M04 (IA8).xlsx",
+      "sheet": "BOM Update",
+      "items": 29,
+      "relationships": 29
+    },
+    {
+      "file": "Format_BOM 72503-X7A04 (IA8-2) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 24,
+      "relationships": 24
+    },
+    {
+      "file": "Format_BOM 72503-X7V45 (IAR) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 34,
+      "relationships": 45
+    },
+    {
+      "file": "Format_BOM 72503-X7V81 (DAA) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 32,
+      "relationships": 40
+    },
+    {
+      "file": "Format_BOM 72504-X7A25 (OK).xlsx",
+      "sheet": "BOM Update",
+      "items": 7,
+      "relationships": 6
+    },
+    {
+      "file": "Format_BOM 72720-X1M05 (OK).xlsx",
+      "sheet": "BOM Update",
+      "items": 34,
+      "relationships": 49
+    },
+    {
+      "file": "Format_BOM 72730-X7A01 (IF1R).xlsx",
+      "sheet": "BOM Update",
+      "items": 33,
+      "relationships": 48
+    },
+    {
+      "file": "Format_BOM 72740-X7A02 (IF1L).xlsx",
+      "sheet": "BOM Update",
+      "items": 36,
+      "relationships": 46
+    },
+    {
+      "file": "Format_BOM 72740-X7A03 (IF1L).xlsx",
+      "sheet": "BOM Update",
+      "items": 37,
+      "relationships": 47
+    },
+    {
+      "file": "Format_BOM 79030-0K050 (IL2) OK.xlsx",
+      "sheet": "BOM Update",
+      "items": 28,
+      "relationships": 27
+    },
+    {
+      "file": "Format_BOM 79303-X1E05 (HFRI).xlsx",
+      "sheet": "BOM Update",
+      "items": 16,
+      "relationships": 15
+    },
+    {
+      "file": "Format_BOM Rev.011.xlsx",
+      "sheet": "BOM Update",
+      "items": 80,
+      "relationships": 90
+    },
+    {
+      "file": "Format_BOM(Aor).xlsx",
+      "sheet": "BOM Update",
+      "items": 195,
+      "relationships": 0
+    },
+    {
+      "file": "Format_BOM_Korakrid.xlsx",
+      "sheet": "BOM Update",
+      "items": 533,
+      "relationships": 941
+    },
+    {
+      "file": "Format_BOM_Nok_(30 Jul'25).xlsx",
+      "sheet": "MAS_BOM Update",
+      "items": 45,
+      "relationships": 44
+    },
+    {
+      "file": "Gloy_BOM Rev.00 ACT.xlsx",
+      "sheet": "BOM Update",
+      "items": 356,
+      "relationships": 779
+    }
+  ],
+  "skipped_detail": [
+    {
+      "file": "BoMsummary.xlsx",
+      "reason": "No BOM sheet"
+    }
+  ],
+  "data_quality": {
+    "items_with_conflicts": 8,
+    "conflict_keys": [
+      "N32-18",
+      "BWT001",
+      "SOJ602",
+      "PAR011",
+      "NHT-13",
+      "N32-18-W",
+      "HYS041",
+      "DUM000"
+    ],
+    "orphan_children": [],
+    "missing_parents": []
+  }
+}

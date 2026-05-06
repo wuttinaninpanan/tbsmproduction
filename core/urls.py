@@ -18,6 +18,7 @@ from .views import ManageLineViews
 from .views import DashboardViews
 from .views import MonthlyComponentPartReportViews
 from .views import ScrapWeightReportViews
+from .views import BomTreeViews
 
 
 
@@ -44,4 +45,5 @@ urlpatterns = [
     path('manage-item-category/', ManageItemCategoryViews.as_view(), name="manage_item_category"),
     path('manage-item-line/', ManageItemLineViews.as_view(), name="manage_item_line"),
     path('manage-bill-of-material/', ManageBillOfMaterialViews.as_view(), name="manage_bill_of_material"),
+    path('bom-tree/', BomTreeViews.as_view(), name="bom_tree"),
 ]

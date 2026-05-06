@@ -12,7 +12,7 @@ from django.views.generic import TemplateView
 
 from core.auth.decorators import user_required
 from core.models.bill_of_material import BillOfMaterial
-from core.models.bill_of_material_item_master import BillOfMaterialItemMater
+from core.models.bill_of_material_item_master import BillOfMaterialItemMaster as BillOfMaterialItemMater
 from core.models.defect_by_category import DefectByCategory
 from core.models.defect_mode import DefectMode
 from core.models.item_line import ItemLine

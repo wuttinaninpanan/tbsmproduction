@@ -16,6 +16,7 @@ from .scrap_record import ScrapRecord
 from . import (  # noqa: F401
 	bill_of_material,
 	bill_of_material_item_master,
+	bom_staging,
 	businesspartner,
 	defect_by_category,
 	item_category,
