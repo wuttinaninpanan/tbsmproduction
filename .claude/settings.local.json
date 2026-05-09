@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(python manage.py seed_bom_master --dry-run)",
-      "Bash(git fetch *)"
+      "Bash(git fetch *)",
+      "PowerShell(Resolve-DnsName docker-images-prod.6aa30f8b08e16409b46e0173d6de2f56.r2.cloudflarestorage.com -ErrorAction SilentlyContinue)",
+      "PowerShell(Resolve-DnsName registry-1.docker.io -ErrorAction SilentlyContinue)",
+      "PowerShell(Test-NetConnection -ComputerName 1.1.1.1 -Port 443 -InformationLevel Quiet)",
+      "PowerShell(docker info 2>&1 | Select-String -Pattern \"Proxy|Registry|HTTP\"; Write-Output \"---\"; Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object { $_.ServerAddresses } | Format-Table -AutoSize)",
+      "PowerShell(ipconfig /flushdns)",
+      "PowerShell(Resolve-DnsName registry-1.docker.io -Type A -ErrorAction SilentlyContinue -Server 8.8.8.8)",
+      "PowerShell(Resolve-DnsName registry-1.docker.io -Type A -Server 1.1.1.1 -ErrorAction Continue)",
+      "PowerShell(nslookup -type=A registry-1.docker.io 2>&1)",
+      "PowerShell(Test-NetConnection -ComputerName 8.8.8.8 -Port 53 -InformationLevel Quiet)"
     ]
   }
 }
