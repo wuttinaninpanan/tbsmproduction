@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py seed_bom_master --dry-run)",
+      "Bash(git fetch *)"
+    ]
+  }
+}

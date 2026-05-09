@@ -11,14 +11,21 @@ from .user_profile import UserProfile
 from .defect_mode import DefectMode
 from .auditlog_entry import AuditLogEntry
 from .scrap_record import ScrapRecord
+from .defect_stat import DefectStat
+from core.models.inspection.inspection_model import InspectionModels
+from core.models.inspection.inspection_item import InspectionItem
+from core.models.inspection.inspection_model_defect import InspectionModelsDefect
+from core.models.inspection.inspection_result import InspectionResult
+from core.models.inspection.inspection_error import InspectionError
+from core.models.inspection.inspection_products import InspectionProducts
 
 # Import other model modules so Django registers them (even if not re-exported).
 from . import (  # noqa: F401
 	bill_of_material,
 	bill_of_material_item_master,
-	bom_staging,
 	businesspartner,
 	defect_by_category,
+	inout,
 	item_category,
 	item_line,
 	item_list,
@@ -26,8 +33,13 @@ from . import (  # noqa: F401
 	item_stage,
 	line,
 	line_process,
+	plant,
+	portion,
+	process,
 	rounting,
 	scrap_record,
+	side,
+	way,
 )
 
 __all__ = [
@@ -36,4 +48,11 @@ __all__ = [
 	"UserProfile",
 	"AuditLogEntry",
 	"ScrapRecord",
+	"DefectStat",
+    "InspectionModels",
+    "InspectionItem",
+    "InspectionModelsDefect",
+    "InspectionResult",
+	"InspectionError",
+    "InspectionProducts",
 ]

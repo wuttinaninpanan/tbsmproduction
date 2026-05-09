@@ -68,6 +68,7 @@
 					actionForm.appendChild(input);
 				});
 				actionForm.submit();
+				setTimeout(function(){ window.location.reload(); }, 1200);
 			});
 		}
 
@@ -146,6 +147,7 @@
 			descEnField.value = (addDescEn.value || '').trim();
 			descJpField.value = (addDescJp.value || '').trim();
 			actionForm.submit();
+			setTimeout(function(){ window.location.reload(); }, 1200);
 		});
 
 		document.getElementById('editSubmit').addEventListener('click', () => {
@@ -157,6 +159,7 @@
 			descEnField.value = (editDescEn.value || '').trim();
 			descJpField.value = (editDescJp.value || '').trim();
 			actionForm.submit();
+			setTimeout(function(){ window.location.reload(); }, 1200);
 		});
 
 		document.getElementById('deleteSubmit').addEventListener('click', () => {

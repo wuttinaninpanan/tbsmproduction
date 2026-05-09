@@ -9,7 +9,6 @@
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการข้อมูล Production line</h1>
-			<p class="text-sm text-slate-600 mt-1">ตาราง Line (Production line) และ Process type</p>
 		</div>
 	</header>
 
@@ -124,15 +123,10 @@
 							<td class="px-4 py-3 text-slate-700">{{ r.description|default:"-" }}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-center gap-2">
-									<button type="button"
-										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap"
-										data-open-edit
-										data-id="{{ r.id }}"
-										data-line-name="{{ r.line_name|default:'' }}"
-										data-description="{{ r.description|default:'' }}"
-										data-process-type-id="{{ r.process_type_id|default:'' }}">
-										แก้ไข
-									</button>
+									<a href="{% url 'manage_line_edit' r.id %}"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap">
+										อัปเดต
+									</a>
 									<button type="button"
 										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
 										data-open-delete
@@ -259,41 +253,6 @@
 		<div class="mt-5 flex items-center justify-end gap-2">
 			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
 			<button id="addSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
-		</div>
-	</div>
-</div>
-
-<!-- Edit Modal -->
-<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
-	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
-			<span class="text-slate-700 text-xl leading-none">×</span>
-		</button>
-		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Production line</h2>
-		<p class="text-xs text-slate-600 mt-1" id="editLabel"></p>
-		<div class="mt-4 space-y-4">
-			<div>
-				<label class="block text-sm font-semibold text-slate-700">Production line</label>
-				<input id="editLineName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-			</div>
-			<div>
-				<label class="block text-sm font-semibold text-slate-700">Process type</label>
-				<select id="editProcessType" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
-					<option value="">เลือก Process</option>
-					{% for p in processes %}
-						<option value="{{ p.id }}">{{ p.display_name|default:p.name }}</option>
-					{% endfor %}
-				</select>
-			</div>
-			<div>
-				<label class="block text-sm font-semibold text-slate-700">Description</label>
-				<input id="editDescription" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-			</div>
-		</div>
-		<div class="mt-5 flex items-center justify-end gap-2">
-			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
 		</div>
 	</div>
 </div>

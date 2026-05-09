@@ -5,14 +5,19 @@ import uuid
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
+from django.views import View
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 
 from core.auth.decorators import staff_required
+from core.models.item_line import ItemLine
+from core.models.item_list import Item_list
+from core.models.item_stage import ItemStage
 from core.models.line import Line
 from core.models.line_process import LineProcess
 from core.services.auditlog import log_event
@@ -473,3 +478,240 @@ class ManageLineViews(TemplateView):
         )
         messages.success(request, "เพิ่มข้อมูลสำเร็จ")
         return self.get(request)
+
+
+@method_decorator(staff_required, name="dispatch")
+class ManageLineEditViews(TemplateView):
+    template_name = "manage_line_edit.html"
+
+    def _get_line(self, line_id):
+        return (
+            Line.objects.select_related("line_process")
+            .filter(pk=line_id)
+            .first()
+        )
+
+    def get(self, request, *args, **kwargs):
+        line = self._get_line(kwargs.get("id"))
+        if line is None:
+            messages.error(request, "ไม่พบ Line")
+            return redirect("manage_line")
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        line = self._get_line(kwargs.get("id"))
+        ctx["line"] = line
+        if line is None:
+            ctx["item_lines"] = []
+            ctx["processes"] = []
+            ctx["stages"] = []
+            return ctx
+
+        item_lines_qs = (
+            ItemLine.objects.select_related("item", "item_stage")
+            .filter(line=line)
+            .order_by("item__sd_code", "item__part_number")
+        )
+        ctx["item_lines"] = [
+            {
+                "id": str(il.id),
+                "item_id": str(il.item_id) if il.item_id else "",
+                "sd_code": getattr(il.item, "sd_code", "") if il.item_id else "",
+                "part_number": getattr(il.item, "part_number", "") if il.item_id else "",
+                "part_name": getattr(il.item, "part_name", "") if il.item_id else "",
+                "stage_id": str(il.item_stage_id) if il.item_stage_id else "",
+                "stage_name": (
+                    getattr(il.item_stage, "display_name", "")
+                    or getattr(il.item_stage, "name", "")
+                )
+                if il.item_stage_id
+                else "",
+            }
+            for il in item_lines_qs
+        ]
+        ctx["processes"] = list(
+            LineProcess.objects.order_by("display_name", "name").values(
+                "id", "name", "display_name"
+            )
+        )
+        ctx["stages"] = list(
+            ItemStage.objects.order_by("display_name", "name").values(
+                "id", "name", "display_name"
+            )
+        )
+        return ctx
+
+    def post(self, request, *args, **kwargs):
+        line = self._get_line(kwargs.get("id"))
+        if line is None:
+            messages.error(request, "ไม่พบ Line")
+            return redirect("manage_line")
+
+        action = (request.POST.get("action") or "").strip().lower()
+
+        if action == "update_line":
+            line_name = (request.POST.get("line_name") or "").strip()
+            description = (request.POST.get("description") or "").strip()
+            process_type_id = (request.POST.get("process_type_id") or "").strip()
+
+            if not line_name:
+                messages.error(request, "กรุณาระบุ Production line")
+                return redirect("manage_line_edit", id=line.id)
+            if not _is_uuid(process_type_id):
+                messages.error(request, "กรุณาเลือก Process type")
+                return redirect("manage_line_edit", id=line.id)
+            process = LineProcess.objects.filter(pk=process_type_id).first()
+            if process is None:
+                messages.error(request, "ไม่พบ Process type")
+                return redirect("manage_line_edit", id=line.id)
+
+            line.line_name = line_name
+            line.description = description
+            line.line_process = process
+            line.save(
+                update_fields=["line_name", "description", "line_process", "updated_at"]
+            )
+            transaction.on_commit(
+                lambda: log_event(
+                    request,
+                    action="line:update",
+                    message="แก้ไข Line",
+                    metadata={
+                        "id": str(line.id),
+                        "line_name": line_name,
+                        "process_type": str(process.id),
+                    },
+                )
+            )
+            messages.success(request, "แก้ไขรายการสำเร็จ")
+            return redirect("manage_line_edit", id=line.id)
+
+        if action == "add_item":
+            item_id = (request.POST.get("item_id") or "").strip()
+            stage_id = (request.POST.get("stage_id") or "").strip()
+            if not _is_uuid(item_id):
+                messages.error(request, "กรุณาเลือก Item")
+                return redirect("manage_line_edit", id=line.id)
+            if not _is_uuid(stage_id):
+                messages.error(request, "กรุณาเลือก Stage")
+                return redirect("manage_line_edit", id=line.id)
+            item = Item_list.objects.filter(pk=item_id).first()
+            stage = ItemStage.objects.filter(pk=stage_id).first()
+            if item is None:
+                messages.error(request, "ไม่พบ Item")
+                return redirect("manage_line_edit", id=line.id)
+            if stage is None:
+                messages.error(request, "ไม่พบ Stage")
+                return redirect("manage_line_edit", id=line.id)
+            try:
+                obj = ItemLine.objects.create(
+                    item=item, line=line, item_stage=stage, user=request.user
+                )
+            except IntegrityError:
+                messages.error(request, "ข้อมูลซ้ำ: Item นี้ผูกกับ Line นี้แล้ว")
+                return redirect("manage_line_edit", id=line.id)
+            transaction.on_commit(
+                lambda: log_event(
+                    request,
+                    action="item_line:create",
+                    message="เพิ่ม Item เข้า Line",
+                    metadata={
+                        "id": str(obj.id),
+                        "line": line.line_name,
+                        "sd_code": item.sd_code,
+                        "stage": str(stage.id),
+                    },
+                )
+            )
+            messages.success(request, "เพิ่ม Item สำเร็จ")
+            return redirect("manage_line_edit", id=line.id)
+
+        if action == "update_item_stage":
+            item_line_id = (request.POST.get("item_line_id") or "").strip()
+            stage_id = (request.POST.get("stage_id") or "").strip()
+            if not _is_uuid(item_line_id) or not _is_uuid(stage_id):
+                messages.error(request, "ข้อมูลไม่ถูกต้อง")
+                return redirect("manage_line_edit", id=line.id)
+            obj = ItemLine.objects.filter(pk=item_line_id, line=line).first()
+            stage = ItemStage.objects.filter(pk=stage_id).first()
+            if obj is None or stage is None:
+                messages.error(request, "ไม่พบรายการ")
+                return redirect("manage_line_edit", id=line.id)
+            obj.item_stage = stage
+            obj.save(update_fields=["item_stage", "updated_at"])
+            transaction.on_commit(
+                lambda: log_event(
+                    request,
+                    action="item_line:update",
+                    message="แก้ Stage ของ Item ใน Line",
+                    metadata={"id": str(obj.id), "stage": str(stage.id)},
+                )
+            )
+            messages.success(request, "อัปเดต Stage สำเร็จ")
+            return redirect("manage_line_edit", id=line.id)
+
+        if action == "delete_item":
+            item_line_id = (request.POST.get("item_line_id") or "").strip()
+            if not _is_uuid(item_line_id):
+                messages.error(request, "ข้อมูลไม่ถูกต้อง")
+                return redirect("manage_line_edit", id=line.id)
+            obj = ItemLine.objects.filter(pk=item_line_id, line=line).first()
+            if obj is None:
+                messages.error(request, "ไม่พบรายการ")
+                return redirect("manage_line_edit", id=line.id)
+            try:
+                obj.delete()
+            except ProtectedError:
+                messages.error(request, "ลบไม่ได้: รายการนี้ถูกใช้งานอยู่")
+                return redirect("manage_line_edit", id=line.id)
+            transaction.on_commit(
+                lambda: log_event(
+                    request,
+                    action="item_line:delete",
+                    message="ลบ Item ออกจาก Line",
+                    metadata={"id": item_line_id, "line": line.line_name},
+                )
+            )
+            messages.success(request, "ลบ Item ออกจาก Line สำเร็จ")
+            return redirect("manage_line_edit", id=line.id)
+
+        messages.error(request, "ไม่รองรับการทำงานนี้")
+        return self.get(request, *args, **kwargs)
+
+
+@method_decorator(staff_required, name="dispatch")
+class LineItemSearchView(View):
+    """AJAX endpoint สำหรับค้น Item เพื่อใช้ใน autocomplete ของหน้า manage-line edit."""
+
+    def get(self, request, *args, **kwargs):
+        q = (request.GET.get("q") or "").strip()
+        line_id = (request.GET.get("line_id") or "").strip()
+
+        qs = Item_list.objects.all()
+        if q:
+            qs = qs.filter(
+                Q(sd_code__icontains=q)
+                | Q(part_number__icontains=q)
+                | Q(part_name__icontains=q)
+                | Q(item_code__icontains=q)
+            )
+
+        if _is_uuid(line_id):
+            already_linked = ItemLine.objects.filter(line_id=line_id).values_list(
+                "item_id", flat=True
+            )
+            qs = qs.exclude(pk__in=list(already_linked))
+
+        qs = qs.order_by("sd_code", "part_number")[:20]
+        results = [
+            {
+                "id": str(it.id),
+                "sd_code": it.sd_code or "",
+                "part_number": it.part_number or "",
+                "part_name": it.part_name or "",
+                "item_code": it.item_code or "",
+            }
+            for it in qs
+        ]
+        return JsonResponse({"results": results})

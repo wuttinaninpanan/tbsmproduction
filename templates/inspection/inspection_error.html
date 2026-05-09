@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Inspection Error — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+
+    <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Inspection Error</h1>
+            <p class="text-sm text-slate-600 mt-1">รายการ defect / NG จากระบบ</p>
+        </div>
+    </header>
+
+    <!-- 🔥 MESSAGE -->
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="px-4 py-2 rounded-lg text-white
+            {% if message.tags == 'success' %}bg-green-500
+            {% elif message.tags == 'warning' %}bg-yellow-500
+            {% else %}bg-red-500{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Search -->
+    <form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+        <div class="flex gap-3">
+            <input name="q" value="{{ request.GET.q }}" placeholder="ค้นหาด้วย UUID"
+                class="w-full rounded-md border border-slate-300 px-3 py-2" />
+            <button type="submit" class="px-4 py-2 rounded-lg text-white bg-slate-800 hover:bg-slate-900">
+                ค้นหา
+            </button>
+        </div>
+    </form>
+
+    <!-- 🔥 BULK DELETE -->
+    <form method="post" onsubmit="return confirm('ลบรายการที่เลือกทั้งหมด?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="bulk_delete">
+
+        <div class="mb-3">
+            <button class="bg-red-700 text-white px-4 py-2 rounded-lg hover:bg-red-800">
+                ลบที่เลือก
+            </button>
+        </div>
+
+        <!-- Table -->
+        <div class="rounded-2xl border border-slate-200 overflow-hidden">
+
+            <div class="bg-slate-100 px-4 py-3 font-extrabold text-slate-800">
+                Inspection Error List
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+
+                    <thead class="bg-white text-slate-800">
+                        <tr>
+                            <th class="w-10 px-2 py-3 text-center">
+                                <input type="checkbox" onclick="toggleAll(this)">
+                            </th>
+
+                            <th class="w-40 px-3 py-3 font-extrabold text-left">SD Code</th>
+                            <th class="w-32 px-3 py-3 font-extrabold text-left">Line</th>
+                            <th class="w-48 px-3 py-3 font-extrabold text-left">QR Work</th>
+                            <th class="w-28 px-3 py-3 font-extrabold text-center">Result</th>
+                            <th class="w-32 px-3 py-3 font-extrabold text-center">Photo</th>
+                            <th class="w-44 px-3 py-3 font-extrabold text-center">วันที่ / เวลา</th>
+                            <th class="w-28 px-3 py-3 font-extrabold text-center">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-slate-200">
+
+                        {% for r in rows %}
+                        <tr class="hover:bg-slate-50">
+
+                            <td class="px-2 py-3 text-center">
+                                <input type="checkbox" name="bulk_id" value="{{ r.id }}">
+                            </td>
+
+                            <!-- SD -->
+                            <td class="px-3 py-3 font-semibold truncate">
+                                {{ r.sd_code }}
+                            </td>
+
+                            <!-- Line -->
+                            <td class="px-3 py-3 truncate">
+                                {{ r.line_name }}
+                            </td>
+
+                            <!-- QR -->
+                            <td class="px-3 py-3 truncate">
+                                {{ r.qr_work }}
+                            </td>
+
+                            <!-- Result -->
+                            <td class="px-3 py-3 text-center">
+                                <span class="px-2 py-1 rounded-lg text-white bg-red-600 text-xs">
+                                    {{ r.result }}
+                                </span>
+                            </td>
+
+                            <!-- Photo -->
+                            <td class="px-3 py-3 text-center">
+                                {% if r.photo_url %}
+                                <img src="{{ r.photo_url }}"
+                                    class="h-14 w-20 object-cover mx-auto rounded-lg border cursor-pointer hover:scale-105 transition"
+                                    onclick="openImage('{{ r.photo_url }}')" />
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+
+                            <!-- Date -->
+                            <td class="px-3 py-3 text-center whitespace-nowrap text-xs">
+                                {{ r.created_at }}
+                            </td>
+
+                            <!-- Action -->
+                            <td class="px-3 py-3 text-center">
+                                <form method="post" onsubmit="return confirm('ลบรายการนี้?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="{{ r.id }}">
+
+                                    <button class="bg-red-500 hover:bg-red-700 text-white px-3 py-1 rounded text-xs">
+                                        ลบ
+                                    </button>
+                                </form>
+                            </td>
+
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj and paginator %}
+            <div class="flex justify-between px-4 py-3 border-t">
+
+                <div class="text-sm text-gray-600">
+                    {{ page_obj.start_index }} - {{ page_obj.end_index }} / {{ rows_total }}
+                </div>
+
+                <div class="flex gap-1">
+                    {% for p in page_items %}
+                    {% if p %}
+                    {% if p == page_obj.number %}
+                    <a href="?page={{ p }}" class="px-3 py-1 rounded bg-indigo-600 text-white">
+                        {{ p }}
+                    </a>
+                    {% else %}
+                    <a href="?page={{ p }}" class="px-3 py-1 rounded bg-white border">
+                        {{ p }}
+                    </a>
+                    {% endif %}
+                    {% else %}
+                    <span class="px-2">...</span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+
+            </div>
+            {% endif %}
+
+        </div>
+    </form>
+
+</section>
+
+<!-- 🔥 Modal Zoom -->
+<div id="imageModal" class="fixed inset-0 hidden items-center justify-center bg-black/80 z-50">
+
+    <img id="modalImg" class="max-h-[90%] max-w-[90%] rounded-xl shadow-xl">
+</div>
+
+<script>
+    function openImage(src) {
+        const modal = document.getElementById('imageModal');
+        const img = document.getElementById('modalImg');
+
+        img.src = src;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    document.getElementById('imageModal').onclick = function () {
+        this.classList.add('hidden');
+    }
+
+    // ✅ select all
+    function toggleAll(source) {
+        const checkboxes = document.querySelectorAll('input[name="bulk_id"]');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+    }
+</script>
+
+{% endblock %}

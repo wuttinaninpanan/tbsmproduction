@@ -1,5 +1,10 @@
 (() => {
 	const init = () => {
+		function tsSet(id, val) {
+			var el = document.getElementById(id);
+			if (!el) return;
+			if (el.tomselect) { el.tomselect.setValue(val || ''); } else { el.value = val || ''; }
+		}
 		const actionForm = document.getElementById('actionForm');
 		const actionField = document.getElementById('actionField');
 		const idField = document.getElementById('idField');
@@ -99,7 +104,7 @@
 		document.querySelectorAll('[data-open-edit]').forEach(btn => {
 			btn.addEventListener('click', () => {
 				idField.value = btn.dataset.id || '';
-				document.getElementById('editItem').value = btn.dataset.itemId || '';
+				tsSet('editItem', btn.dataset.itemId);
 				document.getElementById('editRevision').value = btn.dataset.revision || '';
 				document.getElementById('editEci').value = btn.dataset.eci || '';
 				document.getElementById('editScrap').value = btn.dataset.scrap || '';

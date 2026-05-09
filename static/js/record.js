@@ -59,6 +59,8 @@
 		let productionLineInput = null;
 		let productionLineList = null;
 		let partSelect = null;
+		let partHiddenEl = null;
+		let partDatalist = null;
 		let topDefectSelect = null;
 		let headerHints = null;
 		let topHeaderRowEl = null;
@@ -75,6 +77,30 @@
 			const line = getLine(lineId);
 			if (!line) return null;
 			return (line.parts || []).find(p => p.id === partId) || null;
+		}
+
+		// Resolve a user-typed/scanned value (sd_number, part_number, or UUID) → part UUID
+		function resolvePartId(lineId, inputValue) {
+			const v = (inputValue || '').trim();
+			if (!v) return '';
+			const line = getLine(lineId);
+			if (!line) return '';
+			return (line.parts || []).find(p =>
+				p.id === v ||
+				(p.sd_number || '').toLowerCase() === v.toLowerCase() ||
+				(p.part_number || '').toLowerCase() === v.toLowerCase()
+			)?.id || '';
+		}
+
+		// Populate a datalist element with part options (value = sd_number / part_number)
+		function populatePartDatalist(datalistEl, lineId) {
+			if (!datalistEl) return;
+			datalistEl.innerHTML = '';
+			(getLine(lineId)?.parts || []).forEach(p => {
+				const opt = document.createElement('option');
+				opt.value = p.sd_number || p.part_number || p.id;
+				datalistEl.appendChild(opt);
+			});
 		}
 
 		function setOptions(select, options, placeholder = '— Select —') {
@@ -136,7 +162,7 @@
 
 		function currentDefects() {
 			const lineId = getCurrentLineId();
-			const partId = partSelect?.value || '';
+			const partId = resolvePartId(lineId, partSelect?.value || '');
 			const part = getPart(lineId, partId);
 			return part ? (part.defects || []) : [];
 		}
@@ -257,17 +283,42 @@
 			lineHint.textContent = 'กรุณาใส่หรือสแกน Production line';
 			lineCell.appendChild(lineHint);
 
-			// SD number
-			partSelect = document.createElement('select');
+			// SD number (text input + datalist — supports manual input and barcode scanning)
+			const partWrap = document.createElement('div');
+			partWrap.className = 'relative';
+			partSelect = document.createElement('input');
+			partSelect.type = 'text';
 			partSelect.id = 'part-number';
-			partSelect.name = 'part_number';
-			partSelect.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
-			partCell.appendChild(partSelect);
+			partSelect.placeholder = 'Input or scan';
+			partSelect.setAttribute('list', 'part-numbers-0');
+			partSelect.className = 'production-line-input w-full rounded-md border border-slate-300 bg-white pl-3 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
+			const partChevron = document.createElement('div');
+			partChevron.className = 'datalist-chevron';
+			partChevron.setAttribute('aria-hidden', 'true');
+			partChevron.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>';
+			partChevron.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				openDatalistForInput(partSelect);
+			});
+			partWrap.addEventListener('click', (e) => {
+				if (e.target === partSelect) return;
+				openDatalistForInput(partSelect);
+			});
+			partWrap.appendChild(partSelect);
+			partWrap.appendChild(partChevron);
+			partDatalist = document.createElement('datalist');
+			partDatalist.id = 'part-numbers-0';
+			partHiddenEl = document.createElement('input');
+			partHiddenEl.type = 'hidden';
+			partHiddenEl.name = 'part_number';
+			partCell.appendChild(partWrap);
+			partCell.appendChild(partDatalist);
+			partCell.appendChild(partHiddenEl);
 			const partHint = document.createElement('div');
 			partHint.className = 'text-xs text-slate-600 mt-1';
-			partHint.textContent = 'เลือก SD number';
+			partHint.textContent = 'กรุณาใส่หรือสแกน SD number';
 			partCell.appendChild(partHint);
-			setOptions(partSelect, []);
 
 			// Defect mode (for first block)
 			topDefectSelect = document.createElement('select');
@@ -414,16 +465,17 @@
 				refWrap.classList.add('hidden');
 			}
 
-			// Part name (read-only)
+			// Part name (read-only) — show SD code + Part name for the BOM child
 			const scrapText = document.createElement('input');
 			scrapText.type = 'text';
 			scrapText.readOnly = true;
 			scrapText.className = 'w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none';
-			scrapText.value = scrap?.name || '';
+			const scrapDisplay = [scrap?.sd_code, scrap?.name].filter(Boolean).join(' — ') || (scrap?.name || '');
+			scrapText.value = scrapDisplay;
 			scrapCell.appendChild(scrapText);
 			const scrapHint = document.createElement('div');
 			scrapHint.className = 'text-xs text-slate-600 mt-2';
-			scrapHint.textContent = 'Part name (มาจาก master data)';
+			scrapHint.textContent = scrap?.part_number ? `Part No.: ${scrap.part_number}` : 'ชิ้นส่วนย่อยจาก BOM';
 			scrapCell.appendChild(scrapHint);
 
 			// Hidden fields
@@ -500,20 +552,40 @@
 		function rebuildBlockRows(gi, lineId, partId, defectId, rowsWrap, headerRowEl = null) {
 			const hDefectCell = headerRowEl?.querySelector('.defect-cell') || null;
 
-			// Determine component_parts to show
-			// Priority: defect.component_parts → part.component_parts → placeholder
+			// Determine component_parts to show.
+			// component_parts represent the *direct BOM children* of the selected
+			// part (one level deeper). If empty, the part is a leaf — render an
+			// empty-state row that cannot be saved.
 			let normalized;
+			let isEmpty = false;
 			if (defectId === '__other__') {
-				normalized = [{ id: '', name: 'Part name', defect_id: '__other__', image_url: '' }];
+				const part = partId ? getPart(lineId, partId) : null;
+				const cp = part ? (part.component_parts || []) : [];
+				if (cp.length) {
+					normalized = cp.map(s => ({ ...s, defect_id: '__other__' }));
+				} else {
+					normalized = [{ id: '', name: '', defect_id: '__other__', image_url: '' }];
+					isEmpty = true;
+				}
 			} else if (defectId) {
 				const defect = defectByIdFor(lineId, partId, defectId);
 				const cp = defect ? (defect.component_parts || []) : [];
-				normalized = cp.length ? cp : [{ id: '', name: 'Part name', defect_id: defectId, image_url: '' }];
+				if (cp.length) {
+					normalized = cp;
+				} else {
+					normalized = [{ id: '', name: '', defect_id: defectId, image_url: '' }];
+					isEmpty = true;
+				}
 			} else if (partId) {
 				// No defect selected yet — show rows from part.component_parts
 				const part = getPart(lineId, partId);
 				const cp = part ? (part.component_parts || []) : [];
-				normalized = cp.length ? cp.map(s => ({ ...s, defect_id: '' })) : [{ id: '', name: 'Part name', defect_id: '', image_url: '' }];
+				if (cp.length) {
+					normalized = cp.map(s => ({ ...s, defect_id: '' }));
+				} else {
+					normalized = [{ id: '', name: '', defect_id: '', image_url: '' }];
+					isEmpty = true;
+				}
 			} else {
 				// Nothing selected — clear everything
 				rowsWrap.innerHTML = '';
@@ -523,6 +595,28 @@
 					headerRowEl.querySelector('.scrap-cell').innerHTML = '';
 					headerRowEl.querySelector('.qty-cell').innerHTML = '';
 				}
+				return;
+			}
+
+			if (isEmpty) {
+				// Render a single read-only empty-state row in the header. No
+				// checkbox/photo/quantity inputs — saving this row is blocked.
+				rowsWrap.innerHTML = '';
+				if (headerRowEl) {
+					const checkCell = headerRowEl.querySelector('.check-cell');
+					const photoCell = headerRowEl.querySelector('.photo-cell');
+					const scrapCell = headerRowEl.querySelector('.scrap-cell');
+					const qtyCell = headerRowEl.querySelector('.qty-cell');
+					checkCell.innerHTML = '';
+					photoCell.innerHTML = '';
+					scrapCell.innerHTML = '';
+					qtyCell.innerHTML = '';
+					const note = document.createElement('div');
+					note.className = 'text-sm text-amber-700 italic px-1 py-2';
+					note.textContent = 'ไม่มีชิ้นส่วนย่อยใน BOM — บันทึกไม่ได้';
+					scrapCell.appendChild(note);
+				}
+				refreshCommentVisibilityForGroup(gi);
 				return;
 			}
 
@@ -581,11 +675,14 @@
 			setHintVisible(headerHints?.lineHint, !lineId);
 
 			// Parts
-			const parts = currentParts().map(p => ({ value: p.id, label: (p.sd_number || p.part_number || p.id) }));
-			const prevPart = partSelect.value;
-			setOptions(partSelect, parts);
-			if (prevPart && parts.some(p => p.value === prevPart)) partSelect.value = prevPart;
-			setHintVisible(headerHints?.partHint, !partSelect.value);
+			const prevPartId = resolvePartId(lineId, partSelect?.value || '');
+			populatePartDatalist(partDatalist, lineId);
+			if (prevPartId) {
+				const prevPartObj = (getLine(lineId)?.parts || []).find(p => p.id === prevPartId);
+				if (prevPartObj) partSelect.value = prevPartObj.sd_number || prevPartObj.part_number || prevPartObj.id;
+			}
+			if (partHiddenEl) partHiddenEl.value = resolvePartId(lineId, partSelect?.value || '');
+			setHintVisible(headerHints?.partHint, !partHiddenEl?.value);
 
 			// Defects
 			const defects = currentDefects();
@@ -600,12 +697,15 @@
 				const gLine = (g.lineInput?.value || '').trim().toUpperCase();
 				if (g.lineInput) g.lineInput.value = gLine;
 				setHintVisible(g.lineHint, !gLine);
-				const gParts = (getLine(gLine)?.parts || []).map(p => ({ value: p.id, label: (p.sd_number || p.part_number || p.id) }));
-				const prevPart = g.partSelect?.value || '';
-				setOptions(g.partSelect, gParts);
-				if (prevPart && gParts.some(p => p.value === prevPart)) g.partSelect.value = prevPart;
-				setHintVisible(g.partHint, !(g.partSelect?.value || ''));
-				const gPartId = g.partSelect?.value || '';
+				const prevGPartId = resolvePartId(gLine, g.partSelect?.value || '');
+				populatePartDatalist(g.partDatalist, gLine);
+				if (prevGPartId) {
+					const prevGPartObj = (getLine(gLine)?.parts || []).find(p => p.id === prevGPartId);
+					if (prevGPartObj) g.partSelect.value = prevGPartObj.sd_number || prevGPartObj.part_number || prevGPartObj.id;
+				}
+				if (g.partHidden) g.partHidden.value = resolvePartId(gLine, g.partSelect?.value || '');
+				setHintVisible(g.partHint, !(g.partHidden?.value || ''));
+				const gPartId = g.partHidden?.value || '';
 				const gDefectOpts = defectsFor(gLine, gPartId).map(d => ({ value: d.id, label: d.name || d.id }));
 				const prevDef = g.defectSelect.value;
 				setDefectOptions(g.defectSelect, gDefectOpts, '— Select defect —');
@@ -614,10 +714,10 @@
 			});
 
 			// Rebuild rows for every block
-			rebuildBlockRows(0, lineId, partSelect.value, topDefectSelect.value, document.getElementById('rows-0'), topHeaderRowEl);
+			rebuildBlockRows(0, lineId, partHiddenEl?.value || '', topDefectSelect.value, document.getElementById('rows-0'), topHeaderRowEl);
 			extraGroups.forEach(g => {
 				const gLine = (g.lineInput?.value || '').trim().toUpperCase();
-				const gPart = g.partSelect?.value || '';
+				const gPart = g.partHidden?.value || '';
 				rebuildBlockRows(g.gi, gLine, gPart, g.defectSelect.value, g.rowsWrap, g.headerRowEl);
 			});
 		}
@@ -626,7 +726,7 @@
 			// If user already filled the first row, carry over Production line + SD number
 			// and lock them (grey) for all added groups.
 			const defaultLineId = getCurrentLineId();
-			const defaultPartId = partSelect?.value || '';
+			const defaultPartId = partHiddenEl?.value || '';
 			const shouldLockFromHeader = !!(defaultLineId && defaultPartId);
 
 			const gi = nextGroupIndex++;
@@ -720,15 +820,41 @@
 			lineHint.textContent = 'กรุณาใส่หรือสแกน Production line';
 			lineCell.appendChild(lineHint);
 
-			// Part
+			// Part (text input + datalist — supports manual input and barcode scanning)
 			const partCell = defectRow.querySelector('.part-cell');
-			const partMirror = document.createElement('select');
-			partMirror.name = `blocks[${gi}][part_number]`;
-			partMirror.className = 'w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
-			partCell.appendChild(partMirror);
+			const partMirrorWrap = document.createElement('div');
+			partMirrorWrap.className = 'relative';
+			const partMirror = document.createElement('input');
+			partMirror.type = 'text';
+			partMirror.placeholder = 'Input or scan';
+			partMirror.setAttribute('list', `part-numbers-${gi}`);
+			partMirror.className = 'production-line-input w-full rounded-md border border-slate-300 bg-white pl-3 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-red-500';
+			const partMirrorChevron = document.createElement('div');
+			partMirrorChevron.className = 'datalist-chevron';
+			partMirrorChevron.setAttribute('aria-hidden', 'true');
+			partMirrorChevron.innerHTML = '<svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" /></svg>';
+			partMirrorChevron.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				openDatalistForInput(partMirror);
+			});
+			partMirrorWrap.addEventListener('click', (e) => {
+				if (e.target === partMirror) return;
+				openDatalistForInput(partMirror);
+			});
+			partMirrorWrap.appendChild(partMirror);
+			partMirrorWrap.appendChild(partMirrorChevron);
+			const partMirrorList = document.createElement('datalist');
+			partMirrorList.id = `part-numbers-${gi}`;
+			const partMirrorHidden = document.createElement('input');
+			partMirrorHidden.type = 'hidden';
+			partMirrorHidden.name = `blocks[${gi}][part_number]`;
+			partCell.appendChild(partMirrorWrap);
+			partCell.appendChild(partMirrorList);
+			partCell.appendChild(partMirrorHidden);
 			const partHint = document.createElement('div');
 			partHint.className = 'text-xs text-slate-600 mt-1';
-			partHint.textContent = 'เลือก SD number';
+			partHint.textContent = 'กรุณาใส่หรือสแกน SD number';
 			partCell.appendChild(partHint);
 
 			const defectCell = defectRow.querySelector('.defect-cell');
@@ -750,24 +876,27 @@
 			groupsWrap.appendChild(group);
 
 			populateLineDatalist(lineList);
-			setOptions(partMirror, []);
+			populatePartDatalist(partMirrorList, '');
 			setDefectOptions(sel, [], '— Select defect —');
 			const scheduleRefresh = () => {
 				const gLine = (lineMirror.value || '').trim().toUpperCase();
 				lineMirror.value = gLine;
 				setHintVisible(lineHint, !gLine);
-				const parts = (getLine(gLine)?.parts || []).map(p => ({ value: p.id, label: (p.sd_number || p.part_number || p.id) }));
-				const prevPart = shouldLockFromHeader ? defaultPartId : partMirror.value;
-				setOptions(partMirror, parts);
-				if (prevPart && parts.some(p => p.value === prevPart)) partMirror.value = prevPart;
-				setHintVisible(partHint, !partMirror.value);
-				const gPart = partMirror.value;
-				const defectOpts = defectsFor(gLine, gPart).map(d => ({ value: d.id, label: d.name || d.id }));
+				populatePartDatalist(partMirrorList, gLine);
+				const prevGPartId = shouldLockFromHeader ? defaultPartId : resolvePartId(gLine, partMirror.value);
+				if (prevGPartId) {
+					const prevGPartObj = (getLine(gLine)?.parts || []).find(p => p.id === prevGPartId);
+					if (prevGPartObj) partMirror.value = prevGPartObj.sd_number || prevGPartObj.part_number || prevGPartObj.id;
+				}
+				const gPartId = resolvePartId(gLine, partMirror.value);
+				partMirrorHidden.value = gPartId;
+				setHintVisible(partHint, !gPartId);
+				const defectOpts = defectsFor(gLine, gPartId).map(d => ({ value: d.id, label: d.name || d.id }));
 				const prevDef = sel.value;
 				setDefectOptions(sel, defectOpts, '— Select defect —');
 				if (prevDef && (defectOpts.some(d => d.value === prevDef) || prevDef === '__other__')) sel.value = prevDef;
 				setHintVisible(hint, !sel.value);
-				rebuildBlockRows(gi, gLine, gPart, sel.value, scrapRowsWrap, defectRow);
+				rebuildBlockRows(gi, gLine, gPartId, sel.value, scrapRowsWrap, defectRow);
 			};
 
 			let t = null;
@@ -778,29 +907,34 @@
 					hiddenName: `blocks[${gi}][production_line]`,
 					value: defaultLineId,
 				});
+				// Set display label for the locked part input then lock it
+				const defaultPartObj = (getLine(defaultLineId)?.parts || []).find(p => p.id === defaultPartId);
+				partMirror.value = defaultPartObj
+					? (defaultPartObj.sd_number || defaultPartObj.part_number || defaultPartObj.id)
+					: (partSelect?.value || '');
 				lockFieldWithHidden({
 					fieldEl: partMirror,
 					containerEl: partCell,
 					hiddenName: `blocks[${gi}][part_number]`,
 					value: defaultPartId,
 				});
-				// Ensure select matches the locked value after options are loaded
+				// Ensure fields are fully populated after options are loaded
 				try { scheduleRefresh(); } catch {}
-				// Ensure hidden values track any programmatic refresh
+				// Re-enforce locked hidden values
 				const hiddenLine = lineCell.querySelector(`input[type="hidden"][name="blocks[${gi}][production_line]"]`);
-				const hiddenPart = partCell.querySelector(`input[type="hidden"][name="blocks[${gi}][part_number]"]`);
 				if (hiddenLine) hiddenLine.value = defaultLineId;
-				if (hiddenPart) hiddenPart.value = defaultPartId;
+				partMirrorHidden.value = defaultPartId;
 			}
 
 			lineMirror.addEventListener('change', scheduleRefresh);
 			lineMirror.addEventListener('input', scheduleRefresh);
+			partMirror.addEventListener('input', scheduleRefresh);
 			partMirror.addEventListener('change', scheduleRefresh);
 			sel.addEventListener('change', scheduleRefresh);
 
 			groupAll.addEventListener('change', () => setGroupRowsEnabled(gi, groupAll.checked));
 
-			extraGroups.push({ gi, groupEl: group, defectSelect: sel, rowsWrap: scrapRowsWrap, lineInput: lineMirror, partSelect: partMirror, lineList, lineHint, partHint, defectHint: hint, headerRowEl: defectRow, removeCheck: delCheck, groupSelectAll: groupAll, groupAllRowEl: groupAllRow });
+			extraGroups.push({ gi, groupEl: group, defectSelect: sel, rowsWrap: scrapRowsWrap, lineInput: lineMirror, partSelect: partMirror, partHidden: partMirrorHidden, partDatalist: partMirrorList, lineList, lineHint, partHint, defectHint: hint, headerRowEl: defectRow, removeCheck: delCheck, groupSelectAll: groupAll, groupAllRowEl: groupAllRow });
 			removeGroupBtn.disabled = extraGroups.length === 0;
 			syncGroupSelectAllState(gi);
 			syncSelectAll0State();
@@ -860,9 +994,17 @@
 			productionLineInput.addEventListener('input', scheduleRefresh);
 			productionLineInput.addEventListener('change', refreshPartsAndDefects);
 			productionLineInput.addEventListener('blur', refreshPartsAndDefects);
-			partSelect.addEventListener('change', refreshPartsAndDefects);
+			const onPartInputChange = () => {
+				if (partHiddenEl) partHiddenEl.value = resolvePartId(getCurrentLineId(), partSelect.value);
+				refreshPartsAndDefects();
+			};
+			partSelect.addEventListener('input', onPartInputChange);
+			partSelect.addEventListener('change', onPartInputChange);
 			topDefectSelect.addEventListener('change', () => {
-				rebuildBlockRows(0, getCurrentLineId(), partSelect.value, topDefectSelect.value, rows0, topHeaderRowEl);
+				// partHiddenEl holds the resolved UUID; partSelect.value is the
+				// display string (SD number / part number) which won't match
+				// part.id when looked up.
+				rebuildBlockRows(0, getCurrentLineId(), partHiddenEl?.value || '', topDefectSelect.value, rows0, topHeaderRowEl);
 				refreshCommentVisibilityForGroup(0);
 			});
 

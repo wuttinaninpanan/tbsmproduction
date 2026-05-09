@@ -160,12 +160,6 @@
 								<span class="text-xs text-slate-500" data-sort-ind="category"></span>
 							</button>
 						</th>
-						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">
-							<button type="button" class="inline-flex items-center gap-1 hover:underline" data-sort="level">
-								Level
-								<span class="text-xs text-slate-500" data-sort-ind="level"></span>
-							</button>
-						</th>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 					</tr>
 				</thead>
@@ -193,7 +187,6 @@
                             <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ r.cost|default:"0" }}</td>
                             <td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ r.purchased_price|default:"0" }}</td>
                             <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.category_name|default:"-" }}</td>
-							<td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ r.level|default:"-" }}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-end gap-2">
 									<button type="button"
@@ -209,7 +202,6 @@
 										data-category-id="{{ r.category_id|default:'' }}"
 										data-purchased-price="{{ r.purchased_price|default:'' }}"
 										data-cost="{{ r.cost|default:'' }}"
-										data-level="{{ r.level|default:'' }}"
 										data-comment="{{ r.comment|default:'' }}">
 										แก้ไข
 									</button>
@@ -224,7 +216,7 @@
 							</td>
 						</tr>
 					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="12">ยังไม่มีข้อมูล Item list</td></tr>
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="11">ยังไม่มีข้อมูล Item list</td></tr>
 					{% endfor %}
 				</tbody>
 			</table>
@@ -309,7 +301,6 @@
 	<input type="hidden" name="category_id" id="categoryIdField" value="" />
 	<input type="hidden" name="purchased_price" id="purchasedPriceField" value="" />
 	<input type="hidden" name="cost" id="costField" value="" />
-	<input type="hidden" name="level" id="levelField" value="" />
 	<input type="hidden" name="comment" id="commentField" value="" />
 </form>
 
@@ -370,11 +361,7 @@
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Level</label>
-					<input id="addLevel" name="level" type="number" step="1" inputmode="numeric" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="(ว่างได้)" />
-				</div>
-				<div class="md:col-span-3">
+				<div class="md:col-span-4">
 					<label class="block text-sm font-semibold text-slate-700">Comment</label>
 					<input id="addComment" name="comment" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="(ไม่บังคับ)" />
 				</div>
@@ -454,11 +441,7 @@
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Level</label>
-					<input id="editLevel" name="level" type="number" step="1" inputmode="numeric" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-				</div>
-				<div class="md:col-span-3">
+				<div class="md:col-span-4">
 					<label class="block text-sm font-semibold text-slate-700">Comment</label>
 					<input id="editComment" name="comment" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 				</div>

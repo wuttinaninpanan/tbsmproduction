@@ -42,7 +42,6 @@
 		const categoryIdField = document.getElementById('categoryIdField');
 		const purchasedPriceField = document.getElementById('purchasedPriceField');
 		const costField = document.getElementById('costField');
-		const levelField = document.getElementById('levelField');
 		const commentField = document.getElementById('commentField');
 
 		const addModal = document.getElementById('addModal');
@@ -100,7 +99,6 @@
 				categoryIdField.value = '';
 				purchasedPriceField.value = '';
 				costField.value = '';
-				levelField.value = '';
 				commentField.value = '';
 				ids.forEach(id => {
 					const input = document.createElement('input');
@@ -138,7 +136,6 @@
 		const addCategoryId = document.getElementById('addCategoryId');
 		const addPurchasedPrice = document.getElementById('addPurchasedPrice');
 		const addCost = document.getElementById('addCost');
-		const addLevel = document.getElementById('addLevel');
 		const addComment = document.getElementById('addComment');
 		const addReferenceImage = document.getElementById('addReferenceImage');
 
@@ -153,7 +150,6 @@
 				addCategoryId.value = '';
 				addPurchasedPrice.value = '0';
 				if (addCost) addCost.value = '0';
-				addLevel.value = '';
 				addComment.value = '';
 				if (addReferenceImage) addReferenceImage.value = '';
 				openModal(addModal);
@@ -170,7 +166,6 @@
 		const editCategoryId = document.getElementById('editCategoryId');
 		const editPurchasedPrice = document.getElementById('editPurchasedPrice');
 		const editCost = document.getElementById('editCost');
-		const editLevel = document.getElementById('editLevel');
 		const editComment = document.getElementById('editComment');
 		const editId = document.getElementById('editId');
 		const editReferenceImage = document.getElementById('editReferenceImage');
@@ -190,7 +185,6 @@
 				editCategoryId.value = btn.dataset.categoryId || '';
 				editPurchasedPrice.value = btn.dataset.purchasedPrice || '0';
 				editCost.value = btn.dataset.cost || '0';
-				editLevel.value = btn.dataset.level || '';
 				editComment.value = btn.dataset.comment || '';
 				if (editReferenceImage) editReferenceImage.value = '';
 				const imgUrl = (btn.dataset.imageUrl || '').trim();

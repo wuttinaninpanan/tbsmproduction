@@ -136,13 +136,13 @@ def _parse_xlsx(uploaded_file):
 
 def download_manage_bill_of_material_import_template(request):
 	"""Download a template for importing BOM headers."""
-	sample_sku = "SKU-0001"
-	item = Item_list.objects.order_by("sku").first()
+	sample_sd_code = "SD-0001"
+	item = Item_list.objects.order_by("sd_code").first()
 	if item is not None:
-		sample_sku = item.sku
+		sample_sd_code = item.sd_code
 
-	headers = ["sku", "revision", "lasted_eci", "scrap_percent"]
-	rows = [[sample_sku, "A", "ECI-0001", 0]]
+	headers = ["sd_code", "revision", "lasted_eci", "scrap_percent"]
+	rows = [[sample_sd_code, "A", "ECI-0001", 0]]
 	if openpyxl is None:
 		return HttpResponse(
 			"XLSX format is not available (openpyxl is not installed).",
@@ -194,13 +194,13 @@ class ManageBillOfMaterialViews(TemplateView):
 		qs = BillOfMaterial.objects.select_related("item").all()
 		if q:
 			qs = qs.filter(
-				Q(item__sku__icontains=q)
+				Q(item__sd_code__icontains=q)
 				| Q(item__part_number__icontains=q)
 				| Q(item__part_name__icontains=q)
 				| Q(revision__icontains=q)
-				| Q(lasted_eci__icontains=q)
+				| Q(latest_eci__icontains=q)
 			)
-		qs = qs.order_by("item__sku", "revision")
+		qs = qs.order_by("item__sd_code", "revision")
 		paginator = Paginator(qs, per_page)
 		page_obj = paginator.get_page(page)
 
@@ -210,10 +210,10 @@ class ManageBillOfMaterialViews(TemplateView):
 				{
 					"id": str(obj.id),
 					"item_id": str(obj.item_id) if obj.item_id else "",
-					"sku": getattr(obj.item, "sku", "") if obj.item_id else "",
+					"sd_code": getattr(obj.item, "sdpn", "") if obj.item_id else "",
 					"part_name": getattr(obj.item, "part_name", "") if obj.item_id else "",
 					"revision": obj.revision,
-					"lasted_eci": obj.lasted_eci,
+					"lasted_eci": obj.latest_eci,
 					"scrap_percent": str(obj.scrap_percent),
 				}
 			)
@@ -226,7 +226,7 @@ class ManageBillOfMaterialViews(TemplateView):
 		ctx["rows_total"] = paginator.count
 		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
 		ctx["total_count"] = paginator.count
-		ctx["items"] = list(Item_list.objects.order_by("sku").values("id", "sku", "part_name"))
+		ctx["items"] = list(Item_list.objects.order_by("sd_code").values("id", "sd_code", "part_name"))
 		return ctx
 
 	def post(self, request, *args, **kwargs):
@@ -253,15 +253,15 @@ class ManageBillOfMaterialViews(TemplateView):
 			try:
 				with transaction.atomic():
 					for row in _parse_xlsx(upload):
-						sku = _row_get_first(row, "sku", "item_sku")
+						sd_code = _row_get_first(row, "sd_code", "sd")
 						revision = _row_get_first(row, "revision", "rev") or "A"
 						lasted_eci = _row_get_first(row, "lasted_eci", "eci")
 						scrap_percent = _safe_decimal(row.get("scrap_percent"), default=Decimal("0"))
 
-						if not sku or not lasted_eci:
+						if not sd_code or not lasted_eci:
 							skipped += 1
 							continue
-						item = Item_list.objects.filter(sku__iexact=sku).first()
+						item = Item_list.objects.filter(sd_code__iexact=sd_code).first()
 						if item is None:
 							item_not_found += 1
 							continue
@@ -271,16 +271,16 @@ class ManageBillOfMaterialViews(TemplateView):
 							BillOfMaterial.objects.create(
 								item=item,
 								revision=revision,
-								lasted_eci=lasted_eci,
+								latest_eci=lasted_eci,
 								scrap_percent=scrap_percent,
 								user=request.user,
 							)
 							created += 1
 						else:
 							obj.revision = revision
-							obj.lasted_eci = lasted_eci
+							obj.latest_eci = lasted_eci
 							obj.scrap_percent = scrap_percent
-							obj.save(update_fields=["revision", "lasted_eci", "scrap_percent", "updated_at"])
+							obj.save(update_fields=["revision", "latest_eci", "scrap_percent", "updated_at"])
 							updated += 1
 			except Exception as e:
 				log_event(
@@ -413,10 +413,10 @@ class ManageBillOfMaterialViews(TemplateView):
 				return self.get(request, *args, **kwargs)
 			obj.item = item
 			obj.revision = revision
-			obj.lasted_eci = lasted_eci
+			obj.latest_eci = lasted_eci
 			obj.scrap_percent = scrap_percent
 			try:
-				obj.save(update_fields=["item", "revision", "lasted_eci", "scrap_percent", "updated_at"])
+				obj.save(update_fields=["item", "revision", "latest_eci", "scrap_percent", "updated_at"])
 			except IntegrityError as e:
 				messages.error(request, f"บันทึกไม่สำเร็จ: {e}")
 				return self.get(request, *args, **kwargs)
@@ -425,7 +425,7 @@ class ManageBillOfMaterialViews(TemplateView):
 					request,
 					action="bom:update",
 					message="แก้ไข BOM Header",
-					metadata={"id": obj_id, "sku": item.sku, "revision": revision},
+					metadata={"id": obj_id, "sd_code": item.sd_code, "revision": revision},
 				),
 			)
 			messages.success(request, "แก้ไขรายการสำเร็จ")
@@ -436,7 +436,7 @@ class ManageBillOfMaterialViews(TemplateView):
 			obj = BillOfMaterial.objects.create(
 				item=item,
 				revision=revision,
-				lasted_eci=lasted_eci,
+				latest_eci=lasted_eci,
 				scrap_percent=scrap_percent,
 				user=request.user,
 			)
@@ -456,7 +456,7 @@ class ManageBillOfMaterialViews(TemplateView):
 				request,
 				action="bom:create",
 				message="เพิ่ม BOM Header",
-				metadata={"id": str(obj.id), "sku": item.sku, "revision": revision},
+				metadata={"id": str(obj.id), "sd_code": item.sd_code, "revision": revision},
 			),
 		)
 		messages.success(request, "เพิ่มข้อมูลสำเร็จ")

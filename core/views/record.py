@@ -12,9 +12,10 @@ from django.views.generic import TemplateView
 
 from core.auth.decorators import user_required
 from core.models.bill_of_material import BillOfMaterial
-from core.models.bill_of_material_item_master import BillOfMaterialItemMaster as BillOfMaterialItemMater
+from core.models.bill_of_material_item_master import BillOfMaterialItemMater
 from core.models.defect_by_category import DefectByCategory
 from core.models.defect_mode import DefectMode
+from core.models.defect_stat import DefectStat
 from core.models.item_line import ItemLine
 from core.models.item_list import Item_list
 from core.models.line import Line
@@ -54,33 +55,29 @@ class RecordViews(TemplateView):
         parts = list(Item_list.objects.filter(pk__in=list(item_ids)).order_by("sd_code", "part_number"))
         parts_by_id = {str(p.id): p for p in parts}
 
-        all_defects = list(DefectMode.objects.all().order_by("name_th", "name_en"))
-
-        # Filter defect modes by item category (DefectByCategory). If a category has
-        # configured rows, use them; otherwise fall back to all defects.
+        # Defect mode dropdown is sourced strictly from DefectByCategory rows
+        # whose `is_inlist=True`, scoped to the part's ItemCategory. No fallback
+        # to "all defects" — if a category has no configured rows, the dropdown
+        # is empty for parts in that category.
         category_ids = {str(p.category_id) for p in parts if getattr(p, "category_id", None)}
         cat_to_defects: dict[str, list[DefectMode]] = {}
         if category_ids:
             dbc_qs = (
-                DefectByCategory.objects.filter(category_id__in=list(category_ids))
+                DefectByCategory.objects.filter(
+                    category_id__in=list(category_ids),
+                    is_inlist=True,
+                )
                 .select_related("defect_mode")
                 .order_by("defect_mode__name_th", "defect_mode__name_en")
             )
-            # Prefer is_inlist=True when present
-            grouped: dict[str, list[DefectMode]] = {}
-            grouped_inlist: dict[str, list[DefectMode]] = {}
             for dbc in dbc_qs:
                 cat_key = str(dbc.category_id)
-                dm = dbc.defect_mode
-                grouped.setdefault(cat_key, []).append(dm)
-                if getattr(dbc, "is_inlist", False):
-                    grouped_inlist.setdefault(cat_key, []).append(dm)
-            for cat_key, defects_for_cat in grouped.items():
-                preferred = grouped_inlist.get(cat_key) or defects_for_cat
-                # de-duplicate preserving order
+                cat_to_defects.setdefault(cat_key, []).append(dbc.defect_mode)
+            # de-duplicate within each category, preserving order
+            for cat_key, defects_for_cat in cat_to_defects.items():
                 seen: set[str] = set()
                 uniq: list[DefectMode] = []
-                for dm in preferred:
+                for dm in defects_for_cat:
                     dm_id = str(dm.id)
                     if dm_id in seen:
                         continue
@@ -109,11 +106,19 @@ class RecordViews(TemplateView):
                 c = getattr(it, "component", None)
                 if c is None:
                     continue
+                child_image = ""
+                try:
+                    if getattr(c, "reference_image", None):
+                        child_image = c.reference_image.url
+                except Exception:
+                    child_image = ""
                 comps.append(
                     {
                         "id": str(c.id),
-                        "name": c.part_name or c.part_number or c.sku,
-                        "image_url": "",
+                        "name": (c.part_name or c.part_number or c.sku or "").strip(),
+                        "sd_code": (c.sd_code or "").strip(),
+                        "part_number": (c.part_number or "").strip(),
+                        "image_url": child_image,
                     }
                 )
             components_by_item_id[key] = comps
@@ -123,25 +128,13 @@ class RecordViews(TemplateView):
             parts_payload = []
             for part_ref in items_by_line.get(line.code, []):
                 part = parts_by_id.get(str(part_ref.id), part_ref)
-                # UX requirement: show Part name for the selected SD number. We treat the
-                # selected part itself as the scrap "component" so the UI always has a row.
-                part_display_name = (getattr(part, "part_name", "") or getattr(part, "part_number", "") or getattr(part, "sku", "") or "").strip()
 
-                image_url = ""
-                try:
-                    if getattr(part, "reference_image", None):
-                        image_url = part.reference_image.url
-                except Exception:
-                    image_url = ""
-                component_parts_payload = [
-                    {
-                        "id": str(part.id),
-                        "name": part_display_name,
-                        "image_url": image_url,
-                    }
-                ]
+                # Right-side component list = direct BOM children (one level deeper).
+                # If the selected part has no BOM, the list is empty and the UI
+                # shows an empty-state placeholder.
+                component_parts_payload = components_by_item_id.get(str(part.id), [])
 
-                defect_list = cat_to_defects.get(str(getattr(part, "category_id", ""))) or all_defects
+                defect_list = cat_to_defects.get(str(getattr(part, "category_id", "")), [])
 
                 defects_payload = []
                 for defect in defect_list:
@@ -166,6 +159,7 @@ class RecordViews(TemplateView):
                         "sd_number": (getattr(part, "sd_code", "") or "").strip(),
                         "part_number": (getattr(part, "part_number", "") or "").strip(),
                         "part_name": (getattr(part, "part_name", "") or "").strip(),
+                        "has_components": bool(component_parts_payload),
                         "defects": defects_payload,
                         "component_parts": component_parts_payload,
                     }
@@ -235,9 +229,12 @@ class RecordViews(TemplateView):
                             .first()
                         )
                     else:
-                        # Backward compat: accept part_number text
+                        # Accept part_number text or sd_code (barcode scan)
+                        from django.db.models import Q
                         part_obj = (
-                            Item_list.objects.filter(part_number__iexact=part_ref)
+                            Item_list.objects.filter(
+                                Q(part_number__iexact=part_ref) | Q(sd_code__iexact=part_ref)
+                            )
                             .filter(item_lines__line=line)
                             .distinct()
                             .first()
@@ -292,8 +289,83 @@ class RecordViews(TemplateView):
                 )
                 created += 1
 
+            # ---- DefectStat: 1 row per submitted block (line, part, defect) ----
+            # Counts how many produced units exhibited each defect, regardless
+            # of how many of their components were scrapped. Used for %-defect.
+            block_indices: set[int] = {0}
+            for key in request.POST.keys():
+                m = re.match(r"^blocks\[(\d+)\]", key)
+                if m:
+                    block_indices.add(int(m.group(1)))
+
+            row_defect_re = {
+                gi: re.compile(rf"^blocks\[{gi}\]\[rows\]\[\d+\]\[defect_id\]$")
+                for gi in block_indices
+            }
+
+            def block_defect_id(gi: int) -> str:
+                pattern = row_defect_re[gi]
+                for key, val in request.POST.items():
+                    if pattern.match(key):
+                        s = (val or "").strip()
+                        if s:
+                            return s
+                return ""
+
+            defect_stat_created = 0
+            for gi in sorted(block_indices):
+                line_code, part_ref = group_line_part(gi)
+                if not line_code or not part_ref:
+                    continue
+                d_id = block_defect_id(gi)
+                if not _is_uuid(d_id):
+                    continue
+
+                if line_code not in line_cache:
+                    line_cache[line_code] = Line.objects.filter(line_name__iexact=line_code).first()  # type: ignore
+                line = line_cache.get(line_code)
+                if line is None:
+                    continue
+
+                part_key = (line_code.lower(), part_ref.lower())
+                if part_key not in part_cache:
+                    if _is_uuid(part_ref):
+                        part_obj = (
+                            Item_list.objects.filter(pk=part_ref)
+                            .filter(item_lines__line=line)
+                            .distinct()
+                            .first()
+                        )
+                    else:
+                        from django.db.models import Q
+                        part_obj = (
+                            Item_list.objects.filter(
+                                Q(part_number__iexact=part_ref) | Q(sd_code__iexact=part_ref)
+                            )
+                            .filter(item_lines__line=line)
+                            .distinct()
+                            .first()
+                        )
+                    part_cache[part_key] = part_obj  # type: ignore
+                part = part_cache.get(part_key)
+                if part is None:
+                    continue
+
+                defect = DefectMode.objects.filter(pk=d_id).first()
+                if defect is None:
+                    continue
+
+                DefectStat.objects.create(
+                    production_line=line,
+                    part=part,
+                    defect_mode=defect,
+                    quantity=1,
+                    created_by=request.user if request.user.is_authenticated else None,
+                )
+                defect_stat_created += 1
+
         if created:
-            msg = f"บันทึกข้อมูลสำเร็จ {created} รายการ"
+            msg = f"บันทึกข้อมูลสำเร็จ {created} รายการ (สถิติของเสีย {defect_stat_created} รายการ)"
             if skipped_missing_group or skipped_invalid:
                 msg += f" (ข้าม {skipped_missing_group + skipped_invalid} รายการ)"
             messages.success(request, msg)
@@ -304,6 +376,7 @@ class RecordViews(TemplateView):
                 message="บันทึก ScrapRecord สำเร็จ",
                 metadata={
                     "created": created,
+                    "defect_stat_created": defect_stat_created,
                     "skipped_missing_group": skipped_missing_group,
                     "skipped_invalid": skipped_invalid,
                     "default_line_code": default_line_code,

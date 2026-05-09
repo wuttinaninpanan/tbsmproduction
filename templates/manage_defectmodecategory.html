@@ -4,12 +4,16 @@
 
 {% block title %}Manage Defect Mode Category — TBSMRD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <section class="space-y-6">
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการ Defect mode ตาม Category</h1>
-			<p class="text-sm text-slate-600 mt-1">ตาราง DefectByCategory (ผูก Category กับ Defect mode)</p>
 		</div>
 	</header>
 
@@ -354,4 +358,10 @@
 
 {% load static %}
 <script src="{% static 'js/manage_defectmodecategory.js' %}" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    new TomSelect('#addDefect', { placeholder: 'เลือก Defect', maxOptions: false });
+    new TomSelect('#editDefect', { placeholder: 'เลือก Defect', maxOptions: false });
+});
+</script>
 {% endblock %}

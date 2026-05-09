@@ -108,10 +108,10 @@
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">TH</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">EN</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">JP</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">รายละเอียด (TH)</th>
-						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
-					</tr>
-				</thead>
+					<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">รายละเอียด (TH)</th>
+					<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+				</tr>
+			</thead>
 				<tbody class="divide-y divide-slate-200">
 					{% for r in rows %}
 						<tr class="hover:bg-slate-50">
@@ -121,6 +121,7 @@
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_th|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_en|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_jp|default:"-" }}</td>
+
 							<td class="px-4 py-3 text-slate-700">{{ r.description_th|default:"-" }}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-center gap-2">
@@ -131,6 +132,7 @@
 										data-name-th="{{ r.name_th|default:'' }}"
 										data-name-en="{{ r.name_en|default:'' }}"
 										data-name-jp="{{ r.name_jp|default:'' }}"
+
 										data-description-th="{{ r.description_th|default:'' }}"
 										data-description-en="{{ r.description_en|default:'' }}"
 										data-description-jp="{{ r.description_jp|default:'' }}"
@@ -148,7 +150,7 @@
 							</td>
 						</tr>
 					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="6">ยังไม่มีข้อมูล Defect mode</td></tr>
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="6">ยังไม่มีข้อมูล Defect mode</td></tr>
 					{% endfor %}
 				</tbody>
 			</table>

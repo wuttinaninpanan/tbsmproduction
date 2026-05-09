@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Inspection Result — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+
+    <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Inspection Result</h1>
+            <p class="text-sm text-slate-600 mt-1">ผลการตรวจสอบจากระบบ Inspection</p>
+        </div>
+    </header>
+
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="rounded-2xl border border-slate-200 overflow-hidden">
+
+        <div class="bg-slate-100 px-4 py-3">
+            <div class="font-extrabold text-slate-800">
+                Inspection Results
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+
+            <table class="min-w-full text-sm">
+
+                <thead class="bg-white text-slate-800">
+                    <tr>
+
+                        <th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+                            SD Code
+                        </th>
+
+                        <th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+                            Inspection Line
+                        </th>
+
+                        <th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+                            QR Work
+                        </th>
+
+                        <th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+                            Result
+                        </th>
+
+                        <!-- ✅ เพิ่มตรงนี้ -->
+                        <th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+                            วันที่ / เวลา
+                        </th>
+
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-slate-200">
+
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">
+                            {{ r.sd_code }}
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-700 whitespace-nowrap">
+                            {{ r.line_name }}
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-700 whitespace-nowrap">
+                            {{ r.qr_work }}
+                        </td>
+
+                        <td class="px-4 py-3 text-slate-700">
+                            {{ r.result }}
+                        </td>
+
+                        <!-- ✅ เพิ่มตรงนี้ -->
+                        <td class="px-4 py-3 text-slate-700 whitespace-nowrap">
+                            {{ r.created_at }}
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <!-- ✅ ต้องเปลี่ยน colspan จาก 4 → 5 -->
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                            ยังไม่มีข้อมูล Inspection Result
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% if page_obj and paginator %}
+        <div
+            class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+
+            <p class="text-sm text-gray-700">
+                Showing
+                <span class="font-medium">{{ page_obj.start_index }}</span>
+                to
+                <span class="font-medium">{{ page_obj.end_index }}</span>
+                of
+                <span class="font-medium">{{ rows_total }}</span>
+                results
+            </p>
+
+            {% if paginator.num_pages > 1 %}
+            <nav class="isolate inline-flex -space-x-px rounded-md shadow-xs">
+
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}"
+                    class="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-400 hover:bg-gray-50">
+                    ‹
+                </a>
+                {% endif %}
+
+                {% for item in page_items %}
+
+                {% if item %}
+                {% if item == page_obj.number %}
+                <span
+                    class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
+                    {{ item }}
+                </span>
+                {% else %}
+                <a href="?page={{ item }}"
+                    class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50">
+                    {{ item }}
+                </a>
+                {% endif %}
+                {% else %}
+                <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700">
+                    ...
+                </span>
+                {% endif %}
+
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}"
+                    class="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-400 hover:bg-gray-50">
+                    ›
+                </a>
+                {% endif %}
+
+            </nav>
+            {% endif %}
+
+        </div>
+        {% endif %}
+
+    </div>
+
+</section>
+{% endblock %}

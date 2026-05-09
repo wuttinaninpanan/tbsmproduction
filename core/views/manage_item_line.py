@@ -119,12 +119,13 @@ def _parse_xlsx(uploaded_file):
 def download_manage_item_line_import_template(request):
 	"""Download a template for importing item-line mapping."""
 	# Prefer real samples (if available).
-	sample_sku = "SKU-0001"
 	sample_line = "LINE-01"
 	sample_stage = "FG"
-	item = Item_list.objects.order_by("sku").first()
+	item = Item_list.objects.order_by("sd_code").first()
 	if item is not None:
-		sample_sku = item.sku
+		sample_sd_code = item.sd_code
+	else:
+		sample_sd_code = "SD-0001"
 	line = Line.objects.order_by("line_name").first()
 	if line is not None:
 		sample_line = line.line_name
@@ -132,8 +133,8 @@ def download_manage_item_line_import_template(request):
 	if stage is not None:
 		sample_stage = (stage.display_name or stage.name).strip() or sample_stage
 
-	headers = ["sku", "line_name", "item_stage"]
-	rows = [[sample_sku, sample_line, sample_stage]]
+	headers = ["sd_code", "line_name", "item_stage"]
+	rows = [[sample_sd_code, sample_line, sample_stage]]
 	if openpyxl is None:
 		return HttpResponse(
 			"XLSX format is not available (openpyxl is not installed).",
@@ -185,13 +186,13 @@ class ManageItemLineViews(TemplateView):
 		qs = ItemLine.objects.select_related("item", "line", "item_stage").all()
 		if q:
 			qs = qs.filter(
-				Q(item__sku__icontains=q)
+				Q(item__sd_code__icontains=q)
 				| Q(item__part_name__icontains=q)
 				| Q(line__line_name__icontains=q)
 				| Q(item_stage__name__icontains=q)
 				| Q(item_stage__display_name__icontains=q)
 			)
-		qs = qs.order_by("item__sku", "line__line_name")
+		qs = qs.order_by("line__line_name", "item__sd_code")
 		paginator = Paginator(qs, per_page)
 		page_obj = paginator.get_page(page)
 
@@ -201,7 +202,7 @@ class ManageItemLineViews(TemplateView):
 				{
 					"id": str(obj.id),
 					"item_id": str(obj.item_id) if obj.item_id else "",
-					"sku": getattr(obj.item, "sku", "") if obj.item_id else "",
+					"sd_code": getattr(obj.item, "sd_code", "") if obj.item_id else "",
 					"part_name": getattr(obj.item, "part_name", "") if obj.item_id else "",
 					"line_id": str(obj.line_id) if obj.line_id else "",
 					"line_name": getattr(obj.line, "line_name", "") if obj.line_id else "",
@@ -223,7 +224,7 @@ class ManageItemLineViews(TemplateView):
 		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
 		ctx["total_count"] = paginator.count
 
-		ctx["items"] = list(Item_list.objects.order_by("sku").values("id", "sku", "part_name"))
+		ctx["items"] = list(Item_list.objects.order_by("sd_code").values("id", "sd_code", "part_name"))
 		ctx["lines"] = list(Line.objects.order_by("line_name").values("id", "line_name"))
 		ctx["stages"] = list(ItemStage.objects.order_by("display_name", "name").values("id", "name", "display_name"))
 		return ctx
@@ -254,14 +255,14 @@ class ManageItemLineViews(TemplateView):
 			try:
 				with transaction.atomic():
 					for row in _parse_xlsx(upload):
-						sku = _row_get_first(row, "sku", "item_sku")
+						sd_code = _row_get_first(row, "sd_code", "sd")
 						line_name = _row_get_first(row, "line_name", "line")
 						stage_key = _row_get_first(row, "item_stage", "stage")
-						if not sku or not line_name or not stage_key:
+						if not sd_code or not line_name or not stage_key:
 							skipped += 1
 							continue
 
-						item = Item_list.objects.filter(sku__iexact=sku).first()
+						item = Item_list.objects.filter(sd_code__iexact=sd_code).first()
 						if item is None:
 							item_not_found += 1
 							continue
@@ -435,7 +436,7 @@ class ManageItemLineViews(TemplateView):
 					request,
 					action="item_line:update",
 					message="แก้ไข ItemLine",
-					metadata={"id": obj_id, "sku": item.sku, "line": line.line_name, "stage": str(stage.id)},
+					metadata={"id": obj_id, "sd_code": item.sd_code, "line": line.line_name, "stage": str(stage.id)},
 				),
 			)
 			messages.success(request, "แก้ไขรายการสำเร็จ")
@@ -463,7 +464,7 @@ class ManageItemLineViews(TemplateView):
 				request,
 				action="item_line:create",
 				message="เพิ่ม ItemLine",
-				metadata={"id": str(obj.id), "sku": item.sku, "line": line.line_name, "stage": str(stage.id)},
+				metadata={"id": str(obj.id), "sd_code": item.sd_code, "line": line.line_name, "stage": str(stage.id)},
 			),
 		)
 		messages.success(request, "เพิ่มข้อมูลสำเร็จ")

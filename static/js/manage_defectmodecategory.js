@@ -1,5 +1,11 @@
 (() => {
 	const init = () => {
+		function tsSet(id, val) {
+			var el = document.getElementById(id);
+			if (!el) return;
+			if (el.tomselect) { el.tomselect.setValue(val || ''); } else { el.value = val || ''; }
+		}
+
 		const actionForm = document.getElementById('actionForm');
 		const actionField = document.getElementById('actionField');
 		const idField = document.getElementById('idField');
@@ -102,7 +108,7 @@
 			btn.addEventListener('click', () => {
 				idField.value = btn.dataset.id || '';
 				document.getElementById('editCategory').value = btn.dataset.categoryId || '';
-				document.getElementById('editDefect').value = btn.dataset.defectModeId || '';
+				tsSet('editDefect', btn.dataset.defectModeId || '');
 				document.getElementById('editTitle').value = btn.dataset.title || '';
 				document.getElementById('editDescription').value = btn.dataset.description || '';
 				document.getElementById('editInlist').checked = (btn.dataset.isInlist || '0') === '1';

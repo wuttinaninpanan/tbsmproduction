@@ -2,6 +2,11 @@
 
 {% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{% endblock %}
+
 {% block title %}Manage Item Line — TBSMRD{% endblock %}
 
 {% block content %}
@@ -27,7 +32,7 @@
 		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
 			<div class="md:col-span-5">
 				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย SKU / Part / Line / Stage"
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย SD Code / Part / Line / Stage"
 					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
@@ -107,9 +112,9 @@
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
 							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
 						</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SKU</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+					<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD Code</th>
+					<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+					<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Stage</th>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 					</tr>
@@ -120,9 +125,9 @@
 							<td class="px-4 py-3">
 								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" />
 							</td>
-							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.sku|default:"-" }}</td>
-							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_name|default:"-" }}</td>
-							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.line_name|default:"-" }}</td>
+						<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
+						<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.line_name|default:"-" }}</td>
+						<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_name|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.item_stage_name|default:"-" }}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-center gap-2">
@@ -133,21 +138,21 @@
 										data-item-id="{{ r.item_id|default:'' }}"
 										data-line-id="{{ r.line_id|default:'' }}"
 										data-stage-id="{{ r.item_stage_id|default:'' }}"
-										data-label="{{ r.sku|default:'' }} - {{ r.line_name|default:'' }}">
+								data-label="{{ r.sd_code|default:'' }} - {{ r.line_name|default:'' }}">
 										แก้ไข
 									</button>
 									<button type="button"
 										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
 										data-open-delete
 										data-id="{{ r.id }}"
-										data-label="{{ r.sku|default:'' }} - {{ r.line_name|default:'' }}">
+										data-label="{{ r.sd_code|default:'' }} - {{ r.line_name|default:'' }}">
 										ลบ
 									</button>
 								</div>
 							</td>
 						</tr>
 					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="6">ยังไม่มีข้อมูล Item line</td></tr>
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="7">ยังไม่มีข้อมูล Item line</td></tr>
 					{% endfor %}
 				</tbody>
 			</table>
@@ -239,11 +244,11 @@
 		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่ม Item line</h2>
 		<div class="mt-4 space-y-4">
 			<div>
-				<label class="block text-sm font-semibold text-slate-700">Item (SKU)</label>
+				<label class="block text-sm font-semibold text-slate-700">Item (SD Code)</label>
 				<select id="addItem" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
 					<option value="">เลือก Item</option>
 					{% for it in items %}
-						<option value="{{ it.id }}">{{ it.sku }} — {{ it.part_name }}</option>
+						<option value="{{ it.id }}">{{ it.sd_code }} — {{ it.part_name }}</option>
 					{% endfor %}
 				</select>
 			</div>
@@ -284,11 +289,11 @@
 		<p class="text-xs text-slate-600 mt-1" id="editLabel"></p>
 		<div class="mt-4 space-y-4">
 			<div>
-				<label class="block text-sm font-semibold text-slate-700">Item (SKU)</label>
+				<label class="block text-sm font-semibold text-slate-700">Item (SD Code)</label>
 				<select id="editItem" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
 					<option value="">เลือก Item</option>
 					{% for it in items %}
-						<option value="{{ it.id }}">{{ it.sku }} — {{ it.part_name }}</option>
+						<option value="{{ it.id }}">{{ it.sd_code }} — {{ it.part_name }}</option>
 					{% endfor %}
 				</select>
 			</div>
@@ -336,4 +341,18 @@
 
 {% load static %}
 <script src="{% static 'js/manage_item_line.js' %}" defer></script>
+<script>
+(function(){
+	function initTs(id){
+		var el=document.getElementById(id);
+		if(!el||el.tomselect)return;
+		new TomSelect(el,{allowEmptyOption:true,maxOptions:false});
+	}
+	function run(){
+		initTs('addItem'); initTs('addLine'); initTs('addStage');
+		initTs('editItem'); initTs('editLine'); initTs('editStage');
+	}
+	if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',run);}else{run();}
+})();
+</script>
 {% endblock %}

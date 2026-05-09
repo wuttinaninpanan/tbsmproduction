@@ -14,7 +14,9 @@ class ItemPrice(BaseModel):
     partner = models.ForeignKey(
         BusinessPartner,
         on_delete=models.CASCADE,
-        related_name="item_prices"
+        related_name="item_prices",
+        null=True,
+        blank=True
     )
 
     price = models.DecimalField(max_digits=12, decimal_places=2)

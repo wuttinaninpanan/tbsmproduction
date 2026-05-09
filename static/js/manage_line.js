@@ -21,7 +21,6 @@
 		}
 
 		const addModal = document.getElementById('addModal');
-		const editModal = document.getElementById('editModal');
 		const deleteModal = document.getElementById('deleteModal');
 
 		function openModal(el) {
@@ -37,14 +36,12 @@
 		document.querySelectorAll('[data-modal-close]').forEach(btn => {
 			btn.addEventListener('click', () => {
 				closeModal(addModal);
-				closeModal(editModal);
 				closeModal(deleteModal);
 			});
 		});
 		document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
 			bg.addEventListener('click', () => {
 				closeModal(addModal);
-				closeModal(editModal);
 				closeModal(deleteModal);
 			});
 		});
@@ -90,26 +87,6 @@
 			lineNameField.value = (document.getElementById('addLineName').value || '').trim();
 			descriptionField.value = (document.getElementById('addDescription').value || '').trim();
 			processTypeField.value = (document.getElementById('addProcessType').value || '').trim();
-			actionForm.submit();
-		});
-
-		// Edit
-		const editLabel = document.getElementById('editLabel');
-		document.querySelectorAll('[data-open-edit]').forEach(btn => {
-			btn.addEventListener('click', () => {
-				idField.value = btn.dataset.id || '';
-				document.getElementById('editLineName').value = btn.dataset.lineName || '';
-				document.getElementById('editDescription').value = btn.dataset.description || '';
-				document.getElementById('editProcessType').value = btn.dataset.processTypeId || '';
-				editLabel.textContent = btn.dataset.lineName || '';
-				openModal(editModal);
-			});
-		});
-		document.getElementById('editSubmit').addEventListener('click', () => {
-			actionField.value = 'update';
-			lineNameField.value = (document.getElementById('editLineName').value || '').trim();
-			descriptionField.value = (document.getElementById('editDescription').value || '').trim();
-			processTypeField.value = (document.getElementById('editProcessType').value || '').trim();
 			actionForm.submit();
 		});
 

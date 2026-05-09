@@ -31,6 +31,15 @@ DEBUG = os.getenv("DEBUG", "True") == "True"
 # ALLOWED_HOSTS = []
 ALLOWED_HOSTS = ["*"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://172.29.66.227:8003",
+    "https://172.29.66.227:8003",
+    "http://172.29.66.227",
+    "https://172.29.66.227",
+    "https://tapeless-joseph-fallalishly.ngrok-free.dev",
+    "http://tapeless-joseph-fallalishly.ngrok-free.dev",
+]
+
 
 # Application definition
 

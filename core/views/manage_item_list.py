@@ -95,7 +95,6 @@ def download_manage_item_list_import_template(request):
 		"cost",
 		"purchased_price",
 		"category_name",
-		"level",
 		"comment",
 	]
 	rows = [
@@ -108,7 +107,6 @@ def download_manage_item_list_import_template(request):
 			10.50,
 			9.75,
 			"(ไม่ระบุ)",
-			1,
 			"",
 		],
 	]
@@ -265,7 +263,6 @@ class ManageItemListViews(TemplateView):
 			"cost": "cost",
 			"purchased_price": "purchased_price",
 			"category": "category__name",
-			"level": "level",
 		}
 		order_field = allowed_sorts.get(sort) or "sku"
 		prefix = "-" if sort_dir == "desc" else ""
@@ -294,7 +291,6 @@ class ManageItemListViews(TemplateView):
 					"category_name": getattr(item.category, "name", "") if item.category_id else "",
 					"purchased_price": str(item.purchased_price),
 					"cost": str(item.cost),
-					"level": "" if item.level is None else str(item.level),
 					"comment": item.comment or "",
 				}
 			)
@@ -364,13 +360,6 @@ class ManageItemListViews(TemplateView):
 						weight = _safe_decimal(row.get("weight"), default=Decimal("0"))
 						cost = _safe_decimal(row.get("cost"), default=Decimal("0"))
 						purchased_price = _safe_decimal(row.get("purchased_price"), default=Decimal("0"))
-						level = row.get("level")
-						level_int = None
-						if level is not None and str(level).strip() != "":
-							try:
-								level_int = int(str(level).strip())
-							except Exception:
-								level_int = None
 
 						comment = _excel_to_str(row.get("comment")).strip()
 
@@ -383,7 +372,6 @@ class ManageItemListViews(TemplateView):
 							category=category,
 							purchased_price=purchased_price,
 							cost=cost,
-							level=level_int,
 							comment=comment,
 							user=request.user,
 						)
@@ -428,16 +416,7 @@ class ManageItemListViews(TemplateView):
 		category_id = (request.POST.get("category_id") or "").strip()
 		purchased_price = _safe_decimal(request.POST.get("purchased_price") or "0")
 		cost = _safe_decimal(request.POST.get("cost") or "0")
-		level_raw = (request.POST.get("level") or "").strip()
 		comment = (request.POST.get("comment") or "").strip()
-
-		level = None
-		if level_raw != "":
-			try:
-				level = int(level_raw)
-			except Exception:
-				messages.error(request, "Level ต้องเป็นตัวเลข")
-				return self.get(request, *args, **kwargs)
 
 		category = None
 		if category_id:
@@ -527,7 +506,6 @@ class ManageItemListViews(TemplateView):
 						category=category,
 						purchased_price=purchased_price,
 						cost=cost,
-						level=level,
 						comment=comment,
 						reference_image=reference_image,
 						user=request.user,
@@ -591,7 +569,6 @@ class ManageItemListViews(TemplateView):
 						"category_id": str(item.category_id) if item.category_id else "",
 						"purchased_price": str(item.purchased_price),
 						"cost": str(item.cost),
-						"level": item.level,
 						"comment": item.comment or "",
 					}
 
@@ -619,9 +596,6 @@ class ManageItemListViews(TemplateView):
 					if item.cost != cost:
 						item.cost = cost
 						updated_fields.append("cost")
-					if item.level != level:
-						item.level = level
-						updated_fields.append("level")
 					if (item.comment or "") != comment:
 						item.comment = comment
 						updated_fields.append("comment")
@@ -653,7 +627,6 @@ class ManageItemListViews(TemplateView):
 										"category_id": str(item.category_id) if item.category_id else "",
 										"purchased_price": str(item.purchased_price),
 										"cost": str(item.cost),
-										"level": item.level,
 										"comment": item.comment or "",
 									},
 								},

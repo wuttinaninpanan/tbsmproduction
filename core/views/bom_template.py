@@ -1,0 +1,923 @@
+from __future__ import annotations
+
+import re
+import uuid
+from decimal import Decimal, InvalidOperation
+
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.http import HttpResponse, JsonResponse
+from django.utils.decorators import method_decorator
+from django.views.generic import TemplateView
+
+from core.auth.decorators import staff_required
+from core.models.bill_of_material import BillOfMaterial
+from core.models.bill_of_material_item_master import BillOfMaterialItemMater
+from core.models.item_category import ItemCategory
+from core.models.item_line import ItemLine
+from core.models.item_list import Item_list, extract_item_number, format_item_code
+from core.models.item_stage import ItemStage
+from core.models.line import Line
+
+
+try:
+	import openpyxl  # type: ignore
+except Exception:  # pragma: no cover
+	openpyxl = None
+
+
+def _normalized_key(key: str) -> str:
+	key = (key or "").strip().lower()
+	key = re.sub(r"[^0-9a-z]+", "_", key)
+	key = re.sub(r"_+", "_", key).strip("_")
+	return key
+
+
+def _excel_to_str(value) -> str:
+	if value is None:
+		return ""
+	if isinstance(value, bool):
+		return "TRUE" if value else "FALSE"
+	if isinstance(value, int):
+		return str(value)
+	if isinstance(value, float):
+		if value.is_integer():
+			return str(int(value))
+		return str(value)
+	return str(value).strip()
+
+
+def _row_get_first(row: dict, *keys: str) -> str:
+	for k in keys:
+		if not k:
+			continue
+		v = row.get(k)
+		s = _excel_to_str(v).strip()
+		if s != "":
+			return s
+	return ""
+
+
+def _parse_xlsx(uploaded_file):
+	if openpyxl is None:
+		raise RuntimeError("openpyxl is not installed")
+	wb = openpyxl.load_workbook(uploaded_file, read_only=True, data_only=True)
+	ws = wb.active
+	rows = ws.iter_rows(values_only=True)
+	try:
+		headers = next(rows)
+	except StopIteration:
+		return
+	keys = [_normalized_key(str(h) if h is not None else "") for h in headers]
+	for values in rows:
+		row = {}
+		for idx, value in enumerate(values):
+			k = keys[idx] if idx < len(keys) else ""
+			if not k:
+				continue
+			row[k] = value
+		yield row
+
+
+def _safe_decimal(value, default: Decimal = Decimal("0")) -> Decimal:
+	if value is None:
+		return default
+	if isinstance(value, Decimal):
+		return value
+	if isinstance(value, (int, float)):
+		try:
+			return Decimal(str(value))
+		except (InvalidOperation, ValueError):
+			return default
+	value = str(value).strip()
+	if value == "":
+		return default
+	try:
+		return Decimal(value)
+	except (InvalidOperation, ValueError):
+		return default
+
+
+def _sanitize_sku_base(value: str) -> str:
+	from django.utils.text import slugify
+	value = (value or "").strip()
+	if not value:
+		return ""
+	base = slugify(value).replace("-", "_")
+	base = (base or "").strip("_")
+	return base.upper()
+
+
+def _generate_unique_sku(*, part_number: str, sd_code: str) -> str:
+	"""Build a SKU that fits Item_list.sku (max 100) and isn't already used."""
+	base = _sanitize_sku_base(part_number) or _sanitize_sku_base(sd_code) or "ITEM"
+	for _ in range(20):
+		suffix = uuid.uuid4().hex[:8].upper()
+		max_base_len = 100 - 1 - len(suffix)
+		trimmed = base[:max_base_len]
+		candidate = f"{trimmed}-{suffix}" if trimmed else suffix
+		if not Item_list.objects.filter(sku__iexact=candidate).exists():
+			return candidate
+	return uuid.uuid4().hex[:12].upper()
+
+
+def download_bom_data_excel(request):
+	"""Export the current BOM Item Master data as XLSX, in the same column
+	layout as the import template so the file can be edited and re-imported.
+
+	Rows are ordered by FG group, depth-first within each FG. Extra reference
+	columns (item_code, stage) are appended at the right for visibility — the
+	importer ignores them.
+	"""
+	if openpyxl is None:
+		return HttpResponse(
+			"XLSX format is not available (openpyxl is not installed).",
+			status=400,
+			content_type="text/plain; charset=utf-8",
+		)
+
+	all_rows = list(
+		BillOfMaterialItemMater.objects
+		.select_related(
+			"bom__item",
+			"bom__item__stage",
+			"bom__item__category",
+			"component",
+			"component__stage",
+			"component__category",
+		)
+		.all()
+	)
+
+	item_line_map: dict = {}
+	for il in ItemLine.objects.select_related("line").all():
+		item_line_map.setdefault(il.item_id, il.line)
+
+	children_by_parent: dict = {}
+	parent_items: dict = {}
+	component_ids: set = set()
+	for r in all_rows:
+		parent_item_id = r.bom.item_id if r.bom_id and r.bom and r.bom.item_id else None
+		if parent_item_id:
+			children_by_parent.setdefault(parent_item_id, []).append(r)
+			parent_items[parent_item_id] = r.bom.item
+		if r.component_id:
+			component_ids.add(r.component_id)
+
+	for lst in children_by_parent.values():
+		lst.sort(key=lambda x: (
+			x.sequence or 0,
+			getattr(x.component, "sd_code", "") or "",
+		))
+
+	fg_ids = [pid for pid in parent_items.keys() if pid not in component_ids]
+	fg_ids.sort(key=lambda pid: getattr(parent_items.get(pid), "sd_code", "") or "")
+
+	def _stage_display(stage):
+		if stage is None:
+			return ""
+		name = getattr(stage, "display_name", "") or getattr(stage, "name", "")
+		prefix = getattr(stage, "code_prefix", "") or ""
+		return f"{name} — {prefix}" if prefix else (name or "")
+
+	def _row_for(item, level=0, m2m=""):
+		category = getattr(item, "category", None)
+		stage = getattr(item, "stage", None)
+		line = item_line_map.get(getattr(item, "id", None))
+		level_cells = [""] * 11
+		if isinstance(level, int) and 0 <= level <= 10:
+			level_cells[level] = level
+		return level_cells + [
+			getattr(item, "item_code", "") or "",
+			m2m or "",
+			getattr(item, "sd_code", "") or "",
+			getattr(item, "part_number", "") or "",
+			getattr(item, "part_name", "") or "",
+			getattr(category, "name", "") or "" if category else "",
+			_stage_display(stage),
+			getattr(line, "line_name", "") or "" if line else "",
+		]
+
+	output_rows: list = []
+	visiting: set = set()
+	emitted: set = set()
+
+	def dfs(parent, level):
+		parent_code = getattr(parent, "item_code", "") or ""
+		for r in children_by_parent.get(parent.id, []):
+			comp = r.component
+			if comp is None:
+				continue
+			row_key = (parent.id, comp.id)
+			if row_key in emitted:
+				continue
+			emitted.add(row_key)
+			output_rows.append(_row_for(comp, level=level + 1, m2m=parent_code))
+			if comp.id not in visiting:
+				visiting.add(comp.id)
+				try:
+					dfs(comp, level + 1)
+				finally:
+					visiting.discard(comp.id)
+
+	for fg_id in fg_ids:
+		fg_item = parent_items.get(fg_id)
+		if fg_item is None:
+			continue
+		# FG row first — level 0, M2M shown as "-" since FG has no parent.
+		output_rows.append(_row_for(fg_item, level=0, m2m="-"))
+		dfs(fg_item, 0)
+
+	headers = [str(n) for n in range(11)] + [
+		"Item Code",
+		"M2M",
+		"SD Code",
+		"Part No.",
+		"Part Name",
+		"Category",
+		"Stage",
+		"Line",
+	]
+
+	wb = openpyxl.Workbook()
+	ws = wb.active
+	ws.title = "bom_template"
+	ws.append(headers)
+	for r in output_rows:
+		ws.append(r)
+	for col in range(1, len(headers) + 1):
+		# Narrow level columns (1..11), wider data columns afterwards.
+		width = 5 if col <= 11 else 22
+		ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = width
+
+	response = HttpResponse(
+		content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	)
+	response["Content-Disposition"] = 'attachment; filename="bom_template_data.xlsx"'
+	wb.save(response)
+	return response
+
+
+def download_bom_import_template(request):
+	"""Download an XLSX template for bulk-importing BOM rows.
+
+	Each row represents one item (component or FG). ``parent_sd_code`` /
+	``parent_part_number`` point to the parent BOM owner. Leave them blank to
+	mark the row as a top-level FG.
+	"""
+	if openpyxl is None:
+		return HttpResponse(
+			"XLSX format is not available (openpyxl is not installed).",
+			status=400,
+			content_type="text/plain; charset=utf-8",
+		)
+
+	headers = [
+		"sd_code",
+		"part_number",
+		"part_name",
+		"parent_sd_code",
+		"parent_part_number",
+		"quantity",
+		"unit",
+		"category",
+		"line",
+	]
+	rows = [
+		# FG row — no parent
+		["150-15", "71013-X1424", "FRAME SUB-ASSY, FR SEAT BACK, RH", "", "", "", "", "", ""],
+		# Children of the FG above
+		["GP2-01", "71151-X1401", "FRAME, FR SEAT BACK, RH", "150-15", "71013-X1424", 1, "PCS", "", ""],
+		["FP2-01", "71162-X1411", "PLATE, FR SEAT BACK, LWR", "150-15", "71013-X1424", 1, "PCS", "", ""],
+		# Sub-component of GP2-01 above
+		["STT001", "SOLVEST-114-00", "SOLVEST114 (20 kg./Pail)", "GP2-01", "71151-X1401", 0.5, "KG", "", ""],
+	]
+
+	wb = openpyxl.Workbook()
+	ws = wb.active
+	ws.title = "bom_template"
+	ws.append(headers)
+	for r in rows:
+		ws.append(r)
+	for col in range(1, len(headers) + 1):
+		ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
+
+	response = HttpResponse(
+		content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+	)
+	response["Content-Disposition"] = 'attachment; filename="bom_template_import.xlsx"'
+	wb.save(response)
+	return response
+
+
+def _reclassify_bom_stages_and_codes():
+	"""Re-run the FG/WIP/Raw classification + item_code generation across all
+	items currently referenced in BOMs. Preserves each item's numeric portion
+	when only the prefix changes (so external references stay matchable)."""
+	from core.models.item_list import (
+		extract_item_number as _extract_item_number,
+		format_item_code as _format_item_code,
+	)
+
+	pairs = list(
+		BillOfMaterialItemMater.objects.values_list("component_id", "bom__item_id")
+	)
+	item_to_parents: dict = {}
+	parent_ids: set = set()
+	component_ids: set = set()
+	for component_id, parent_item_id in pairs:
+		if component_id and parent_item_id:
+			item_to_parents.setdefault(component_id, set()).add(parent_item_id)
+		if parent_item_id:
+			parent_ids.add(parent_item_id)
+		if component_id:
+			component_ids.add(component_id)
+
+	all_items_in_boms = parent_ids | component_ids
+	if not all_items_in_boms:
+		return
+
+	levels: dict = {}
+	visiting: set = set()
+
+	def compute_level(item_id):
+		if item_id in levels:
+			return levels[item_id]
+		parents = item_to_parents.get(item_id)
+		if not parents:
+			levels[item_id] = 0
+			return 0
+		if item_id in visiting:
+			return 0
+		visiting.add(item_id)
+		try:
+			parent_levels = [compute_level(pid) for pid in parents]
+		finally:
+			visiting.discard(item_id)
+		lvl = max(parent_levels) + 1 if parent_levels else 0
+		levels[item_id] = lvl
+		return lvl
+
+	for item_id in all_items_in_boms:
+		compute_level(item_id)
+	if not levels:
+		return
+
+	max_level = max(levels.values())
+	stages = {
+		s.name: s for s in ItemStage.objects.filter(name__in=["fg", "wip", "raw_mat"])
+	}
+	fg_stage = stages.get("fg")
+	wip_stage = stages.get("wip")
+	raw_stage = stages.get("raw_mat")
+	if not (fg_stage and wip_stage and raw_stage):
+		return
+
+	target_by_item: dict = {}
+	for iid, lvl in levels.items():
+		if lvl == 0:
+			target_by_item[iid] = fg_stage
+		elif lvl == max_level and max_level > 0:
+			target_by_item[iid] = raw_stage
+		else:
+			target_by_item[iid] = wip_stage
+
+	items = list(Item_list.objects.filter(id__in=list(all_items_in_boms)))
+	for item in items:
+		target = target_by_item.get(item.id)
+		if not target:
+			continue
+		prefix = (target.code_prefix or "").strip()
+		stage_changed = item.stage_id != target.id
+
+		if stage_changed:
+			item.stage = target
+			existing_num = _extract_item_number(item.item_code)
+			if prefix and existing_num is not None:
+				item.item_code = _format_item_code(prefix, existing_num)
+			else:
+				item.item_code = None
+
+		if stage_changed:
+			if item.item_code:
+				item.save(update_fields=["stage", "item_code", "updated_at"])
+			else:
+				item.save()  # triggers Item_list.save() auto-generation
+		elif not item.item_code and item.stage_id:
+			item.save()
+
+
+def _is_uuid(value: str) -> bool:
+	try:
+		uuid.UUID(str(value))
+	except Exception:
+		return False
+	return True
+
+
+def _page_items(num_pages: int, current: int) -> list[int | None]:
+	if num_pages <= 0:
+		return []
+	if num_pages <= 10:
+		return list(range(1, num_pages + 1))
+	items: list[int | None] = [1]
+	if current > 4:
+		items.append(None)
+	start = max(2, current - 1)
+	end = min(num_pages - 1, current + 1)
+	if current <= 4:
+		start, end = 2, 4
+	if current >= num_pages - 3:
+		start, end = num_pages - 3, num_pages - 1
+	for n in range(start, end + 1):
+		if 1 < n < num_pages:
+			items.append(n)
+	if current < num_pages - 3:
+		items.append(None)
+	items.append(num_pages)
+	compressed: list[int | None] = []
+	for it in items:
+		if compressed and compressed[-1] == it:
+			continue
+		if it is None and compressed and compressed[-1] is None:
+			continue
+		compressed.append(it)
+	return compressed
+
+
+def _sd_prefix(sd_code: str) -> str:
+	if not sd_code:
+		return ""
+	return sd_code.split("-", 1)[0]
+
+
+def _sd_suffix(sd_code: str) -> str:
+	"""Everything after the first '-' in sd_code (e.g. 'NOSD-72510-X7V45' -> '72510-X7V45')."""
+	if not sd_code:
+		return ""
+	parts = sd_code.split("-", 1)
+	return parts[1] if len(parts) > 1 else ""
+
+
+@method_decorator(staff_required, name="dispatch")
+class BomTemplateView(TemplateView):
+	template_name = "bom_template.html"
+
+	def get(self, request, *args, **kwargs):
+		action = (request.GET.get("action") or "").strip().lower()
+		if action == "download_template":
+			return download_bom_import_template(request)
+		if action == "download_data":
+			return download_bom_data_excel(request)
+		return super().get(request, *args, **kwargs)
+
+	def get_context_data(self, **kwargs):
+		ctx = super().get_context_data(**kwargs)
+		request = self.request
+
+		q = (request.GET.get("q") or "").strip()
+		per_page_raw = (request.GET.get("per_page") or "").strip()
+		page = (request.GET.get("page") or "1").strip() or "1"
+
+		allowed_per_page = {20, 50, 100, 200}
+		try:
+			per_page = int(per_page_raw or 50)
+		except Exception:
+			per_page = 50
+		if per_page not in allowed_per_page:
+			per_page = 50
+
+		all_rows = list(
+			BillOfMaterialItemMater.objects
+			.select_related(
+				"bom__item",
+				"bom__item__stage",
+				"bom__item__category",
+				"component",
+				"component__stage",
+				"component__category",
+			)
+			.all()
+		)
+
+		# Map item_id -> first ItemLine (used to preselect Line dropdown).
+		item_line_map: dict = {}
+		for il in ItemLine.objects.values("item_id", "line_id"):
+			item_line_map.setdefault(il["item_id"], il["line_id"])
+
+		children_by_parent: dict = {}
+		parent_items: dict = {}
+		component_ids: set = set()
+		for r in all_rows:
+			parent_item_id = r.bom.item_id if r.bom_id and r.bom and r.bom.item_id else None
+			if parent_item_id:
+				children_by_parent.setdefault(parent_item_id, []).append(r)
+				parent_items[parent_item_id] = r.bom.item
+			if r.component_id:
+				component_ids.add(r.component_id)
+
+		for lst in children_by_parent.values():
+			lst.sort(key=lambda x: (
+				x.sequence or 0,
+				getattr(x.component, "sd_code", "") or "",
+			))
+
+		fg_ids = [pid for pid in parent_items.keys() if pid not in component_ids]
+		fg_ids.sort(key=lambda pid: getattr(parent_items.get(pid), "sd_code", "") or "")
+
+		flat: list = []
+		emitted_row_ids: set = set()
+		visiting: set = set()
+
+		def dfs(item_id, level, fg_id):
+			for row in children_by_parent.get(item_id, []):
+				if row.id in emitted_row_ids:
+					continue
+				flat.append((level + 1, row, fg_id))
+				emitted_row_ids.add(row.id)
+				cid = row.component_id
+				if cid and cid not in visiting:
+					visiting.add(cid)
+					try:
+						dfs(cid, level + 1, fg_id)
+					finally:
+						visiting.discard(cid)
+
+		for fg_id in fg_ids:
+			dfs(fg_id, 0, fg_id)
+
+		# Orphan rows (in case the BOM tree contains cycles excluding it from any FG)
+		for r in all_rows:
+			if r.id in emitted_row_ids:
+				continue
+			parent_item_id = r.bom.item_id if r.bom_id and r.bom and r.bom.item_id else None
+			flat.append((1, r, parent_item_id))
+			emitted_row_ids.add(r.id)
+
+		rich_rows: list = []
+		for level, obj, fg_id in flat:
+			component = obj.component if obj.component_id else None
+			parent_item = obj.bom.item if obj.bom_id and obj.bom and obj.bom.item_id else None
+			fg_item = parent_items.get(fg_id) if fg_id else None
+			component_sd_code = getattr(component, "sd_code", "") or ""
+			parent_item_code = getattr(parent_item, "item_code", "") or ""
+			component_stage = getattr(component, "stage", None) if component else None
+			fg_sd_code = getattr(fg_item, "sd_code", "") or ""
+			fg_stage = getattr(fg_item, "stage", None) if fg_item else None
+			fg_category = getattr(fg_item, "category", None) if fg_item else None
+			fg_part_number_raw = getattr(fg_item, "part_number", "") or ""
+			component_category = getattr(component, "category", None) if component else None
+
+			component_id = getattr(component, "id", None)
+			fg_item_id_val = getattr(fg_item, "id", None)
+			rich_rows.append({
+				"id": str(obj.id),
+				"level": level,
+				"item_id": str(component_id) if component_id else "",
+				"category_id": str(component.category_id) if component and component.category_id else "",
+				"stage_id": str(component.stage_id) if component and component.stage_id else "",
+				"line_id": str(item_line_map.get(component_id, "")) if component_id and item_line_map.get(component_id) else "",
+				"item_code": getattr(component, "item_code", "") or "",
+				"m2m": parent_item_code,
+				"sd_code": component_sd_code,
+				"part_number": getattr(component, "part_number", "") or "",
+				"part_name": getattr(component, "part_name", "") or "",
+				"category_name": getattr(component_category, "name", "") or "",
+				"stage_name": getattr(component_stage, "display_name", "") or "",
+				"fg_part_name": getattr(fg_item, "part_name", "") or "",
+				"fg_item_code": getattr(fg_item, "item_code", "") or "",
+				"fg_part_number": fg_part_number_raw,
+				"fg_sd_code": fg_sd_code,
+				"fg_category_name": getattr(fg_category, "name", "") or "",
+				"fg_stage_name": getattr(fg_stage, "display_name", "") or "",
+				"fg_item_id": str(fg_item_id_val) if fg_item_id_val else "",
+				"fg_category_id": str(fg_item.category_id) if fg_item and fg_item.category_id else "",
+				"fg_stage_id": str(fg_item.stage_id) if fg_item and fg_item.stage_id else "",
+				"fg_line_id": str(item_line_map.get(fg_item_id_val, "")) if fg_item_id_val and item_line_map.get(fg_item_id_val) else "",
+			})
+
+		if q:
+			ql = q.lower()
+
+			def match(r):
+				return (
+					ql in (r["sd_code"] or "").lower()
+					or ql in (r["m2m"] or "").lower()
+					or ql in (r["item_code"] or "").lower()
+					or ql in (r["part_number"] or "").lower()
+					or ql in (r["part_name"] or "").lower()
+					or ql in (r["stage_name"] or "").lower()
+					or ql in (r["fg_sd_code"] or "").lower()
+					or ql in (r["fg_part_name"] or "").lower()
+				)
+
+			rich_rows = [r for r in rich_rows if match(r)]
+
+		paginator = Paginator(rich_rows, per_page)
+		page_obj = paginator.get_page(page)
+
+		ctx["rows"] = list(page_obj.object_list)
+		ctx["q"] = q
+		ctx["page_obj"] = page_obj
+		ctx["paginator"] = paginator
+		ctx["per_page"] = per_page
+		ctx["rows_total"] = paginator.count
+		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
+		ctx["total_count"] = paginator.count
+		ctx["level_range"] = list(range(0, 11))
+		# columns after level: Item Code, M2M, SD Code, Part No., Part Name, Category, Stage, Line, Action = 9
+		ctx["group_colspan"] = len(ctx["level_range"]) + 9
+		ctx["categories"] = list(
+			ItemCategory.objects.order_by("name").values("id", "name")
+		)
+		ctx["stages"] = list(
+			ItemStage.objects.order_by("display_name").values(
+				"id", "display_name", "code_prefix"
+			)
+		)
+		ctx["lines"] = list(
+			Line.objects.order_by("line_name").values("id", "line_name")
+		)
+		return ctx
+
+	def post(self, request, *args, **kwargs):
+		action = (request.POST.get("action") or "").strip().lower()
+		if action == "import_master_data":
+			return self._handle_import(request, *args, **kwargs)
+		if action != "save_row":
+			return JsonResponse({"ok": False, "error": "ไม่รองรับการทำงานนี้"}, status=400)
+
+		item_id = (request.POST.get("item_id") or "").strip()
+		category_id = (request.POST.get("category_id") or "").strip()
+		stage_id = (request.POST.get("stage_id") or "").strip()
+		line_id = (request.POST.get("line_id") or "").strip()
+
+		if not _is_uuid(item_id):
+			return JsonResponse({"ok": False, "error": "ไม่พบรหัสรายการ"}, status=400)
+
+		item = Item_list.objects.filter(pk=item_id).first()
+		if item is None:
+			return JsonResponse({"ok": False, "error": "ไม่พบ Item"}, status=404)
+
+		category = None
+		if category_id:
+			if not _is_uuid(category_id):
+				return JsonResponse({"ok": False, "error": "Category ไม่ถูกต้อง"}, status=400)
+			category = ItemCategory.objects.filter(pk=category_id).first()
+			if category is None:
+				return JsonResponse({"ok": False, "error": "ไม่พบ Category"}, status=404)
+
+		stage = None
+		if stage_id:
+			if not _is_uuid(stage_id):
+				return JsonResponse({"ok": False, "error": "Stage ไม่ถูกต้อง"}, status=400)
+			stage = ItemStage.objects.filter(pk=stage_id).first()
+			if stage is None:
+				return JsonResponse({"ok": False, "error": "ไม่พบ Stage"}, status=404)
+
+		line = None
+		if line_id:
+			if not _is_uuid(line_id):
+				return JsonResponse({"ok": False, "error": "Line ไม่ถูกต้อง"}, status=400)
+			line = Line.objects.filter(pk=line_id).first()
+			if line is None:
+				return JsonResponse({"ok": False, "error": "ไม่พบ Line"}, status=404)
+
+		try:
+			with transaction.atomic():
+				updated_fields: list = []
+				if item.category_id != (category.id if category else None):
+					item.category = category
+					updated_fields.append("category")
+
+				stage_changed = item.stage_id != (stage.id if stage else None)
+				if stage_changed:
+					item.stage = stage
+					updated_fields.append("stage")
+
+					new_prefix = (
+						(getattr(stage, "code_prefix", "") or "").strip()
+						if stage else ""
+					)
+					existing_num = extract_item_number(item.item_code)
+
+					if new_prefix and existing_num is not None:
+						# Reuse the same number; only swap the prefix so external
+						# references to this item stay matchable.
+						item.item_code = format_item_code(new_prefix, existing_num)
+					else:
+						# Either no prefix (stage cleared) or no existing number.
+						# Clear so model.save() can generate a fresh one if applicable.
+						item.item_code = None
+					updated_fields.append("item_code")
+
+				if stage_changed:
+					# Full save() triggers item_code generation via Item_list.save
+					# when item_code is empty and stage is set.
+					item.save()
+				elif updated_fields:
+					updated_fields.append("updated_at")
+					item.save(update_fields=updated_fields)
+
+				# Manage ItemLine: if a line is selected, ensure (item, line) row exists.
+				# We do not delete existing assignments to other lines.
+				if line is not None:
+					stage_for_link = item.stage or stage
+					if stage_for_link is None:
+						return JsonResponse(
+							{"ok": False, "error": "ต้องเลือก Stage ก่อนผูก Line"},
+							status=400,
+						)
+					ItemLine.objects.update_or_create(
+						item=item,
+						line=line,
+						defaults={
+							"item_stage": stage_for_link,
+							"user": request.user,
+						},
+					)
+		except Exception as e:
+			return JsonResponse({"ok": False, "error": str(e)}, status=500)
+
+		return JsonResponse({
+			"ok": True,
+			"item_code": item.item_code or "",
+			"category_name": getattr(item.category, "name", "") if item.category_id else "",
+			"stage_name": getattr(item.stage, "display_name", "") if item.stage_id else "",
+		})
+
+	def _handle_import(self, request, *args, **kwargs):
+		if openpyxl is None:
+			messages.error(request, "ไม่สามารถนำเข้า XLSX ได้: ยังไม่ได้ติดตั้ง openpyxl")
+			return self.get(request, *args, **kwargs)
+		upload = request.FILES.get("excel_file")
+		if upload is None:
+			messages.error(request, "กรุณาเลือกไฟล์ Excel (.xlsx)")
+			return self.get(request, *args, **kwargs)
+		name = (getattr(upload, "name", "") or "").lower()
+		if not name.endswith(".xlsx"):
+			messages.error(request, "รองรับเฉพาะไฟล์ .xlsx")
+			return self.get(request, *args, **kwargs)
+
+		items_created = 0
+		items_existing = 0
+		fg_count = 0
+		bom_links_created = 0
+		bom_links_duplicate = 0
+		parent_not_found = 0
+		skipped = 0
+		bom_cache: dict = {}
+		seq_by_parent: dict = {}
+		line_assignments: list = []
+
+		def _lookup_or_create(sd_code, part_number, part_name):
+			"""Return (item, created_flag). Looks up by (sd_code, part_number);
+			creates a new Item_list if not found."""
+			nonlocal items_created, items_existing
+			item = Item_list.objects.filter(
+				sd_code__iexact=sd_code, part_number__iexact=part_number
+			).first()
+			if item is not None:
+				items_existing += 1
+				return item, False
+			sku = _generate_unique_sku(part_number=part_number, sd_code=sd_code)
+			item = Item_list.objects.create(
+				sd_code=sd_code,
+				part_number=part_number,
+				part_name=part_name or "",
+				sku=sku,
+				user=request.user,
+			)
+			items_created += 1
+			return item, True
+
+		try:
+			with transaction.atomic():
+				for row in _parse_xlsx(upload):
+					sd_code = _row_get_first(row, "sd_code", "sdcode", "sd")
+					part_number = _row_get_first(row, "part_number", "part_no", "partnumber", "pn")
+					part_name = _row_get_first(row, "part_name", "partname", "name")
+					parent_sd = _row_get_first(
+						row, "parent_sd_code", "parent_sd", "parent_sdcode", "m2m"
+					)
+					parent_pn = _row_get_first(
+						row, "parent_part_number", "parent_part_no", "parent_pn"
+					)
+					quantity_raw = _excel_to_str(row.get("quantity")).strip()
+					unit = _excel_to_str(row.get("unit")).strip() or "PCS"
+					category_name = _row_get_first(row, "category", "category_name")
+					line_name = _row_get_first(row, "line", "line_name")
+
+					if not sd_code or not part_number:
+						skipped += 1
+						continue
+
+					item, _new = _lookup_or_create(sd_code, part_number, part_name)
+
+					# Optionally apply category if specified.
+					if category_name and category_name.lower() != "(ไม่ระบุ)":
+						cat = ItemCategory.objects.filter(name__iexact=category_name).first()
+						if cat and item.category_id != cat.id:
+							item.category = cat
+							item.save(update_fields=["category", "updated_at"])
+
+					# Resolve parent if any.
+					parent_item = None
+					if parent_sd:
+						parent_qs = Item_list.objects.filter(sd_code__iexact=parent_sd)
+						if parent_pn:
+							parent_qs = parent_qs.filter(part_number__iexact=parent_pn)
+						parent_item = parent_qs.first()
+						if parent_item is None:
+							parent_not_found += 1
+							skipped += 1
+							continue
+
+					if parent_item is None:
+						# No parent → this row is an FG. Ensure it owns a BOM header.
+						BillOfMaterial.objects.get_or_create(
+							item=item,
+							defaults={
+								"revision": "A",
+								"latest_eci": "",
+								"user": request.user,
+							},
+						)
+						fg_count += 1
+					else:
+						bom = bom_cache.get(parent_item.id)
+						if bom is None:
+							bom, _ = BillOfMaterial.objects.get_or_create(
+								item=parent_item,
+								defaults={
+									"revision": "A",
+									"latest_eci": "",
+									"user": request.user,
+								},
+							)
+							bom_cache[parent_item.id] = bom
+
+						if BillOfMaterialItemMater.objects.filter(
+							bom=bom, component=item
+						).exists():
+							bom_links_duplicate += 1
+						else:
+							quantity = _safe_decimal(quantity_raw, default=Decimal("1"))
+							seq_by_parent[parent_item.id] = (
+								seq_by_parent.get(parent_item.id, 0) + 1
+							)
+							BillOfMaterialItemMater.objects.create(
+								bom=bom,
+								component=item,
+								quantity=quantity,
+								unit=unit,
+								sequence=seq_by_parent[parent_item.id],
+								user=request.user,
+							)
+							bom_links_created += 1
+
+					# Defer line assignment until reclassify has set item.stage.
+					if line_name:
+						line_obj = Line.objects.filter(line_name__iexact=line_name).first()
+						if line_obj is not None:
+							line_assignments.append((item.id, line_obj.id))
+		except Exception as e:
+			messages.error(request, f"นำเข้าไม่สำเร็จ: {e}")
+			return self.get(request, *args, **kwargs)
+
+		# Recompute stage classification + item_code for all BOM items.
+		try:
+			_reclassify_bom_stages_and_codes()
+		except Exception as e:
+			messages.warning(request, f"นำเข้าเสร็จ แต่ reclassify ไม่สำเร็จ: {e}")
+
+		# Now apply Line assignments — items have valid stage at this point.
+		for iid, lid in line_assignments:
+			item = Item_list.objects.filter(pk=iid).first()
+			line_obj = Line.objects.filter(pk=lid).first()
+			if item is None or line_obj is None or item.stage_id is None:
+				continue
+			ItemLine.objects.update_or_create(
+				item=item,
+				line=line_obj,
+				defaults={"item_stage": item.stage, "user": request.user},
+			)
+
+		parts = []
+		if items_created:
+			parts.append(f"สร้าง Item ใหม่ {items_created}")
+		if items_existing:
+			parts.append(f"ใช้ Item เดิม {items_existing}")
+		if fg_count:
+			parts.append(f"FG {fg_count}")
+		if bom_links_created:
+			parts.append(f"ผูก BOM {bom_links_created}")
+		if bom_links_duplicate:
+			parts.append(f"BOM ซ้ำ {bom_links_duplicate}")
+		if parent_not_found:
+			parts.append(f"ไม่พบ parent {parent_not_found}")
+		if skipped:
+			parts.append(f"ข้าม {skipped}")
+		messages.success(request, "นำเข้าสำเร็จ — " + ", ".join(parts))
+		return self.get(request, *args, **kwargs)

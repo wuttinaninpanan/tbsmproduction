@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(.venv/bin/python manage.py shell -c ' *)",
+      "Bash(docker exec tbsmproduction-web-1 python manage.py shell -c ' *)",
+      "Bash(docker exec *)",
+      "Bash(grep -v -E \"^\\(\\\\.venv/|media/|Document/|.*/node_modules/|.*\\\\.xlsx$|.*\\\\.pyc$|.*\\\\.png$|.*\\\\.jpg$|.*\\\\.jpeg$|.*\\\\.JPG$|.*\\\\.ico$|.*\\\\.svg$|.*\\\\.woff|.*\\\\.ttf|.*\\\\.eot\\)\")",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(python)",
+      "Bash(python -m py_compile core/views/manage_line.py core/views/__init__.py core/urls.py)",
+      "Bash(grep -o \"md\\\\\\\\\\\\\\\\:col-span-[0-9]*\\\\b\" theme/static/css/dist/styles.css)",
+      "Bash(python -m py_compile core/views/record.py)",
+      "Bash(python -m py_compile core/views/record.py core/models/defect_stat.py core/models/__init__.py)"
+    ]
+  }
+}

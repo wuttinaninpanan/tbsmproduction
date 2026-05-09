@@ -14,6 +14,7 @@ from django.core.paginator import Paginator
 from core.services.auditlog import log_event
 from core.auth.decorators import staff_required
 from core.models import DefectMode
+from core.models.inspection.inspection_model import InspectionModels
 
 try:
 	import openpyxl  # type: ignore
@@ -105,7 +106,11 @@ class ManageDefectModeViews(TemplateView):
 		action = (request.GET.get("action") or "").strip().lower()
 		if action == "download_template":
 			return download_manage_defectmode_import_template(request)
-		return super().get(request, *args, **kwargs)
+		response = super().get(request, *args, **kwargs)
+		response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+		response['Pragma'] = 'no-cache'
+		response['Expires'] = '0'
+		return response
 
 	def get_context_data(self, **kwargs):
 		ctx = super().get_context_data(**kwargs)
@@ -137,6 +142,8 @@ class ManageDefectModeViews(TemplateView):
 		qs = qs.order_by("name_en", "name_th")
 		paginator = Paginator(qs, per_page)
 		page_obj = paginator.get_page(page)
+		inspection_models_qs = InspectionModels.objects.order_by("class_name")
+
 		rows = []
 		for d in page_obj.object_list:
 			rows.append(
@@ -148,6 +155,9 @@ class ManageDefectModeViews(TemplateView):
 					"description_th": d.description_th or "",
 					"description_en": d.description_en or "",
 					"description_jp": d.description_jp or "",
+					"inspection_model_id": str(d.inspection_model_id) if d.inspection_model_id else "",
+					"inspection_model_name": d.inspection_model.class_name if d.inspection_model else "-",
+					"class_name": d.class_name or "",
 				}
 			)
 
@@ -181,6 +191,7 @@ class ManageDefectModeViews(TemplateView):
 			return compressed
 
 		ctx["rows"] = rows
+		ctx["inspection_models"] = list(inspection_models_qs.values("id", "class_name"))
 		ctx["q"] = q
 		ctx["page_obj"] = page_obj
 		ctx["paginator"] = paginator
@@ -202,6 +213,8 @@ class ManageDefectModeViews(TemplateView):
 		description_th = (request.POST.get("description_th") or "").strip()
 		description_en = (request.POST.get("description_en") or "").strip()
 		description_jp = (request.POST.get("description_jp") or "").strip()
+		inspection_model_id_raw = (request.POST.get("inspection_model_id") or "").strip()
+		class_name = (request.POST.get("class_name") or "").strip()
 
 		def _is_uuid(value: str) -> bool:
 			try:
@@ -349,6 +362,9 @@ class ManageDefectModeViews(TemplateView):
 			if not name_th or not name_en or not name_jp:
 				messages.error(request, "กรุณากรอกชื่อ Defect mode ให้ครบทั้ง TH/EN/JP")
 				return self.get(request, *args, **kwargs)
+			inspection_model_obj = None
+			if inspection_model_id_raw and _is_uuid(inspection_model_id_raw):
+				inspection_model_obj = InspectionModels.objects.filter(pk=inspection_model_id_raw).first()
 			try:
 				with transaction.atomic():
 					if DefectMode.objects.filter(name_en__iexact=name_en).exists():
@@ -360,6 +376,8 @@ class ManageDefectModeViews(TemplateView):
 						description_th=description_th,
 						description_en=description_en,
 						description_jp=description_jp,
+						inspection_model=inspection_model_obj,
+						class_name=class_name,
 						user=request.user,
 					)
 					messages.success(request, "เพิ่ม Defect mode สำเร็จ")
@@ -405,6 +423,9 @@ class ManageDefectModeViews(TemplateView):
 			if not name_th or not name_en or not name_jp:
 				messages.error(request, "กรุณากรอกชื่อ Defect mode ให้ครบทั้ง TH/EN/JP")
 				return self.get(request, *args, **kwargs)
+			inspection_model_obj = None
+			if inspection_model_id_raw and _is_uuid(inspection_model_id_raw):
+				inspection_model_obj = InspectionModels.objects.filter(pk=inspection_model_id_raw).first()
 			try:
 				with transaction.atomic():
 					defect = DefectMode.objects.get(pk=obj_id)
@@ -439,6 +460,14 @@ class ManageDefectModeViews(TemplateView):
 					if (defect.description_jp or "") != description_jp:
 						defect.description_jp = description_jp
 						updated_fields.append("description_jp")
+
+					new_im_id = inspection_model_obj.pk if inspection_model_obj else None
+					if defect.inspection_model_id != new_im_id:
+						defect.inspection_model = inspection_model_obj
+						updated_fields.append("inspection_model")
+					if (defect.class_name or "") != class_name:
+						defect.class_name = class_name
+						updated_fields.append("class_name")
 
 					if updated_fields:
 						updated_fields.append("updated_at")

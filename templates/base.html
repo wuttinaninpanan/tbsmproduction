@@ -11,12 +11,15 @@
     {% tailwind_css %}
 
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/dist/styles.css' %}">
 
     <style>
         body {
             font-family: 'Sarabun', ui-sans-serif, system-ui;
         }
     </style>
+    {% block extra_head %}{% endblock %}
 </head>
 
 <!-- ✅ พื้นหลังรอบนอก -->
