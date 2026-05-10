@@ -11,7 +11,9 @@
       "PowerShell(Resolve-DnsName registry-1.docker.io -Type A -ErrorAction SilentlyContinue -Server 8.8.8.8)",
       "PowerShell(Resolve-DnsName registry-1.docker.io -Type A -Server 1.1.1.1 -ErrorAction Continue)",
       "PowerShell(nslookup -type=A registry-1.docker.io 2>&1)",
-      "PowerShell(Test-NetConnection -ComputerName 8.8.8.8 -Port 53 -InformationLevel Quiet)"
+      "PowerShell(Test-NetConnection -ComputerName 8.8.8.8 -Port 53 -InformationLevel Quiet)",
+      "Bash(pip install *)",
+      "Bash(python -c ' *)"
     ]
   }
 }
