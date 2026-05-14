@@ -13,7 +13,13 @@
       "PowerShell(nslookup -type=A registry-1.docker.io 2>&1)",
       "PowerShell(Test-NetConnection -ComputerName 8.8.8.8 -Port 53 -InformationLevel Quiet)",
       "Bash(pip install *)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "PowerShell(python manage.py import_itemline_xlsx)",
+      "PowerShell(docker compose ps 2>$null)",
+      "PowerShell(docker compose exec -T web poetry run python manage.py import_itemline_xlsx)",
+      "PowerShell(docker compose exec -T web poetry run python manage.py shell -c \"from core.models.item_stage import ItemStage; [print\\(s.id, repr\\(s.name\\), repr\\(s.display_name\\), repr\\(getattr\\(s,'code_prefix',''\\)\\)\\) for s in ItemStage.objects.all\\(\\).order_by\\('name'\\)]\")",
+      "PowerShell(docker compose exec -T web poetry run python manage.py shell -c \"from core.models.line_process import LineProcess; from core.models.line import Line; print\\('LineProcess:'\\); [print\\(' ', lp.id, repr\\(lp.name\\) if hasattr\\(lp, 'name'\\) else lp\\) for lp in LineProcess.objects.all\\(\\)[:30]]; print\\('Existing lines sample:'\\); [print\\(' ', l.line_name, '->', l.line_process_id\\) for l in Line.objects.all\\(\\)[:5]]\")",
+      "PowerShell(docker compose exec -T web poetry run python manage.py import_itemline_xlsx --commit)"
     ]
   }
 }
