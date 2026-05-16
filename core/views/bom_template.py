@@ -10,6 +10,7 @@ from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.auth.decorators import staff_required
 from core.models.bill_of_material import BillOfMaterial
@@ -480,13 +481,13 @@ class BomTemplateView(TemplateView):
 		per_page_raw = (request.GET.get("per_page") or "").strip()
 		page = (request.GET.get("page") or "1").strip() or "1"
 
-		allowed_per_page = {20, 50, 100, 200}
+		allowed_per_page = {100, 200, 500, 1000}
 		try:
-			per_page = int(per_page_raw or 50)
+			per_page = int(per_page_raw or 100)
 		except Exception:
-			per_page = 50
+			per_page = 100
 		if per_page not in allowed_per_page:
-			per_page = 50
+			per_page = 100
 
 		all_rows = list(
 			BillOfMaterialItemMater.objects
@@ -501,10 +502,15 @@ class BomTemplateView(TemplateView):
 			.all()
 		)
 
-		# Map item_id -> first ItemLine (used to preselect Line dropdown).
+		# Map item_id -> first ItemLine (used to display the row's Line).
 		item_line_map: dict = {}
 		for il in ItemLine.objects.values("item_id", "line_id"):
 			item_line_map.setdefault(il["item_id"], il["line_id"])
+		# line_id -> line_name for cheap lookup when rendering rows.
+		line_name_by_id = {
+			str(row["id"]): row["line_name"] or ""
+			for row in Line.objects.values("id", "line_name")
+		}
 
 		children_by_parent: dict = {}
 		parent_items: dict = {}
@@ -571,13 +577,15 @@ class BomTemplateView(TemplateView):
 
 			component_id = getattr(component, "id", None)
 			fg_item_id_val = getattr(fg_item, "id", None)
+			component_line_id = item_line_map.get(component_id) if component_id else None
+			fg_line_id = item_line_map.get(fg_item_id_val) if fg_item_id_val else None
 			rich_rows.append({
 				"id": str(obj.id),
 				"level": level,
 				"item_id": str(component_id) if component_id else "",
 				"category_id": str(component.category_id) if component and component.category_id else "",
 				"stage_id": str(component.stage_id) if component and component.stage_id else "",
-				"line_id": str(item_line_map.get(component_id, "")) if component_id and item_line_map.get(component_id) else "",
+				"line_id": str(component_line_id) if component_line_id else "",
 				"item_code": getattr(component, "item_code", "") or "",
 				"m2m": parent_item_code,
 				"sd_code": component_sd_code,
@@ -585,6 +593,7 @@ class BomTemplateView(TemplateView):
 				"part_name": getattr(component, "part_name", "") or "",
 				"category_name": getattr(component_category, "name", "") or "",
 				"stage_name": getattr(component_stage, "display_name", "") or "",
+				"line_name": line_name_by_id.get(str(component_line_id), "") if component_line_id else "",
 				"fg_part_name": getattr(fg_item, "part_name", "") or "",
 				"fg_item_code": getattr(fg_item, "item_code", "") or "",
 				"fg_part_number": fg_part_number_raw,
@@ -594,7 +603,8 @@ class BomTemplateView(TemplateView):
 				"fg_item_id": str(fg_item_id_val) if fg_item_id_val else "",
 				"fg_category_id": str(fg_item.category_id) if fg_item and fg_item.category_id else "",
 				"fg_stage_id": str(fg_item.stage_id) if fg_item and fg_item.stage_id else "",
-				"fg_line_id": str(item_line_map.get(fg_item_id_val, "")) if fg_item_id_val and item_line_map.get(fg_item_id_val) else "",
+				"fg_line_id": str(fg_line_id) if fg_line_id else "",
+				"fg_line_name": line_name_by_id.get(str(fg_line_id), "") if fg_line_id else "",
 			})
 
 		if q:
@@ -626,8 +636,8 @@ class BomTemplateView(TemplateView):
 		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
 		ctx["total_count"] = paginator.count
 		ctx["level_range"] = list(range(0, 11))
-		# columns after level: Item Code, M2M, SD Code, Part No., Part Name, Category, Stage, Line, Action = 9
-		ctx["group_colspan"] = len(ctx["level_range"]) + 9
+		# columns after level: Item Code, M2M, SD Code, Part No., Part Name, Category, Stage, Line = 8
+		ctx["group_colspan"] = len(ctx["level_range"]) + 8
 		ctx["categories"] = list(
 			ItemCategory.objects.order_by("name").values("id", "name")
 		)
@@ -750,16 +760,15 @@ class BomTemplateView(TemplateView):
 	def _handle_import(self, request, *args, **kwargs):
 		if openpyxl is None:
 			messages.error(request, "ไม่สามารถนำเข้า XLSX ได้: ยังไม่ได้ติดตั้ง openpyxl")
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 		upload = request.FILES.get("excel_file")
 		if upload is None:
 			messages.error(request, "กรุณาเลือกไฟล์ Excel (.xlsx)")
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 		name = (getattr(upload, "name", "") or "").lower()
 		if not name.endswith(".xlsx"):
 			messages.error(request, "รองรับเฉพาะไฟล์ .xlsx")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		items_created = 0
 		items_existing = 0
 		fg_count = 0
@@ -884,8 +893,7 @@ class BomTemplateView(TemplateView):
 							line_assignments.append((item.id, line_obj.id))
 		except Exception as e:
 			messages.error(request, f"นำเข้าไม่สำเร็จ: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		# Recompute stage classification + item_code for all BOM items.
 		try:
 			_reclassify_bom_stages_and_codes()
@@ -920,4 +928,4 @@ class BomTemplateView(TemplateView):
 		if skipped:
 			parts.append(f"ข้าม {skipped}")
 		messages.success(request, "นำเข้าสำเร็จ — " + ", ".join(parts))
-		return self.get(request, *args, **kwargs)
+		return redirect(request.get_full_path())

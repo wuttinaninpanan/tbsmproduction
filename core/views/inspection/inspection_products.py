@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.models.inspection.inspection_products import InspectionProducts
 
@@ -71,15 +72,15 @@ class InspectionProductsView(TemplateView):
         per_page_raw = (request.GET.get("per_page") or "").strip()
         page = (request.GET.get("page") or "1").strip() or "1"
 
-        allowed_per_page = {20, 50, 100, 200}
+        allowed_per_page = {100, 200, 500, 1000}
 
         try:
-            per_page = int(per_page_raw or 20)
+            per_page = int(per_page_raw or 100)
         except Exception:
-            per_page = 20
+            per_page = 100
 
         if per_page not in allowed_per_page:
-            per_page = 20
+            per_page = 100
 
         qs = InspectionProducts.objects.all()
 
@@ -136,8 +137,7 @@ class InspectionProductsView(TemplateView):
 
             if not sd_code:
                 messages.error(request, "กรุณากรอก SD Code")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
                 with transaction.atomic():
 
@@ -153,15 +153,13 @@ class InspectionProductsView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         # ================= UPDATE =================
         if action == "update":
 
             if not _is_uuid(obj_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
                 with transaction.atomic():
 
@@ -179,15 +177,13 @@ class InspectionProductsView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         # ================= DELETE =================
         if action == "delete":
 
             if not _is_uuid(obj_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
                 with transaction.atomic():
 
@@ -202,7 +198,6 @@ class InspectionProductsView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         messages.error(request, "ไม่รู้จัก action")
-        return self.get(request, *args, **kwargs)
+        return redirect(request.get_full_path())

@@ -2,14 +2,14 @@
 
 {% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
-{% block title %}Products (FG) — TBSMRD{% endblock %}
+{% block title %}Products — TBSMRD{% endblock %}
 
 {% block content %}
 <section class="space-y-6">
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Products</h1>
-			<p class="text-sm text-slate-600 mt-1">รายการ FG (Finished Goods) เท่านั้น</p>
+			<p class="text-sm text-slate-600 mt-1">รายการสินค้าที่ผูกอยู่กับ Line ผลิต</p>
 		</div>
 	</header>
 
@@ -28,7 +28,7 @@
 				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Item Code / SD Code / Part No. / Part Name / Category"
 					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
-			<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
+			<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
 			<div class="md:col-span-2 flex items-end">
 				<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
 					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
@@ -47,16 +47,16 @@
 	<div class="rounded-2xl border border-slate-200 overflow-hidden">
 		<div class="bg-slate-100 px-4 py-3">
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-				<div class="font-extrabold text-slate-800">FG Products</div>
+				<div class="font-extrabold text-slate-800">Products</div>
 				<form method="get" class="flex items-center gap-2">
 					<input type="hidden" name="q" value="{{ q|default:'' }}" />
 					<div class="flex items-center gap-2">
 						<span class="text-sm text-gray-700">Show</span>
 						<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
-							<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-							<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
 							<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
 							<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+							<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
 						</select>
 						<span class="text-sm text-gray-700">entries</span>
 					</div>
@@ -90,19 +90,11 @@
 				<tbody class="divide-y divide-slate-200">
 					{% for r in rows %}
 						{% with detail_url="/products/"|add:r.id|add:"/" %}
-						<tr class="hover:bg-slate-50">
-							<td class="px-4 py-3 font-mono font-semibold whitespace-nowrap">
-								{% if r.item_code %}<a href="{{ detail_url }}" class="text-indigo-600 hover:text-indigo-800 hover:underline">{{ r.item_code }}</a>{% else %}-{% endif %}
-							</td>
-							<td class="px-4 py-3 whitespace-nowrap">
-								{% if r.sd_code %}<a href="{{ detail_url }}" class="text-indigo-600 hover:text-indigo-800 hover:underline">{{ r.sd_code }}</a>{% else %}-{% endif %}
-							</td>
-							<td class="px-4 py-3 whitespace-nowrap">
-								{% if r.part_number %}<a href="{{ detail_url }}" class="text-indigo-600 hover:text-indigo-800 hover:underline">{{ r.part_number }}</a>{% else %}-{% endif %}
-							</td>
-							<td class="px-4 py-3 whitespace-nowrap">
-								{% if r.part_name %}<a href="{{ detail_url }}" class="text-indigo-600 hover:text-indigo-800 hover:underline">{{ r.part_name }}</a>{% else %}-{% endif %}
-							</td>
+						<tr class="hover:bg-slate-50 cursor-pointer" data-detail-url="{{ detail_url }}">
+							<td class="px-4 py-3 font-mono font-semibold whitespace-nowrap text-slate-900">{{ r.item_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_name|default:"-" }}</td>
 							<td class="px-4 py-3">
 								{% if r.reference_image_url %}
 									<a href="{{ r.reference_image_url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
@@ -199,4 +191,28 @@
 		{% endif %}
 	</div>
 </section>
+
+<script>
+(() => {
+	const handler = () => {
+		document.querySelectorAll('tr[data-detail-url]').forEach(tr => {
+			tr.addEventListener('click', (e) => {
+				if (e.target.closest('a, button, input, label, select, textarea')) return;
+				const url = tr.dataset.detailUrl;
+				if (!url) return;
+				if (e.ctrlKey || e.metaKey || e.button === 1) {
+					window.open(url, '_blank');
+				} else {
+					window.location.href = url;
+				}
+			});
+		});
+	};
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', handler);
+	} else {
+		handler();
+	}
+})();
+</script>
 {% endblock %}

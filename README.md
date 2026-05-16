@@ -1,5 +1,13 @@
 # tbapp สร้างสภาพแวดล้อมสำหรับพัฒนาระบบ
 # Django Start project
+
+ด้วยคำสั่ง
+```
+docker compose exec web bash
+poetry run python manage.py runserver 0.0.0.0:8000
+poetry run python manage.py tailwind start
+```
+
 สร้างไฟล์โดยตั้งชื่อดังนี้
 ```
 .env.local
@@ -291,4 +299,20 @@ psql -U tbapp_user -d tbapp_db
 ดูตาราง
 ```
 \dt
+```
+
+### วิธีใช้บน server
+```
+git pull
+./scripts/deploy_seed.sh
+หรือ manually:
+
+
+python manage.py migrate
+python manage.py seed_load --no-input
+วิธี regenerate seed (เมื่อ DB เปลี่ยนและอยาก snapshot ใหม่)
+
+python manage.py seed_dump
+git add core/management/seeds/master_seed.json
+git commit -m "Update seed snapshot"
 ```

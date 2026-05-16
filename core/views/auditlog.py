@@ -95,13 +95,13 @@ class AuditLogViews(TemplateView):
 
         qs = self._filtered_qs()
 
-        allowed_per_page = {20, 50, 100, 200}
+        allowed_per_page = {100, 200, 500, 1000}
         try:
-            per_page = int(per_page_raw or 50)
+            per_page = int(per_page_raw or 100)
         except Exception:
-            per_page = 50
+            per_page = 100
         if per_page not in allowed_per_page:
-            per_page = 50
+            per_page = 100
 
         paginator = Paginator(qs, per_page)
         page_obj = paginator.get_page(page)

@@ -21,6 +21,7 @@
 		}
 
 		const addModal = document.getElementById('addModal');
+		const editModal = document.getElementById('editModal');
 		const deleteModal = document.getElementById('deleteModal');
 
 		function openModal(el) {
@@ -33,18 +34,18 @@
 			el.classList.add('hidden');
 			el.classList.remove('flex');
 		}
+		function closeAllModals() {
+			closeModal(addModal);
+			closeModal(editModal);
+			closeModal(deleteModal);
+		}
 		document.querySelectorAll('[data-modal-close]').forEach(btn => {
-			btn.addEventListener('click', () => {
-				closeModal(addModal);
-				closeModal(deleteModal);
-			});
+			btn.addEventListener('click', closeAllModals);
 		});
 		document.querySelectorAll('[data-modal-backdrop]').forEach(bg => {
-			bg.addEventListener('click', () => {
-				closeModal(addModal);
-				closeModal(deleteModal);
-			});
+			bg.addEventListener('click', closeAllModals);
 		});
+		document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllModals(); });
 
 		// Bulk selection
 		const selectAll = document.getElementById('selectAllRows');
@@ -61,6 +62,20 @@
 		}
 		document.querySelectorAll('.rowCheckbox').forEach(cb => cb.addEventListener('change', updateBulkState));
 		updateBulkState();
+
+		// Row-click navigation -> edit page. Skips clicks on interactive controls.
+		document.querySelectorAll('tr[data-edit-url]').forEach(tr => {
+			tr.addEventListener('click', (e) => {
+				if (e.target.closest('a, button, input, label, select, textarea, [data-modal-close], [data-modal-backdrop]')) return;
+				const url = tr.dataset.editUrl;
+				if (!url) return;
+				if (e.ctrlKey || e.metaKey || e.button === 1) {
+					window.open(url, '_blank');
+				} else {
+					window.location.href = url;
+				}
+			});
+		});
 
 		bulkDeleteBtn.addEventListener('click', () => {
 			const ids = Array.from(document.querySelectorAll('.rowCheckbox')).filter(cb => cb.checked).map(cb => cb.dataset.id);
@@ -87,6 +102,26 @@
 			lineNameField.value = (document.getElementById('addLineName').value || '').trim();
 			descriptionField.value = (document.getElementById('addDescription').value || '').trim();
 			processTypeField.value = (document.getElementById('addProcessType').value || '').trim();
+			actionForm.submit();
+		});
+
+		// Edit
+		const editLabel = document.getElementById('editLabel');
+		document.querySelectorAll('[data-open-edit]').forEach(btn => {
+			btn.addEventListener('click', () => {
+				idField.value = btn.dataset.id || '';
+				document.getElementById('editLineName').value = btn.dataset.lineName || '';
+				document.getElementById('editDescription').value = btn.dataset.description || '';
+				document.getElementById('editProcessType').value = btn.dataset.processTypeId || '';
+				if (editLabel) editLabel.textContent = btn.dataset.label || '';
+				openModal(editModal);
+			});
+		});
+		document.getElementById('editSubmit').addEventListener('click', () => {
+			actionField.value = 'update';
+			lineNameField.value = (document.getElementById('editLineName').value || '').trim();
+			descriptionField.value = (document.getElementById('editDescription').value || '').trim();
+			processTypeField.value = (document.getElementById('editProcessType').value || '').trim();
 			actionForm.submit();
 		});
 

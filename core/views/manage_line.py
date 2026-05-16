@@ -6,7 +6,7 @@ import uuid
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect
@@ -83,14 +83,19 @@ def _parse_xlsx(uploaded_file):
 
 
 def download_manage_line_import_template(request):
-    """Download a template for importing production lines."""
-    headers = [
-        "line_name",
-        "process_type",
-        "description",
-    ]
+    """Download a 2-sheet template covering both Line records and ItemLine mappings.
 
-    # Use existing process names in sample rows (if available) to reduce confusion.
+    Sheet `lines`     : line_name | process_type | description
+    Sheet `item_lines`: sd_code   | line_name    | item_stage
+    """
+    if openpyxl is None:
+        return HttpResponse(
+            "XLSX format is not available (openpyxl is not installed).",
+            status=400,
+            content_type="text/plain; charset=utf-8",
+        )
+
+    # ----- Sample values pulled from existing master data -----
     process_samples: list[str] = []
     for p in LineProcess.objects.order_by("display_name", "name")[:2]:
         label = (getattr(p, "display_name", "") or getattr(p, "name", "") or "").strip()
@@ -99,26 +104,41 @@ def download_manage_line_import_template(request):
     while len(process_samples) < 2:
         process_samples.append(f"PROCESS-{chr(ord('A') + len(process_samples))}")
 
-    rows = [
-        ["LINE-01", process_samples[0], "Main line"],
-        ["LINE-02", process_samples[1], ""],
-    ]
-
-    if openpyxl is None:
-        return HttpResponse(
-            "XLSX format is not available (openpyxl is not installed).",
-            status=400,
-            content_type="text/plain; charset=utf-8",
-        )
+    sample_sd = "SD-0001"
+    item = Item_list.objects.order_by("sd_code").first()
+    if item is not None and (item.sd_code or "").strip():
+        sample_sd = item.sd_code.strip()
+    sample_line = "LINE-01"
+    real_line = Line.objects.order_by("line_name").first()
+    if real_line is not None and (real_line.line_name or "").strip():
+        sample_line = real_line.line_name.strip()
+    sample_stage = "Semi finished goods"
+    stage = ItemStage.objects.order_by("display_name", "name").first()
+    if stage is not None:
+        sample_stage = (stage.display_name or stage.name or sample_stage).strip()
 
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "lines"
-    ws.append(headers)
-    for r in rows:
-        ws.append(r)
-    for col in range(1, len(headers) + 1):
-        ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
+
+    # Sheet 1: Production lines
+    ws_lines = wb.active
+    ws_lines.title = "lines"
+    line_headers = ["line_name", "process_type", "description"]
+    ws_lines.append(line_headers)
+    for row in (
+        ["LINE-01", process_samples[0], "Main line"],
+        ["LINE-02", process_samples[1], ""],
+    ):
+        ws_lines.append(row)
+    for col in range(1, len(line_headers) + 1):
+        ws_lines.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
+
+    # Sheet 2: ItemLine mappings
+    ws_il = wb.create_sheet(title="item_lines")
+    il_headers = ["sd_code", "line_name", "item_stage"]
+    ws_il.append(il_headers)
+    ws_il.append([sample_sd, sample_line, sample_stage])
+    for col in range(1, len(il_headers) + 1):
+        ws_il.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
 
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -126,6 +146,27 @@ def download_manage_line_import_template(request):
     response["Content-Disposition"] = 'attachment; filename="manage_line_import_template.xlsx"'
     wb.save(response)
     return response
+
+
+def _iter_sheet_rows(wb, sheet_name: str):
+    """Yield dict rows from a named sheet. Returns empty iter if sheet missing."""
+    if sheet_name not in wb.sheetnames:
+        return
+    ws = wb[sheet_name]
+    rows = ws.iter_rows(values_only=True)
+    try:
+        headers = next(rows)
+    except StopIteration:
+        return
+    keys = [_normalized_key(str(h) if h is not None else "") for h in headers]
+    for values in rows:
+        row: dict[str, object] = {}
+        for idx, value in enumerate(values):
+            k = keys[idx] if idx < len(keys) else ""
+            if not k:
+                continue
+            row[k] = value
+        yield row
 
 
 def _is_uuid(value: str) -> bool:
@@ -184,15 +225,15 @@ class ManageLineViews(TemplateView):
         per_page_raw = (request.GET.get("per_page") or "").strip()
         page = (request.GET.get("page") or "1").strip() or "1"
 
-        allowed_per_page = {20, 50, 100, 200}
+        allowed_per_page = {100, 200, 500, 1000}
         try:
-            per_page = int(per_page_raw or 20)
+            per_page = int(per_page_raw or 100)
         except Exception:
-            per_page = 20
+            per_page = 100
         if per_page not in allowed_per_page:
-            per_page = 20
+            per_page = 100
 
-        qs = Line.objects.select_related("line_process").all()
+        qs = Line.objects.select_related("line_process").annotate(item_count=Count("item_lines"))
         if q:
             qs = qs.filter(
                 Q(line_name__icontains=q)
@@ -215,6 +256,7 @@ class ManageLineViews(TemplateView):
                     "process_type_id": str(line.line_process_id) if line.line_process_id else "",
                     "process_type_name": getattr(line.line_process, "display_name", "")
                     or getattr(line.line_process, "name", ""),
+                    "item_count": getattr(line, "item_count", 0) or 0,
                 }
             )
 
@@ -243,98 +285,182 @@ class ManageLineViews(TemplateView):
         if action == "import_master_data":
             if openpyxl is None:
                 messages.error(request, "ไม่สามารถนำเข้า XLSX ได้: ยังไม่ได้ติดตั้ง openpyxl")
-                return self.get(request, *args, **kwargs)
+                return redirect(request.get_full_path())
             upload = request.FILES.get("excel_file")
             if upload is None:
                 messages.error(request, "กรุณาเลือกไฟล์ Excel (.xlsx)")
-                return self.get(request, *args, **kwargs)
+                return redirect(request.get_full_path())
             name = (getattr(upload, "name", "") or "").lower()
             if not name.endswith(".xlsx"):
                 messages.error(request, "รองรับเฉพาะไฟล์ .xlsx")
-                return self.get(request, *args, **kwargs)
+                return redirect(request.get_full_path())
 
-            created = 0
-            updated = 0
-            skipped = 0
-            process_not_found = 0
+            # Load workbook once; dispatch to whichever sheets exist.
+            try:
+                wb = openpyxl.load_workbook(upload, read_only=True, data_only=True)
+            except Exception as e:
+                messages.error(request, f"อ่านไฟล์ Excel ไม่สำเร็จ: {e}")
+                return redirect(request.get_full_path())
+
+            # Stats per sheet
+            ln_created = ln_updated = ln_skipped = ln_proc_nf = 0
+            il_created = il_updated = il_skipped = 0
+            il_item_nf = il_line_nf = il_stage_nf = 0
+            has_lines_sheet = "lines" in wb.sheetnames
+            has_item_lines_sheet = "item_lines" in wb.sheetnames
+            # Backward compat: if neither named sheet exists, treat the active sheet as `lines`.
+            use_active_as_lines = not has_lines_sheet and not has_item_lines_sheet
+
             try:
                 with transaction.atomic():
-                    for row in _parse_xlsx(upload):
-                        line_name = _row_get_first(row, "line_name", "line", "production_line")
-                        description = _row_get_first(row, "description", "desc")
-                        process_key = _row_get_first(
-                            row,
-                            "process_type",
-                            "process_type_name",
-                            "process",
-                            "process_name",
-                            "line_process",
+                    # ----- Sheet: lines -----
+                    if has_lines_sheet or use_active_as_lines:
+                        rows_iter = (
+                            _iter_sheet_rows(wb, "lines")
+                            if has_lines_sheet
+                            else _parse_xlsx(upload)
                         )
-
-                        if not line_name or not process_key:
-                            skipped += 1
-                            continue
-
-                        process = (
-                            LineProcess.objects.filter(display_name__iexact=process_key).first()
-                            or LineProcess.objects.filter(name__iexact=process_key).first()
-                        )
-                        if process is None:
-                            process_not_found += 1
-                            continue
-
-                        existing = Line.objects.filter(line_name__iexact=line_name).first()
-                        if existing is None:
-                            Line.objects.create(
-                                line_name=line_name,
-                                description=description,
-                                line_process=process,
-                                user=request.user,
+                        # _parse_xlsx re-opens the file; rewind upload stream
+                        if use_active_as_lines:
+                            try:
+                                upload.seek(0)
+                            except Exception:
+                                pass
+                            rows_iter = _parse_xlsx(upload)
+                        for row in rows_iter:
+                            line_name = _row_get_first(row, "line_name", "line", "production_line")
+                            description = _row_get_first(row, "description", "desc")
+                            process_key = _row_get_first(
+                                row,
+                                "process_type",
+                                "process_type_name",
+                                "process",
+                                "process_name",
+                                "line_process",
                             )
-                            created += 1
-                        else:
-                            existing.line_name = line_name
-                            existing.description = description
-                            existing.line_process = process
-                            existing.save(update_fields=["line_name", "description", "line_process", "updated_at"])
-                            updated += 1
+
+                            if not line_name or not process_key:
+                                ln_skipped += 1
+                                continue
+
+                            process = (
+                                LineProcess.objects.filter(display_name__iexact=process_key).first()
+                                or LineProcess.objects.filter(name__iexact=process_key).first()
+                            )
+                            if process is None:
+                                ln_proc_nf += 1
+                                continue
+
+                            existing = Line.objects.filter(line_name__iexact=line_name).first()
+                            if existing is None:
+                                Line.objects.create(
+                                    line_name=line_name,
+                                    description=description,
+                                    line_process=process,
+                                    user=request.user,
+                                )
+                                ln_created += 1
+                            else:
+                                existing.line_name = line_name
+                                existing.description = description
+                                existing.line_process = process
+                                existing.save(update_fields=["line_name", "description", "line_process", "updated_at"])
+                                ln_updated += 1
+
+                    # ----- Sheet: item_lines -----
+                    if has_item_lines_sheet:
+                        for row in _iter_sheet_rows(wb, "item_lines"):
+                            sd_code = _row_get_first(row, "sd_code", "sd")
+                            line_name = _row_get_first(row, "line_name", "line")
+                            stage_key = _row_get_first(row, "item_stage", "stage")
+                            if not sd_code or not line_name or not stage_key:
+                                il_skipped += 1
+                                continue
+
+                            item = Item_list.objects.filter(sd_code__iexact=sd_code).first()
+                            if item is None:
+                                il_item_nf += 1
+                                continue
+                            line_obj = Line.objects.filter(line_name__iexact=line_name).first()
+                            if line_obj is None:
+                                il_line_nf += 1
+                                continue
+                            stage_obj = (
+                                ItemStage.objects.filter(display_name__iexact=stage_key).first()
+                                or ItemStage.objects.filter(name__iexact=stage_key).first()
+                            )
+                            if stage_obj is None:
+                                il_stage_nf += 1
+                                continue
+
+                            existing_il = ItemLine.objects.filter(item=item, line=line_obj).first()
+                            if existing_il is None:
+                                ItemLine.objects.create(
+                                    item=item,
+                                    line=line_obj,
+                                    item_stage=stage_obj,
+                                    user=request.user,
+                                )
+                                il_created += 1
+                            else:
+                                existing_il.item_stage = stage_obj
+                                existing_il.save(update_fields=["item_stage", "updated_at"])
+                                il_updated += 1
             except Exception as e:
                 log_event(
                     request,
                     action="line:import_master_data",
                     status="failure",
-                    message="นำเข้า Line ไม่สำเร็จ",
+                    message="นำเข้า Line/ItemLine ไม่สำเร็จ",
                     metadata={"filename": getattr(upload, "name", ""), "error": str(e)},
                 )
                 messages.error(request, f"เกิดข้อผิดพลาดระหว่างนำเข้า: {e}")
-                return self.get(request, *args, **kwargs)
+                return redirect(request.get_full_path())
 
-            messages.success(
-                request,
-                f"นำเข้าสำเร็จ: +{created}, อัปเดต {updated}, ข้าม {skipped}, ไม่พบ Process {process_not_found}",
-            )
+            # Build a combined summary message
+            parts: list[str] = []
+            if has_lines_sheet or use_active_as_lines:
+                parts.append(
+                    f"Line: +{ln_created}, อัปเดต {ln_updated}, ข้าม {ln_skipped}, ไม่พบ Process {ln_proc_nf}"
+                )
+            if has_item_lines_sheet:
+                parts.append(
+                    f"ItemLine: +{il_created}, อัปเดต {il_updated}, ข้าม {il_skipped}, "
+                    f"ไม่พบ Item {il_item_nf}, ไม่พบ Line {il_line_nf}, ไม่พบ Stage {il_stage_nf}"
+                )
+            if not parts:
+                messages.warning(request, "ไม่พบ sheet ที่ชื่อ `lines` หรือ `item_lines` ในไฟล์")
+            else:
+                messages.success(request, "นำเข้าสำเร็จ — " + " | ".join(parts))
+
             transaction.on_commit(
                 lambda: log_event(
                     request,
                     action="line:import_master_data",
-                    message="นำเข้า Line สำเร็จ",
+                    message="นำเข้า Line/ItemLine สำเร็จ",
                     metadata={
                         "filename": getattr(upload, "name", ""),
-                        "created": created,
-                        "updated": updated,
-                        "skipped": skipped,
-                        "process_not_found": process_not_found,
+                        "line_created": ln_created,
+                        "line_updated": ln_updated,
+                        "line_skipped": ln_skipped,
+                        "line_process_not_found": ln_proc_nf,
+                        "il_created": il_created,
+                        "il_updated": il_updated,
+                        "il_skipped": il_skipped,
+                        "il_item_not_found": il_item_nf,
+                        "il_line_not_found": il_line_nf,
+                        "il_stage_not_found": il_stage_nf,
                     },
                 )
             )
-            return self.get(request, *args, **kwargs)
+            return redirect(request.get_full_path())
 
         if action == "bulk_delete_lines":
             bulk_ids = request.POST.getlist("bulk_id")
             ids = [pk for pk in bulk_ids if _is_uuid((pk or "").strip())]
             if not ids:
                 messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
-                return self.get(request)
+                return redirect(request.get_full_path())
 
             deleted = 0
             blocked = 0
@@ -360,7 +486,7 @@ class ManageLineViews(TemplateView):
                     metadata={"selected": len(ids), "error": str(e)},
                 )
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-                return self.get(request)
+                return redirect(request.get_full_path())
 
             transaction.on_commit(
                 lambda: log_event(
@@ -383,23 +509,23 @@ class ManageLineViews(TemplateView):
                 )
             else:
                 messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
-            return self.get(request)
+            return redirect(request.get_full_path())
 
         if action in {"update", "delete"}:
             if not _is_uuid(obj_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request)
+                return redirect(request.get_full_path())
 
         if action == "delete":
             obj = Line.objects.filter(pk=obj_id).first()
             if obj is None:
                 messages.error(request, "ไม่พบรายการ")
-                return self.get(request)
+                return redirect(request.get_full_path())
             try:
                 obj.delete()
             except ProtectedError:
                 messages.error(request, "ไม่สามารถลบได้: รายการนี้ถูกใช้งานอยู่")
-                return self.get(request)
+                return redirect(request.get_full_path())
 
             transaction.on_commit(
                 lambda: log_event(
@@ -410,7 +536,7 @@ class ManageLineViews(TemplateView):
                 )
             )
             messages.success(request, "ลบรายการสำเร็จ")
-            return self.get(request)
+            return redirect(request.get_full_path())
 
         line_name = (request.POST.get("line_name") or "").strip()
         description = (request.POST.get("description") or "").strip()
@@ -418,21 +544,21 @@ class ManageLineViews(TemplateView):
 
         if not line_name:
             messages.error(request, "กรุณาระบุ Production line")
-            return self.get(request)
+            return redirect(request.get_full_path())
         if not _is_uuid(process_type_id):
             messages.error(request, "กรุณาเลือก Process type")
-            return self.get(request)
+            return redirect(request.get_full_path())
 
         process = LineProcess.objects.filter(pk=process_type_id).first()
         if process is None:
             messages.error(request, "ไม่พบ Process type")
-            return self.get(request)
+            return redirect(request.get_full_path())
 
         if action == "update":
             obj = Line.objects.filter(pk=obj_id).first()
             if obj is None:
                 messages.error(request, "ไม่พบรายการ")
-                return self.get(request)
+                return redirect(request.get_full_path())
             obj.line_name = line_name
             obj.description = description
             obj.line_process = process
@@ -447,7 +573,7 @@ class ManageLineViews(TemplateView):
                 )
             )
             messages.success(request, "แก้ไขรายการสำเร็จ")
-            return self.get(request)
+            return redirect(request.get_full_path())
 
         # Default: create
         try:
@@ -466,7 +592,7 @@ class ManageLineViews(TemplateView):
                 metadata={"error": str(e)},
             )
             messages.error(request, f"เพิ่มข้อมูลไม่สำเร็จ: {e}")
-            return self.get(request)
+            return redirect(request.get_full_path())
 
         transaction.on_commit(
             lambda: log_event(
@@ -477,7 +603,7 @@ class ManageLineViews(TemplateView):
             )
         )
         messages.success(request, "เพิ่มข้อมูลสำเร็จ")
-        return self.get(request)
+        return redirect(request.get_full_path())
 
 
 @method_decorator(staff_required, name="dispatch")
@@ -677,7 +803,7 @@ class ManageLineEditViews(TemplateView):
             return redirect("manage_line_edit", id=line.id)
 
         messages.error(request, "ไม่รองรับการทำงานนี้")
-        return self.get(request, *args, **kwargs)
+        return redirect(request.get_full_path())
 
 
 @method_decorator(staff_required, name="dispatch")

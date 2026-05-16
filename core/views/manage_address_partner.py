@@ -11,6 +11,7 @@ from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.auth.decorators import staff_required
 from core.models.businesspartner import Address, BusinessPartner
@@ -192,13 +193,13 @@ class ManageAddressPartnerViews(TemplateView):
 		per_page_raw = (request.GET.get("per_page") or "").strip()
 		page = (request.GET.get("page") or "1").strip() or "1"
 
-		allowed_per_page = {20, 50, 100, 200}
+		allowed_per_page = {100, 200, 500, 1000}
 		try:
-			per_page = int(per_page_raw or 20)
+			per_page = int(per_page_raw or 100)
 		except Exception:
-			per_page = 20
+			per_page = 100
 		if per_page not in allowed_per_page:
-			per_page = 20
+			per_page = 100
 
 		qs = Address.objects.select_related("partner").all()
 		if q:
@@ -257,15 +258,15 @@ class ManageAddressPartnerViews(TemplateView):
 		if action == "import_master_data":
 			if openpyxl is None:
 				messages.error(request, "ไม่สามารถนำเข้า XLSX ได้: ยังไม่ได้ติดตั้ง openpyxl")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			upload = request.FILES.get("excel_file")
 			if upload is None:
 				messages.error(request, "กรุณาเลือกไฟล์ Excel (.xlsx)")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			filename = (getattr(upload, "name", "") or "").lower()
 			if not filename.endswith(".xlsx"):
 				messages.error(request, "รองรับเฉพาะไฟล์ .xlsx")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			created = updated = skipped = 0
 			try:
 				with transaction.atomic():
@@ -353,17 +354,16 @@ class ManageAddressPartnerViews(TemplateView):
 			except Exception as e:
 				log_event(request, action="address:import", status="failure", message="นำเข้า Address Partner ไม่สำเร็จ", metadata={"error": str(e)})
 				messages.error(request, f"เกิดข้อผิดพลาดระหว่างนำเข้า: {e}")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			log_event(request, action="address:import", message="นำเข้า Address Partner", metadata={"created": created, "updated": updated, "skipped": skipped})
 			messages.success(request, f"นำเข้าสำเร็จ: +{created}, อัปเดต {updated}, ข้าม {skipped}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "bulk_delete":
 			bulk_ids = request.POST.getlist("bulk_id")
 			ids = [x for x in [b.strip() for b in bulk_ids] if _is_uuid(x)]
 			if not ids:
 				messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			deleted = blocked = 0
 			try:
 				with transaction.atomic():
@@ -378,17 +378,16 @@ class ManageAddressPartnerViews(TemplateView):
 							blocked += 1
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if blocked:
 				messages.warning(request, f"ลบสำเร็จ {deleted} รายการ, ลบไม่ได้ {blocked} รายการ")
 			else:
 				messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "create":
 			if not _is_uuid(partner_id) or not address_line1 or not province or not postal_code:
 				messages.error(request, "กรุณากรอกข้อมูลที่จำเป็นให้ครบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					partner = BusinessPartner.objects.get(pk=partner_id)
@@ -407,15 +406,14 @@ class ManageAddressPartnerViews(TemplateView):
 					transaction.on_commit(lambda: log_event(request, action="address:create", message="เพิ่ม Address", metadata={"id": str(obj.pk)}))
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "update":
 			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if not address_line1 or not province or not postal_code:
 				messages.error(request, "กรุณากรอกข้อมูลที่จำเป็นให้ครบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					obj = Address.objects.get(pk=obj_id)
@@ -444,12 +442,11 @@ class ManageAddressPartnerViews(TemplateView):
 						messages.info(request, "ไม่มีการเปลี่ยนแปลง")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "delete":
 			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					obj = Address.objects.get(pk=obj_id)
@@ -459,7 +456,6 @@ class ManageAddressPartnerViews(TemplateView):
 				messages.error(request, "ลบไม่ได้ มีข้อมูลอ้างอิงอยู่")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		messages.error(request, "ไม่รู้จัก action")
-		return self.get(request, *args, **kwargs)
+		return redirect(request.get_full_path())

@@ -29,7 +29,7 @@
 				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Line / Description / Process"
 					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
-			<input type="hidden" name="per_page" value="{{ per_page|default:20 }}" />
+			<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
 			<div class="md:col-span-2 flex items-end">
 				<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
 					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
@@ -87,10 +87,10 @@
 						<div class="flex items-center gap-2">
 							<span class="text-sm text-gray-700">Show</span>
 							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
-								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
 								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
 								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+								<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+								<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
 							</select>
 							<span class="text-sm text-gray-700">entries</span>
 						</div>
@@ -109,24 +109,36 @@
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Process type</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จำนวนผลิตภัณฑ์</th>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200">
 					{% for r in rows %}
-						<tr class="hover:bg-slate-50">
+						<tr class="hover:bg-slate-50 cursor-pointer" data-edit-url="{% url 'manage_line_edit' r.id %}">
 							<td class="px-4 py-3">
 								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" />
 							</td>
 							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.line_name|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.process_type_name|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700">{{ r.description|default:"-" }}</td>
+							<td class="px-4 py-3 text-center">
+								<span class="inline-flex items-center justify-center min-w-[2.5rem] px-2.5 py-0.5 rounded-full text-xs font-semibold {% if r.item_count %}bg-indigo-100 text-indigo-800{% else %}bg-slate-100 text-slate-500{% endif %}">
+									{{ r.item_count|default:0 }}
+								</span>
+							</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-center gap-2">
-									<a href="{% url 'manage_line_edit' r.id %}"
-										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap">
-										อัปเดต
-									</a>
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap"
+										data-open-edit
+										data-id="{{ r.id }}"
+										data-line-name="{{ r.line_name|default:'' }}"
+										data-description="{{ r.description|default:'' }}"
+										data-process-type-id="{{ r.process_type_id|default:'' }}"
+										data-label="{{ r.line_name|default:'' }}">
+										แก้ไข
+									</button>
 									<button type="button"
 										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
 										data-open-delete
@@ -138,7 +150,7 @@
 							</td>
 						</tr>
 					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="5">ยังไม่มีข้อมูล Production line</td></tr>
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="6">ยังไม่มีข้อมูล Production line</td></tr>
 					{% endfor %}
 				</tbody>
 			</table>
@@ -253,6 +265,41 @@
 		<div class="mt-5 flex items-center justify-end gap-2">
 			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
 			<button id="addSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+		</div>
+	</div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Production line</h2>
+		<p class="text-xs text-slate-600 mt-1" id="editLabel"></p>
+		<div class="mt-4 space-y-4">
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Production line</label>
+				<input id="editLineName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Process type</label>
+				<select id="editProcessType" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">เลือก Process</option>
+					{% for p in processes %}
+						<option value="{{ p.id }}">{{ p.display_name|default:p.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Description</label>
+				<input id="editDescription" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
 		</div>
 	</div>
 </div>

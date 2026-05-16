@@ -73,7 +73,7 @@ class InspectionResultView(TemplateView):
         q = (request.GET.get("q") or "").strip()
         page = request.GET.get("page", 1)
 
-        per_page = 20
+        per_page = 100
 
         qs = (
             InspectionResult.objects

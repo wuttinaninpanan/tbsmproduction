@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.models.inspection.inspection_model_defect import InspectionModelsDefect
 from core.models.inspection.inspection_model import InspectionModels
@@ -64,13 +65,13 @@ class InspectionModelsDefectView(TemplateView):
         per_page_raw = (request.GET.get("per_page") or "").strip()
         page = (request.GET.get("page") or "1").strip() or "1"
 
-        allowed_per_page = {20, 50, 100, 200}
+        allowed_per_page = {100, 200, 500, 1000}
         try:
-            per_page = int(per_page_raw or 20)
+            per_page = int(per_page_raw or 100)
         except Exception:
-            per_page = 20
+            per_page = 100
         if per_page not in allowed_per_page:
-            per_page = 20
+            per_page = 100
 
         qs = InspectionModelsDefect.objects.select_related(
             "inspection_model_id",
@@ -137,8 +138,7 @@ class InspectionModelsDefectView(TemplateView):
 
             if not class_name:
                 messages.error(request, "กรุณากรอก Class Name")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
 
                 with transaction.atomic():
@@ -157,14 +157,12 @@ class InspectionModelsDefectView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         if action == "update":
 
             if not _is_uuid(obj_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
 
                 with transaction.atomic():
@@ -185,14 +183,12 @@ class InspectionModelsDefectView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         if action == "delete":
 
             if not _is_uuid(obj_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
 
                 with transaction.atomic():
@@ -208,8 +204,7 @@ class InspectionModelsDefectView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         messages.error(request, "ไม่รู้จัก action")
 
-        return self.get(request, *args, **kwargs)
+        return redirect(request.get_full_path())

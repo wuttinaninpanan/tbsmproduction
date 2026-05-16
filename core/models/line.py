@@ -4,7 +4,7 @@ from .line_process import LineProcess
 from django.conf import settings
 
 class Line(BaseModel):
-    line_name = models.CharField(max_length=255)
+    line_name = models.CharField(max_length=255, unique=True)
     description = models.CharField(max_length=255, blank=True)
     
     line_process = models.ForeignKey(

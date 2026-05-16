@@ -3,7 +3,7 @@ from core.models.base import BaseModel
 from django.conf import settings
 
 class ItemCategory(BaseModel):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, unique=True)
     description = models.CharField(max_length=255)
 
     user = models.ForeignKey(

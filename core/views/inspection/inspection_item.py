@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.models.bill_of_material_item_master import BillOfMaterialItemMater
 from core.models.inspection.inspection_item import InspectionItem
@@ -64,13 +65,13 @@ class InspectionItemView(TemplateView):
         per_page_raw = (request.GET.get("per_page") or "").strip()
         page = (request.GET.get("page") or "1").strip() or "1"
 
-        allowed_per_page = {20, 50, 100, 200}
+        allowed_per_page = {100, 200, 500, 1000}
         try:
-            per_page = int(per_page_raw or 20)
+            per_page = int(per_page_raw or 100)
         except Exception:
-            per_page = 20
+            per_page = 100
         if per_page not in allowed_per_page:
-            per_page = 20
+            per_page = 100
 
         qs = InspectionItem.objects.select_related(
             "bill_of_material_item_master__component",
@@ -181,8 +182,7 @@ class InspectionItemView(TemplateView):
 
             if not ids:
                 messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             deleted = blocked = 0
 
             try:
@@ -198,33 +198,27 @@ class InspectionItemView(TemplateView):
                             blocked += 1
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if blocked:
                 messages.warning(request, f"ลบสำเร็จ {deleted} รายการ, ลบไม่ได้ {blocked} รายการ (มีข้อมูลอ้างอิง)")
             else:
                 messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         # ================= CREATE =================
         if action == "create":
             if not name:
                 messages.error(request, "กรุณากรอก Name")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not _is_uuid(bom_item_id):
                 messages.error(request, "กรุณาเลือก BOM Item Master")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not class_name_bom:
                 messages.error(request, "กรุณากรอก Class Name BOM")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not _is_uuid(insp_model_id):
                 messages.error(request, "กรุณาเลือก Inspection Model")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
                 bom_obj = BillOfMaterialItemMater.objects.get(pk=bom_item_id)
                 insp_obj = InspectionModels.objects.get(pk=insp_model_id)
@@ -244,30 +238,24 @@ class InspectionItemView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         # ================= UPDATE =================
         if action == "update":
             if not _is_uuid(obj_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not name:
                 messages.error(request, "กรุณากรอก Name")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not _is_uuid(bom_item_id):
                 messages.error(request, "กรุณาเลือก BOM Item Master")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not class_name_bom:
                 messages.error(request, "กรุณากรอก Class Name BOM")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not _is_uuid(insp_model_id):
                 messages.error(request, "กรุณาเลือก Inspection Model")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
                 obj = InspectionItem.objects.get(pk=obj_id)
                 bom_obj = BillOfMaterialItemMater.objects.get(pk=bom_item_id)
@@ -296,14 +284,12 @@ class InspectionItemView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         # ================= DELETE =================
         if action == "delete":
             if not _is_uuid(obj_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             try:
                 with transaction.atomic():
                     obj = InspectionItem.objects.get(pk=obj_id)
@@ -316,7 +302,6 @@ class InspectionItemView(TemplateView):
             except Exception as e:
                 messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         messages.error(request, "ไม่รู้จัก action")
-        return self.get(request, *args, **kwargs)
+        return redirect(request.get_full_path())

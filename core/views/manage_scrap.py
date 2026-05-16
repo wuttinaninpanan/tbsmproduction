@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.auth.decorators import staff_required
 from core.models.bill_of_material import BillOfMaterial
@@ -112,13 +113,13 @@ class ManageScrapViews(TemplateView):
                 | Q(created_by__profile__shift__icontains=q)
             )
 
-        allowed_per_page = {20, 50, 100, 200}
+        allowed_per_page = {100, 200, 500, 1000}
         try:
-            per_page = int(per_page_raw or 20)
+            per_page = int(per_page_raw or 100)
         except Exception:
-            per_page = 20
+            per_page = 100
         if per_page not in allowed_per_page:
-            per_page = 20
+            per_page = 100
 
         qs = qs.order_by("-created_at")
         paginator = Paginator(qs, per_page)
@@ -148,8 +149,7 @@ class ManageScrapViews(TemplateView):
             ids = [rid for rid in raw_ids if _is_uuid((rid or "").strip())]
             if not ids:
                 messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             with transaction.atomic():
                 deleted, _ = ScrapRecord.objects.filter(pk__in=ids).delete()
 
@@ -162,13 +162,11 @@ class ManageScrapViews(TemplateView):
                     metadata={"selected": len(ids), "deleted": deleted, "ids": ids[:50]},
                 )
             )
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         if action in {"delete", "update"}:
             if not _is_uuid(rec_id):
                 messages.error(request, "ไม่พบรหัสรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
         if action == "delete":
             obj = (
                 ScrapRecord.objects.select_related(
@@ -204,8 +202,7 @@ class ManageScrapViews(TemplateView):
                 )
             else:
                 messages.error(request, "ไม่พบรายการ")
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         if action == "update":
             line_code = (request.POST.get("line_code") or "").strip()
             part_ref = (request.POST.get("part_number") or "").strip()
@@ -223,17 +220,14 @@ class ManageScrapViews(TemplateView):
 
             if quantity is None or quantity < 1:
                 messages.error(request, "กรุณาระบุ Quantity เป็นตัวเลข (>= 1)")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if not line_code or not part_ref or not _is_uuid(defect_id) or not _is_uuid(component_part_id):
                 messages.error(request, "กรุณาเลือก Line / SD number / Defect / Part name ให้ครบ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             rec = ScrapRecord.objects.filter(pk=rec_id).first()
             if rec is None:
                 messages.error(request, "ไม่พบรายการ")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             old_snapshot = {
                 "line_id": str(rec.production_line_id),
                 "part_id": str(rec.part_number_id),
@@ -246,8 +240,7 @@ class ManageScrapViews(TemplateView):
             line = Line.objects.filter(line_name__iexact=line_code).first()
             if line is None:
                 messages.error(request, "ไม่พบ Production line")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if _is_uuid(part_ref):
                 part = (
                     Item_list.objects.filter(pk=part_ref)
@@ -265,18 +258,15 @@ class ManageScrapViews(TemplateView):
                 )
             if part is None:
                 messages.error(request, "ไม่พบ SD number ใน Production line ที่เลือก")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             defect = DefectMode.objects.filter(pk=defect_id).first()
             if defect is None:
                 messages.error(request, "ไม่พบ Defect mode")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             component_part = Item_list.objects.filter(pk=component_part_id).first()
             if component_part is None:
                 messages.error(request, "ไม่พบ Component Part")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             with transaction.atomic():
                 updated_fields: list[str] = []
                 if str(rec.production_line_id) != str(line.id):
@@ -339,10 +329,8 @@ class ManageScrapViews(TemplateView):
                 else:
                     messages.info(request, "ไม่มีการเปลี่ยนแปลง")
 
-            return self.get(request, *args, **kwargs)
-
-        return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
+        return redirect(request.get_full_path())
     def _build_record_data_payload(self) -> dict:
         lines = list(Line.objects.all().order_by("line_name"))
         line_names = [l.code for l in lines]
@@ -455,8 +443,7 @@ class ManageScrapViews(TemplateView):
             from openpyxl.styles import Font, PatternFill
         except Exception:
             messages.error(request, "ไม่สามารถ export Excel ได้เนื่องจากไม่มี openpyxl")
-            return self.get(request)
-
+            return redirect(request.get_full_path())
         q = (request.GET.get("q") or "").strip()
         date_from_raw = (request.GET.get("date_from") or "").strip()
         date_to_raw = (request.GET.get("date_to") or "").strip()

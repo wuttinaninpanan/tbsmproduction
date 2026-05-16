@@ -114,10 +114,10 @@
 						<div class="flex items-center gap-2">
 							<span class="text-sm text-gray-700">Show</span>
 							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
-								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
 								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
 								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+								<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+								<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
 							</select>
 							<span class="text-sm text-gray-700">entries</span>
 						</div>

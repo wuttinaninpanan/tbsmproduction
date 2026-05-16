@@ -30,7 +30,7 @@
 				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย SDPN / M2M / Part No. / Part Name"
 					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
-			<input type="hidden" name="per_page" value="{{ per_page|default:50 }}" />
+			<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
 			<div class="md:col-span-2 flex items-end">
 				<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
 					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
@@ -77,10 +77,10 @@
 						<div class="flex items-center gap-2">
 							<span class="text-sm text-gray-700">Show</span>
 							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
-								<option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
-								<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
 								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
 								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+								<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+								<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
 							</select>
 							<span class="text-sm text-gray-700">entries</span>
 						</div>
@@ -104,92 +104,43 @@
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Category</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Stage</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Line</th>
-						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Action</th>
 					</tr>
 				</thead>
 				<tbody>
 					{% regroup rows by fg_item_id as fg_groups %}
 					{% for group in fg_groups %}
 						{% with first=group.list|first %}
-							<tr class="hover:bg-slate-50">
+							<tr class="hover:bg-slate-50 {% if first.fg_item_id %}cursor-pointer{% endif %} bg-pink-50/40" {% if first.fg_item_id %}data-detail-url="/products/{{ first.fg_item_id }}/"{% endif %}>
 								{% for n in level_range %}
 									<td class="px-2 py-2 text-center border border-slate-200 text-slate-700 whitespace-nowrap">
 										{% if n == 0 %}0{% endif %}
 									</td>
 								{% endfor %}
-								<td class="px-3 py-2 border border-slate-200 font-mono font-semibold text-slate-900 whitespace-nowrap" data-row-cell="item_code">{{ first.fg_item_code|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 font-mono font-semibold text-slate-900 whitespace-nowrap">{{ first.fg_item_code|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">-</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ first.fg_sd_code|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ first.fg_part_number|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ first.fg_part_name|default:"-" }}</td>
-								<td class="px-2 py-1 border border-slate-200" data-row-cell="category">
-									<select class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" data-field="category_id">
-										<option value="">(ไม่ระบุ)</option>
-										{% for c in categories %}
-											<option value="{{ c.id }}" {% if first.fg_category_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
-										{% endfor %}
-									</select>
-								</td>
-								<td class="px-2 py-1 border border-slate-200" data-row-cell="stage">
-									<select class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" data-field="stage_id">
-										<option value="">(ไม่ระบุ)</option>
-										{% for s in stages %}
-											<option value="{{ s.id }}" {% if first.fg_stage_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.display_name }}{% if s.code_prefix %} — {{ s.code_prefix }}{% endif %}</option>
-										{% endfor %}
-									</select>
-								</td>
-								<td class="px-2 py-1 border border-slate-200" data-row-cell="line">
-									<select class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" data-field="line_id">
-										<option value="">(ไม่ระบุ)</option>
-										{% for l in lines %}
-											<option value="{{ l.id }}" {% if first.fg_line_id == l.id|stringformat:"s" %}selected{% endif %}>{{ l.line_name }}</option>
-										{% endfor %}
-									</select>
-								</td>
-								<td class="px-3 py-2 border border-slate-200 text-center whitespace-nowrap">
-									<button type="button" class="inline-flex items-center px-3 py-1 rounded-md font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition text-xs" data-save-row data-item-id="{{ first.fg_item_id }}">Save</button>
-								</td>
+								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_category_name|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_stage_name|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_line_name|default:"-" }}</td>
 							</tr>
 						{% endwith %}
 						{% for r in group.list %}
-							<tr class="hover:bg-slate-50">
+							<tr class="hover:bg-slate-50 {% if r.item_id %}cursor-pointer{% endif %}" {% if r.item_id %}data-detail-url="/products/{{ r.item_id }}/"{% endif %}>
 								{% for n in level_range %}
 									<td class="px-2 py-2 text-center border border-slate-200 text-slate-700 whitespace-nowrap">
 										{% if r.level == n %}{{ n }}{% endif %}
 									</td>
 								{% endfor %}
-								<td class="px-3 py-2 border border-slate-200 font-mono font-semibold text-slate-900 whitespace-nowrap" data-row-cell="item_code">{{ r.item_code|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 font-mono font-semibold text-slate-900 whitespace-nowrap">{{ r.item_code|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ r.m2m|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ r.part_name|default:"-" }}</td>
-								<td class="px-2 py-1 border border-slate-200" data-row-cell="category">
-									<select class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" data-field="category_id">
-										<option value="">(ไม่ระบุ)</option>
-										{% for c in categories %}
-											<option value="{{ c.id }}" {% if r.category_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
-										{% endfor %}
-									</select>
-								</td>
-								<td class="px-2 py-1 border border-slate-200" data-row-cell="stage">
-									<select class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" data-field="stage_id">
-										<option value="">(ไม่ระบุ)</option>
-										{% for s in stages %}
-											<option value="{{ s.id }}" {% if r.stage_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.display_name }}{% if s.code_prefix %} — {{ s.code_prefix }}{% endif %}</option>
-										{% endfor %}
-									</select>
-								</td>
-								<td class="px-2 py-1 border border-slate-200" data-row-cell="line">
-									<select class="w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" data-field="line_id">
-										<option value="">(ไม่ระบุ)</option>
-										{% for l in lines %}
-											<option value="{{ l.id }}" {% if r.line_id == l.id|stringformat:"s" %}selected{% endif %}>{{ l.line_name }}</option>
-										{% endfor %}
-									</select>
-								</td>
-								<td class="px-3 py-2 border border-slate-200 text-center whitespace-nowrap">
-									<button type="button" class="inline-flex items-center px-3 py-1 rounded-md font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition text-xs" data-save-row data-item-id="{{ r.item_id }}">Save</button>
-								</td>
+								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.category_name|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.stage_name|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.line_name|default:"-" }}</td>
 							</tr>
 						{% endfor %}
 					{% empty %}
@@ -269,5 +220,5 @@
 <form id="bomTemplateCsrf" class="hidden">{% csrf_token %}</form>
 
 {% load static %}
-<script src="{% static 'js/bom_template.js' %}" defer></script>
+<script src="{% static 'js/bom_template.js' %}?v=2" defer></script>
 {% endblock %}

@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
+from django.shortcuts import redirect
 
 from core.auth.decorators import user_required
 from core.services.auditlog import log_event
@@ -33,8 +34,7 @@ class ProfileViews(TemplateView):
                 metadata={"user_id": user.pk, "username": user.username},
             )
             messages.success(request, "อัปเดตโปรไฟล์สำเร็จ")
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         if action == "change_password":
             current_password = request.POST.get("current_password") or ""
             new_password = (request.POST.get("new_password") or "").strip()
@@ -44,16 +44,13 @@ class ProfileViews(TemplateView):
 
             if not user.check_password(current_password):
                 messages.error(request, "รหัสผ่านปัจจุบันไม่ถูกต้อง")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if len(new_password) < 8:
                 messages.error(request, "รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             if new_password != confirm_password:
                 messages.error(request, "รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน")
-                return self.get(request, *args, **kwargs)
-
+                return redirect(request.get_full_path())
             user.set_password(new_password)
             user.save()
             update_session_auth_hash(request, user)
@@ -66,7 +63,6 @@ class ProfileViews(TemplateView):
                 metadata={"user_id": user.pk, "username": user.username},
             )
             messages.success(request, "เปลี่ยนรหัสผ่านสำเร็จ")
-            return self.get(request, *args, **kwargs)
-
+            return redirect(request.get_full_path())
         messages.error(request, "คำสั่งไม่ถูกต้อง")
-        return self.get(request, *args, **kwargs)
+        return redirect(request.get_full_path())

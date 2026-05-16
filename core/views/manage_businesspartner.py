@@ -11,6 +11,7 @@ from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.auth.decorators import staff_required
 from core.models.businesspartner import BusinessPartner
@@ -156,13 +157,13 @@ class ManageBusinessPartnerViews(TemplateView):
 		per_page_raw = (request.GET.get("per_page") or "").strip()
 		page = (request.GET.get("page") or "1").strip() or "1"
 
-		allowed_per_page = {20, 50, 100, 200}
+		allowed_per_page = {100, 200, 500, 1000}
 		try:
-			per_page = int(per_page_raw or 20)
+			per_page = int(per_page_raw or 100)
 		except Exception:
-			per_page = 20
+			per_page = 100
 		if per_page not in allowed_per_page:
-			per_page = 20
+			per_page = 100
 
 		qs = BusinessPartner.objects.all()
 		if q:
@@ -200,15 +201,15 @@ class ManageBusinessPartnerViews(TemplateView):
 		if action == "import_master_data":
 			if openpyxl is None:
 				messages.error(request, "ไม่สามารถนำเข้า XLSX ได้: ยังไม่ได้ติดตั้ง openpyxl")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			upload = request.FILES.get("excel_file")
 			if upload is None:
 				messages.error(request, "กรุณาเลือกไฟล์ Excel (.xlsx)")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			filename = (getattr(upload, "name", "") or "").lower()
 			if not filename.endswith(".xlsx"):
 				messages.error(request, "รองรับเฉพาะไฟล์ .xlsx")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			created = updated = skipped = 0
 			try:
 				with transaction.atomic():
@@ -231,16 +232,15 @@ class ManageBusinessPartnerViews(TemplateView):
 			except Exception as e:
 				log_event(request, action="businesspartner:import", status="failure", message="นำเข้า Business Partner ไม่สำเร็จ", metadata={"error": str(e)})
 				messages.error(request, f"เกิดข้อผิดพลาดระหว่างนำเข้า: {e}")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			messages.success(request, f"นำเข้าสำเร็จ: +{created}, อัปเดต {updated}, ข้าม {skipped}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "bulk_delete":
 			bulk_ids = request.POST.getlist("bulk_id")
 			ids = [x for x in [b.strip() for b in bulk_ids] if _is_uuid(x)]
 			if not ids:
 				messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			deleted = blocked = 0
 			try:
 				with transaction.atomic():
@@ -255,17 +255,16 @@ class ManageBusinessPartnerViews(TemplateView):
 							blocked += 1
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if blocked:
 				messages.warning(request, f"ลบสำเร็จ {deleted} รายการ, ลบไม่ได้ {blocked} รายการ (มีข้อมูลอ้างอิง)")
 			else:
 				messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "create":
 			if not code or not name:
 				messages.error(request, "กรุณากรอก Code และ Name")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					obj = BusinessPartner.objects.create(code=code, name=name, tax_id=tax_id)
@@ -273,15 +272,14 @@ class ManageBusinessPartnerViews(TemplateView):
 					transaction.on_commit(lambda: log_event(request, action="businesspartner:create", message="เพิ่ม Business Partner", metadata={"id": str(obj.pk), "code": code, "name": name}))
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "update":
 			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if not code or not name:
 				messages.error(request, "กรุณากรอก Code และ Name")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					obj = BusinessPartner.objects.get(pk=obj_id)
@@ -303,12 +301,11 @@ class ManageBusinessPartnerViews(TemplateView):
 						messages.info(request, "ไม่มีการเปลี่ยนแปลง")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "delete":
 			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					obj = BusinessPartner.objects.get(pk=obj_id)
@@ -318,7 +315,6 @@ class ManageBusinessPartnerViews(TemplateView):
 				messages.error(request, "ลบไม่ได้ มีข้อมูลอ้างอิงอยู่")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		messages.error(request, "ไม่รู้จัก action")
-		return self.get(request, *args, **kwargs)
+		return redirect(request.get_full_path())

@@ -42,11 +42,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 @method_decorator(staff_required, name="dispatch")
 class ProductsView(TemplateView):
-	"""Read-only listing of FG (Finished Goods) items.
-
-	'FG' is determined by the item's stage having code_prefix 'G'
-	(i.e. Finished goods, Finish goods, Delivery — anything in the G series).
-	"""
+	"""Read-only listing of items that have at least one ItemLine assignment."""
 	template_name = "products.html"
 
 	def get_context_data(self, **kwargs):
@@ -57,17 +53,17 @@ class ProductsView(TemplateView):
 		per_page_raw = (request.GET.get("per_page") or "").strip()
 		page = (request.GET.get("page") or "1").strip() or "1"
 
-		allowed_per_page = {20, 50, 100, 200}
+		allowed_per_page = {100, 200, 500, 1000}
 		try:
-			per_page = int(per_page_raw or 20)
+			per_page = int(per_page_raw or 100)
 		except Exception:
-			per_page = 20
+			per_page = 100
 		if per_page not in allowed_per_page:
-			per_page = 20
+			per_page = 100
 
 		qs = (
 			Item_list.objects
-			.filter(stage__code_prefix__iexact="G")
+			.filter(id__in=ItemLine.objects.values("item_id"))
 			.select_related("category", "stage", "portion", "side", "inout", "way")
 			.order_by("item_code", "sd_code")
 		)

@@ -30,7 +30,7 @@ class AuditLogMiddleware:
         "record": "เปิดหน้า Record",
         "settings": "เปิดหน้า Settings",
         "manage_component_part": "เปิดหน้า Manage Component Part",
-        "manage_defectmode": "เปิดหน้า Manage Defect Mode",
+        "manage_settings": "เปิดหน้าตั้งค่าทั่วไป",
         "manage_production": "เปิดหน้า Manage Production",
         "manage_user": "เปิดหน้า Manage User",
         "report_component_part_monthly": "เปิดหน้า Monthly Component Part Report",

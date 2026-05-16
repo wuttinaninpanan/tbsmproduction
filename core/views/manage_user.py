@@ -10,6 +10,7 @@ from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
@@ -239,13 +240,13 @@ class ManageUserViews(TemplateView):
 
 		total_count = qs.count()
 
-		allowed_per_page = {20, 50, 100, 200}
+		allowed_per_page = {100, 200, 500, 1000}
 		try:
-			per_page = int(per_page_raw or 20)
+			per_page = int(per_page_raw or 100)
 		except Exception:
-			per_page = 20
+			per_page = 100
 		if per_page not in allowed_per_page:
-			per_page = 20
+			per_page = 100
 
 		paginator = Paginator(qs, per_page)
 		page_obj = paginator.get_page(page)
@@ -298,7 +299,7 @@ class ManageUserViews(TemplateView):
 
 		def _deny(msg: str):
 			messages.error(request, msg)
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		if action == "import":
 			# Import can create AND update users, so require both add+change.
@@ -314,7 +315,7 @@ class ManageUserViews(TemplateView):
 			uploaded = request.FILES.get("excel_file")
 			if not uploaded:
 				messages.error(request, "กรุณาเลือกไฟล์ Excel/CSV ก่อนนำเข้า")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 
 			filename = (uploaded.name or "").lower()
 			if filename.endswith(".csv"):
@@ -324,10 +325,10 @@ class ManageUserViews(TemplateView):
 					rows = _parse_xlsx(uploaded)
 				except RuntimeError:
 					messages.error(request, "ยังไม่รองรับไฟล์ .xlsx ในสภาพแวดล้อมนี้ (ต้องติดตั้ง openpyxl)")
-					return self.get(request, *args, **kwargs)
+					return redirect(request.get_full_path())
 			else:
 				messages.error(request, "รองรับเฉพาะไฟล์ .xlsx หรือ .csv")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 
 			created = 0
 			updated = 0
@@ -403,7 +404,7 @@ class ManageUserViews(TemplateView):
 					"filename": getattr(uploaded, "name", ""),
 				},
 			)
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		if action == "create":
 			if not (request.user.is_superuser or request.user.has_perm("core.add_user")):
@@ -421,16 +422,16 @@ class ManageUserViews(TemplateView):
 
 			if not username:
 				messages.error(request, "กรุณากรอก Username")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if not password:
 				messages.error(request, "กรุณากรอกรหัสผ่าน")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if password != password_confirm:
 				messages.error(request, "รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if User.objects.filter(username=username).exists():
 				messages.error(request, "Username นี้มีอยู่แล้ว")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 
 			first_name, last_name = _split_full_name(full_name)
 			user = User.objects.create_user(username=username, email=email, password=password)
@@ -452,7 +453,7 @@ class ManageUserViews(TemplateView):
 				message="เพิ่มผู้ใช้งาน",
 				metadata={"user_id": user.pk, "username": user.username},
 			)
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		if action == "bulk_delete":
 			if not (request.user.is_superuser or request.user.has_perm("core.delete_user")):
@@ -467,7 +468,7 @@ class ManageUserViews(TemplateView):
 
 			if not ids:
 				messages.error(request, "กรุณาเลือกผู้ใช้งานที่ต้องการลบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 
 			# Safety: prevent deleting yourself
 			if getattr(request, "user", None) is not None and request.user.is_authenticated:
@@ -483,19 +484,19 @@ class ManageUserViews(TemplateView):
 				message="ลบผู้ใช้งานแบบ bulk",
 				metadata={"deleted": deleted, "ids": ids},
 			)
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		user_id = (request.POST.get("id") or "").strip()
 
 		if not user_id.isdigit():
 			messages.error(request, "ไม่พบรหัสผู้ใช้งาน")
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		try:
 			target_user = User.objects.get(pk=int(user_id))
 		except User.DoesNotExist:
 			messages.error(request, "ไม่พบผู้ใช้งาน")
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		if action == "update":
 			if not (request.user.is_superuser or request.user.has_perm("core.change_user")):
@@ -562,7 +563,7 @@ class ManageUserViews(TemplateView):
 				message="อัปเดตผู้ใช้งาน",
 				metadata={"user_id": target_user.pk, "username": target_user.username},
 			)
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		if action == "delete":
 			if not (request.user.is_superuser or request.user.has_perm("core.delete_user")):
@@ -572,7 +573,7 @@ class ManageUserViews(TemplateView):
 			if getattr(request, "user", None) is not None and request.user.is_authenticated:
 				if request.user.pk == target_user.pk:
 					messages.error(request, "ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่")
-					return self.get(request, *args, **kwargs)
+					return redirect(request.get_full_path())
 
 			target_username = target_user.username
 			target_user.delete()
@@ -584,7 +585,7 @@ class ManageUserViews(TemplateView):
 				message="ลบผู้ใช้งาน",
 				metadata={"username": target_username},
 			)
-			return self.get(request, *args, **kwargs)
+			return redirect(request.get_full_path())
 
 		messages.error(request, "คำสั่งไม่ถูกต้อง")
-		return self.get(request, *args, **kwargs)
+		return redirect(request.get_full_path())

@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from django.shortcuts import redirect
 
 from core.auth.decorators import staff_required
 from core.models.businesspartner import BusinessPartner, Contact
@@ -65,13 +66,13 @@ class ManageContactViews(TemplateView):
 		per_page_raw = (request.GET.get("per_page") or "").strip()
 		page = (request.GET.get("page") or "1").strip() or "1"
 
-		allowed_per_page = {20, 50, 100, 200}
+		allowed_per_page = {100, 200, 500, 1000}
 		try:
-			per_page = int(per_page_raw or 20)
+			per_page = int(per_page_raw or 100)
 		except Exception:
-			per_page = 20
+			per_page = 100
 		if per_page not in allowed_per_page:
-			per_page = 20
+			per_page = 100
 
 		qs = Contact.objects.select_related("partner").all()
 		if q:
@@ -124,7 +125,7 @@ class ManageContactViews(TemplateView):
 			ids = [x for x in [b.strip() for b in bulk_ids] if _is_uuid(x)]
 			if not ids:
 				messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			deleted = blocked = 0
 			try:
 				with transaction.atomic():
@@ -139,17 +140,16 @@ class ManageContactViews(TemplateView):
 							blocked += 1
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if blocked:
 				messages.warning(request, f"ลบสำเร็จ {deleted} รายการ, ลบไม่ได้ {blocked} รายการ")
 			else:
 				messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "create":
 			if not _is_uuid(partner_id) or not first_name or not last_name:
 				messages.error(request, "กรุณากรอกข้อมูลที่จำเป็นให้ครบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					partner = BusinessPartner.objects.get(pk=partner_id)
@@ -164,15 +164,14 @@ class ManageContactViews(TemplateView):
 					transaction.on_commit(lambda: log_event(request, action="contact:create", message="เพิ่ม Contact", metadata={"id": str(obj.pk)}))
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "update":
 			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			if not first_name or not last_name:
 				messages.error(request, "กรุณากรอกข้อมูลที่จำเป็นให้ครบ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					obj = Contact.objects.get(pk=obj_id)
@@ -197,12 +196,11 @@ class ManageContactViews(TemplateView):
 						messages.info(request, "ไม่มีการเปลี่ยนแปลง")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		if action == "delete":
 			if not _is_uuid(obj_id):
 				messages.error(request, "ไม่พบรหัสรายการ")
-				return self.get(request, *args, **kwargs)
+				return redirect(request.get_full_path())
 			try:
 				with transaction.atomic():
 					obj = Contact.objects.get(pk=obj_id)
@@ -212,7 +210,6 @@ class ManageContactViews(TemplateView):
 				messages.error(request, "ลบไม่ได้ มีข้อมูลอ้างอิงอยู่")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
-			return self.get(request, *args, **kwargs)
-
+			return redirect(request.get_full_path())
 		messages.error(request, "ไม่รู้จัก action")
-		return self.get(request, *args, **kwargs)
+		return redirect(request.get_full_path())
