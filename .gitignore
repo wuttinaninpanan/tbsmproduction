@@ -12,6 +12,7 @@ ENV/
 .DS_Store
 Thumbs.db
 .vscode/
+.claude/settings.local.json
 
 # Django
 *.log
