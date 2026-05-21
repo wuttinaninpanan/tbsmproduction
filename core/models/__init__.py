@@ -18,6 +18,8 @@ from core.models.inspection.inspection_model_defect import InspectionModelsDefec
 from core.models.inspection.inspection_result import InspectionResult
 from core.models.inspection.inspection_error import InspectionError
 from core.models.inspection.inspection_products import InspectionProducts
+from core.models.inspection.inspection_defect import InspectionDefect
+from core.models.inspection.inspection_defect_image import InspectionDefectImage
 
 # Import other model modules so Django registers them (even if not re-exported).
 from . import (  # noqa: F401
@@ -55,4 +57,6 @@ __all__ = [
     "InspectionResult",
 	"InspectionError",
     "InspectionProducts",
+    "InspectionDefect",
+    "InspectionDefectImage",
 ]

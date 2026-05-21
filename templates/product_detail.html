@@ -5,6 +5,22 @@
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<style>
+	#componentSelect-ts-dropdown .ts-dropdown-content,
+	.ts-wrapper.component-wide .ts-dropdown .ts-dropdown-content {
+		max-height: 360px;
+	}
+	.ts-wrapper.component-wide .ts-dropdown {
+		width: max-content;
+		min-width: 100%;
+		max-width: 90vw;
+	}
+	.ts-wrapper.component-wide .ts-dropdown .option {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+</style>
 {% endblock %}
 
 {% block title %}{{ item.item_code|default:item.sd_code }} — Product Detail{% endblock %}
@@ -175,9 +191,9 @@
 			{% csrf_token %}
 			<input type="hidden" name="action" value="add_component" />
 			<div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-				<div class="md:col-span-6">
+				<div class="md:col-span-12">
 					<label class="block text-sm font-semibold text-slate-700">Component (SD Code — Part No. — Part Name)</label>
-					<select name="component_id" required class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<select id="componentSelect" name="component_id" required class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
 						<option value="">เลือก Component</option>
 						{% for c in components %}
 							<option value="{{ c.id }}">{{ c.sd_code }} — {{ c.part_number }} — {{ c.part_name }}</option>
@@ -265,14 +281,24 @@
 (function(){
 	function init(){
 		var el = document.getElementById('lineSelect');
-		if (!el || el.tomselect) return;
-		new TomSelect(el, {
-			create: true,
-			persist: false,
-			plugins: ['remove_button'],
-			maxOptions: 200,
-			placeholder: 'พิมพ์เพื่อค้นหา / เพิ่ม Line ใหม่...',
-		});
+		if (el && !el.tomselect) {
+			new TomSelect(el, {
+				create: true,
+				persist: false,
+				plugins: ['remove_button'],
+				maxOptions: 200,
+				placeholder: 'พิมพ์เพื่อค้นหา / เพิ่ม Line ใหม่...',
+			});
+		}
+		var comp = document.getElementById('componentSelect');
+		if (comp && !comp.tomselect) {
+			new TomSelect(comp, {
+				maxOptions: false,
+				allowEmptyOption: true,
+				placeholder: 'พิมพ์เพื่อค้นหา Component...',
+				wrapperClass: 'ts-wrapper component-wide',
+			});
+		}
 	}
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', init);

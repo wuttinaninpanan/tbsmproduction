@@ -24,12 +24,76 @@
     </div>
     {% endif %}
 
+    <!-- SEARCH FORM -->
+    <form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">SD Code</label>
+                <input name="sd_code" value="{{ q_sd|default:'' }}" placeholder="ค้นหา SD Code"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">Inspection Line</label>
+                <input name="line" value="{{ q_line|default:'' }}" placeholder="ค้นหา Line"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">QR Work</label>
+                <input name="qr_work" value="{{ q_qr|default:'' }}" placeholder="ค้นหา QR"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">Result</label>
+                <input name="result" value="{{ q_result|default:'' }}" placeholder="ค้นหา Result"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">วันที่ (จาก)</label>
+                <input name="date_from" type="date" value="{{ q_date_from|default:'' }}"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">วันที่ (ถึง)</label>
+                <input name="date_to" type="date" value="{{ q_date_to|default:'' }}"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+        </div>
+        <input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="text-xs text-slate-600">ทั้งหมด {{ total_count|default:0 }} รายการ</div>
+            <div class="flex items-center gap-3">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+                    <svg viewBox="0 0 20 20" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd"/></svg>
+                    ค้นหา
+                </button>
+                <a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+            </div>
+        </div>
+    </form>
+
     <div class="rounded-2xl border border-slate-200 overflow-hidden">
 
-        <div class="bg-slate-100 px-4 py-3">
+        <div class="bg-slate-100 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div class="font-extrabold text-slate-800">
                 Inspection Results
             </div>
+            <form method="get" class="flex items-center gap-2">
+                <input type="hidden" name="sd_code" value="{{ q_sd|default:'' }}" />
+                <input type="hidden" name="line" value="{{ q_line|default:'' }}" />
+                <input type="hidden" name="qr_work" value="{{ q_qr|default:'' }}" />
+                <input type="hidden" name="result" value="{{ q_result|default:'' }}" />
+                <input type="hidden" name="date_from" value="{{ q_date_from|default:'' }}" />
+                <input type="hidden" name="date_to" value="{{ q_date_to|default:'' }}" />
+                <span class="text-sm text-gray-700">Show</span>
+                <select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+                    <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+                    <option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+                    <option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
+                </select>
+                <span class="text-sm text-gray-700">entries</span>
+            </form>
         </div>
 
         <div class="overflow-x-auto">
@@ -124,7 +188,7 @@
             <nav class="isolate inline-flex -space-x-px rounded-md shadow-xs">
 
                 {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}"
+                <a href="?sd_code={{ q_sd|urlencode }}&line={{ q_line|urlencode }}&qr_work={{ q_qr|urlencode }}&result={{ q_result|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}"
                     class="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-400 hover:bg-gray-50">
                     ‹
                 </a>
@@ -139,7 +203,7 @@
                     {{ item }}
                 </span>
                 {% else %}
-                <a href="?page={{ item }}"
+                <a href="?sd_code={{ q_sd|urlencode }}&line={{ q_line|urlencode }}&qr_work={{ q_qr|urlencode }}&result={{ q_result|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&per_page={{ per_page }}&page={{ item }}"
                     class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-50">
                     {{ item }}
                 </a>
@@ -153,7 +217,7 @@
                 {% endfor %}
 
                 {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}"
+                <a href="?sd_code={{ q_sd|urlencode }}&line={{ q_line|urlencode }}&qr_work={{ q_qr|urlencode }}&result={{ q_result|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}"
                     class="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-400 hover:bg-gray-50">
                     ›
                 </a>

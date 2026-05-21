@@ -65,7 +65,7 @@
                         <th class="px-4 py-3 text-left font-extrabold">SD Code</th>
                         <th class="px-4 py-3 text-left font-extrabold">QR</th>
                         <th class="px-4 py-3 text-left font-extrabold">Qty</th>
-                        <th class="px-4 py-3 text-left font-extrabold">Image</th>
+                        <th class="px-4 py-3 text-left font-extrabold">Image Path</th>
                         <th class="px-4 py-3 text-center font-extrabold">จัดการ</th>
                     </tr>
                 </thead>
@@ -78,9 +78,9 @@
                         <td class="px-4 py-3 text-slate-700">{{ r.qtt_box }}</td>
                         <td class="px-4 py-3">
                             {% if r.products_path_image %}
-                                <img src="{{ r.products_path_image }}" class="h-12 rounded shadow">
+                                <span class="font-mono text-xs text-slate-700 break-all">{{ r.products_path_image }}</span>
                             {% else %}
-                                <span class="text-slate-400">ไม่มีรูป</span>
+                                <span class="text-slate-400">-</span>
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-center">
@@ -88,7 +88,7 @@
                                 <button
                                     class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
                                     data-open-edit data-id="{{ r.id }}" data-sd="{{ r.sd_code }}"
-                                    data-qr="{{ r.work_qr }}" data-qty="{{ r.qtt_box }}" data-img="{{ r.products_patn_image }}">
+                                    data-qr="{{ r.work_qr }}" data-qty="{{ r.qtt_box }}" data-img="{{ r.products_path_image }}">
                                     แก้ไข
                                 </button>
 

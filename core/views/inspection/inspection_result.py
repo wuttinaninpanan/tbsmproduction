@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, time
 
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.views.generic import TemplateView
+from django.utils import timezone
 from django.utils.timezone import localtime
+from django.views.generic import TemplateView
 
 from core.models.inspection.inspection_result import InspectionResult
 
@@ -16,6 +18,17 @@ def _is_uuid(value: str) -> bool:
         return True
     except Exception:
         return False
+
+
+def _parse_date(value: str):
+    """Parse YYYY-MM-DD; return date or None."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
 
 
 def _page_items(num_pages: int, current: int) -> list[int | None]:
@@ -70,10 +83,22 @@ class InspectionResultView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         request = self.request
 
-        q = (request.GET.get("q") or "").strip()
+        q_sd = (request.GET.get("sd_code") or "").strip()
+        q_line = (request.GET.get("line") or "").strip()
+        q_qr = (request.GET.get("qr_work") or "").strip()
+        q_result = (request.GET.get("result") or "").strip()
+        q_from_raw = (request.GET.get("date_from") or "").strip()
+        q_to_raw = (request.GET.get("date_to") or "").strip()
+        per_page_raw = (request.GET.get("per_page") or "").strip()
         page = request.GET.get("page", 1)
 
-        per_page = 100
+        allowed_per_page = {50, 100, 200, 500, 1000}
+        try:
+            per_page = int(per_page_raw or 100)
+        except Exception:
+            per_page = 100
+        if per_page not in allowed_per_page:
+            per_page = 100
 
         qs = (
             InspectionResult.objects
@@ -81,12 +106,23 @@ class InspectionResultView(TemplateView):
             .order_by("-created_at")
         )
 
-        if q and _is_uuid(q):
-            qs = qs.filter(
-                Q(id=q)
-                | Q(inspectionitem_id=q)
-                | Q(inspection_line_id=q)
-            )
+        if q_sd:
+            qs = qs.filter(inspectionitem__sd_code__icontains=q_sd)
+        if q_line:
+            qs = qs.filter(inspection_line__line_name__icontains=q_line)
+        if q_qr:
+            qs = qs.filter(qr_work__icontains=q_qr)
+        if q_result:
+            qs = qs.filter(result__icontains=q_result)
+
+        date_from = _parse_date(q_from_raw)
+        date_to = _parse_date(q_to_raw)
+        if date_from is not None:
+            dt_from = timezone.make_aware(datetime.combine(date_from, time.min))
+            qs = qs.filter(created_at__gte=dt_from)
+        if date_to is not None:
+            dt_to = timezone.make_aware(datetime.combine(date_to, time.max))
+            qs = qs.filter(created_at__lte=dt_to)
 
         paginator = Paginator(qs, per_page)
         page_obj = paginator.get_page(page)
@@ -103,7 +139,6 @@ class InspectionResultView(TemplateView):
                 "qr_work": obj.qr_work,
                 "result": obj.result,
 
-                # ✅ ดึงจาก DB แล้ว format เลย
                 "created_at": localtime(obj.created_at).strftime("%d/%m/%Y %H:%M:%S"),
             }
             for obj in page_obj
@@ -113,8 +148,16 @@ class InspectionResultView(TemplateView):
             "rows": rows,
             "page_obj": page_obj,
             "paginator": paginator,
+            "per_page": per_page,
             "rows_total": paginator.count,
             "page_items": _page_items(paginator.num_pages, page_obj.number),
+            "q_sd": q_sd,
+            "q_line": q_line,
+            "q_qr": q_qr,
+            "q_result": q_result,
+            "q_date_from": q_from_raw,
+            "q_date_to": q_to_raw,
+            "total_count": paginator.count,
         })
 
         return ctx

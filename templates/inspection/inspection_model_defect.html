@@ -4,6 +4,11 @@
 
 {% block title %}Inspection Model Defects — TBSMRD{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <section class="space-y-6">
 
@@ -311,6 +316,22 @@
 	const deleteModal = document.getElementById('deleteModal');
 	const deleteLabel = document.getElementById('deleteLabel');
 
+	['addInspectionModel', 'addDefectMode', 'editInspectionModel', 'editDefectMode'].forEach(id => {
+		const el = document.getElementById(id);
+		if (el && !el.tomselect) new TomSelect(el, { allowEmptyOption: true, maxOptions: false });
+	});
+
+	function tsSet(id, val) {
+		const el = document.getElementById(id);
+		if (!el) return;
+		if (el.tomselect) { el.tomselect.setValue(val || ''); } else { el.value = val || ''; }
+	}
+	function tsGet(id) {
+		const el = document.getElementById(id);
+		if (!el) return '';
+		return el.tomselect ? el.tomselect.getValue() : el.value;
+	}
+
 	function openModal(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
 	function closeModal(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 
@@ -323,8 +344,8 @@
 
 	// ADD
 	document.getElementById('openAddModal').addEventListener('click', () => {
-		document.getElementById('addInspectionModel').value = '';
-		document.getElementById('addDefectMode').value = '';
+		tsSet('addInspectionModel', '');
+		tsSet('addDefectMode', '');
 		document.getElementById('addClassName').value = '';
 		document.getElementById('addModelPath').value = '';
 		document.getElementById('addDescTh').value = '';
@@ -334,8 +355,8 @@
 	document.getElementById('addSubmit').addEventListener('click', () => {
 		actionField.value = 'create';
 		idField.value = '';
-		inspectionModelField.value = document.getElementById('addInspectionModel').value;
-		defectModeField.value = document.getElementById('addDefectMode').value;
+		inspectionModelField.value = tsGet('addInspectionModel');
+		defectModeField.value = tsGet('addDefectMode');
 		classNameField.value = document.getElementById('addClassName').value.trim();
 		modelPathField.value = document.getElementById('addModelPath').value.trim();
 		descThField.value = document.getElementById('addDescTh').value.trim();
@@ -347,10 +368,8 @@
 	document.querySelectorAll('[data-open-edit]').forEach(btn => {
 		btn.addEventListener('click', () => {
 			idField.value = btn.dataset.id || '';
-			const editIM = document.getElementById('editInspectionModel');
-			const editDM = document.getElementById('editDefectMode');
-			editIM.value = btn.dataset.inspectionModelId || '';
-			editDM.value = btn.dataset.defectModeId || '';
+			tsSet('editInspectionModel', btn.dataset.inspectionModelId || '');
+			tsSet('editDefectMode', btn.dataset.defectModeId || '');
 			document.getElementById('editClassName').value = btn.dataset.className || '';
 			document.getElementById('editModelPath').value = btn.dataset.modelPath || '';
 			document.getElementById('editDescTh').value = btn.dataset.descriptionTh || '';
@@ -360,8 +379,8 @@
 	});
 	document.getElementById('editSubmit').addEventListener('click', () => {
 		actionField.value = 'update';
-		inspectionModelField.value = document.getElementById('editInspectionModel').value;
-		defectModeField.value = document.getElementById('editDefectMode').value;
+		inspectionModelField.value = tsGet('editInspectionModel');
+		defectModeField.value = tsGet('editDefectMode');
 		classNameField.value = document.getElementById('editClassName').value.trim();
 		modelPathField.value = document.getElementById('editModelPath').value.trim();
 		descThField.value = document.getElementById('editDescTh').value.trim();

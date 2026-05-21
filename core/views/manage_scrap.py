@@ -110,6 +110,7 @@ class ManageScrapViews(TemplateView):
                 | Q(component_part__part_name__icontains=q)
                 | Q(component_part__part_number__icontains=q)
                 | Q(created_by__username__icontains=q)
+                | Q(created_by__first_name__icontains=q)
                 | Q(created_by__profile__shift__icontains=q)
             )
 
@@ -471,6 +472,7 @@ class ManageScrapViews(TemplateView):
                 | Q(defect_mode__name_en__icontains=q)
                 | Q(component_part__part_name__icontains=q)
                 | Q(created_by__username__icontains=q)
+                | Q(created_by__first_name__icontains=q)
                 | Q(created_by__profile__shift__icontains=q)
             )
 
@@ -514,7 +516,7 @@ class ManageScrapViews(TemplateView):
             ws.append(
                 [
                     created_at_local.strftime("%d/%m/%Y %H:%M") if created_at_local else "-",
-                    r.created_by.username if r.created_by else "-",
+                    r.created_by.get_short_name() if r.created_by else "-",
                     shift_display,
                     getattr(r.production_line, "code", "-"),
                     getattr(r.part_number, "sd_code", "-") or "-",

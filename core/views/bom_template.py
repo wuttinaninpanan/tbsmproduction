@@ -6,7 +6,8 @@ from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
@@ -649,12 +650,34 @@ class BomTemplateView(TemplateView):
 		ctx["lines"] = list(
 			Line.objects.order_by("line_name").values("id", "line_name")
 		)
+		# Source items for Add modal — same filter as /products/ listing:
+		# Item_list rows that have at least one ItemLine assignment.
+		ctx["available_products"] = list(
+			Item_list.objects
+			.filter(id__in=ItemLine.objects.values("item_id"))
+			.order_by("sd_code", "item_code")
+			.values("id", "item_code", "sd_code", "part_number", "part_name")
+		)
+		# Items that already have a BillOfMaterial (FG candidates for parent-of-component selection).
+		fg_ids_qs = BillOfMaterial.objects.values_list("item_id", flat=True)
+		ctx["fg_items"] = list(
+			Item_list.objects
+			.filter(id__in=fg_ids_qs)
+			.order_by("sd_code", "item_code")
+			.values("id", "item_code", "sd_code", "part_number", "part_name")
+		)
 		return ctx
 
 	def post(self, request, *args, **kwargs):
 		action = (request.POST.get("action") or "").strip().lower()
 		if action == "import_master_data":
 			return self._handle_import(request, *args, **kwargs)
+		if action == "add_to_bom":
+			return self._handle_add_to_bom(request)
+		if action == "delete_bom_row":
+			return self._handle_delete_bom_row(request)
+		if action == "delete_fg_bom":
+			return self._handle_delete_fg_bom(request)
 		if action != "save_row":
 			return JsonResponse({"ok": False, "error": "ไม่รองรับการทำงานนี้"}, status=400)
 
@@ -756,6 +779,151 @@ class BomTemplateView(TemplateView):
 			"category_name": getattr(item.category, "name", "") if item.category_id else "",
 			"stage_name": getattr(item.stage, "display_name", "") if item.stage_id else "",
 		})
+
+	def _resolve_fk(self, model, value):
+		value = (value or "").strip()
+		if not value or not _is_uuid(value):
+			return None
+		return model.objects.filter(pk=value).first()
+
+	def _handle_add_to_bom(self, request):
+		source_item_id = (request.POST.get("source_item_id") or "").strip()
+		parent_item_id = (request.POST.get("parent_item_id") or "").strip()
+
+		if not _is_uuid(source_item_id):
+			messages.error(request, "กรุณาเลือก Item จาก Products")
+			return redirect(request.get_full_path())
+		source = Item_list.objects.filter(pk=source_item_id).first()
+		if source is None:
+			messages.error(request, "ไม่พบ Item ที่เลือก")
+			return redirect(request.get_full_path())
+
+		# No parent → register source as a FG (create BillOfMaterial header).
+		if not parent_item_id:
+			try:
+				with transaction.atomic():
+					_, created = BillOfMaterial.objects.get_or_create(
+						item=source,
+						defaults={
+							"revision": "A",
+							"latest_eci": "",
+							"user": request.user,
+						},
+					)
+			except IntegrityError as e:
+				messages.error(request, f"เพิ่มไม่สำเร็จ (ข้อมูลซ้ำ): {e}")
+				return redirect(request.get_full_path())
+			except Exception as e:
+				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+				return redirect(request.get_full_path())
+			if created:
+				messages.success(request, f"เพิ่ม FG '{source.sd_code or source.part_name}' สำเร็จ")
+			else:
+				messages.info(request, "FG นี้มี BOM อยู่แล้ว")
+			return redirect(request.get_full_path())
+
+		# Has parent → link source as a component of parent's BOM.
+		if not _is_uuid(parent_item_id):
+			messages.error(request, "Parent FG ไม่ถูกต้อง")
+			return redirect(request.get_full_path())
+		parent = Item_list.objects.filter(pk=parent_item_id).first()
+		if parent is None:
+			messages.error(request, "ไม่พบ Parent FG")
+			return redirect(request.get_full_path())
+		if parent.id == source.id:
+			messages.error(request, "ไม่สามารถเลือกตัวเองเป็น Component ได้")
+			return redirect(request.get_full_path())
+
+		quantity = _safe_decimal(request.POST.get("quantity") or "1", default=Decimal("1"))
+		unit = (request.POST.get("unit") or "PCS").strip() or "PCS"
+		sequence_raw = (request.POST.get("sequence") or "").strip()
+		try:
+			sequence = int(sequence_raw) if sequence_raw else None
+		except (ValueError, TypeError):
+			sequence = None
+
+		try:
+			with transaction.atomic():
+				bom, _ = BillOfMaterial.objects.get_or_create(
+					item=parent,
+					defaults={
+						"revision": "A",
+						"latest_eci": "",
+						"user": request.user,
+					},
+				)
+				if BillOfMaterialItemMater.objects.filter(bom=bom, component=source).exists():
+					messages.warning(request, "Component นี้อยู่ใน BOM อยู่แล้ว")
+					return redirect(request.get_full_path())
+				if sequence is None:
+					last = (
+						BillOfMaterialItemMater.objects.filter(bom=bom)
+						.order_by("-sequence")
+						.first()
+					)
+					sequence = (last.sequence + 1) if last and last.sequence else 1
+				BillOfMaterialItemMater.objects.create(
+					bom=bom,
+					component=source,
+					quantity=quantity,
+					unit=unit,
+					sequence=sequence,
+					user=request.user,
+				)
+		except IntegrityError as e:
+			messages.error(request, f"เพิ่มไม่สำเร็จ (ข้อมูลซ้ำ): {e}")
+			return redirect(request.get_full_path())
+		except Exception as e:
+			messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+			return redirect(request.get_full_path())
+
+		messages.success(
+			request,
+			f"เพิ่ม Component '{source.sd_code or source.part_name}' เข้า BOM '{parent.sd_code or parent.part_name}' สำเร็จ",
+		)
+		return redirect(request.get_full_path())
+
+	def _handle_delete_bom_row(self, request):
+		row_id = (request.POST.get("id") or "").strip()
+		if not _is_uuid(row_id):
+			messages.error(request, "ไม่พบรหัสรายการ")
+			return redirect(request.get_full_path())
+		obj = BillOfMaterialItemMater.objects.filter(pk=row_id).first()
+		if obj is None:
+			messages.error(request, "ไม่พบรายการ BOM")
+			return redirect(request.get_full_path())
+		try:
+			with transaction.atomic():
+				obj.delete()
+		except ProtectedError:
+			messages.error(request, "ลบไม่ได้: รายการนี้ถูกใช้งานอยู่")
+			return redirect(request.get_full_path())
+		except Exception as e:
+			messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+			return redirect(request.get_full_path())
+		messages.success(request, "ลบรายการ BOM สำเร็จ")
+		return redirect(request.get_full_path())
+
+	def _handle_delete_fg_bom(self, request):
+		fg_id = (request.POST.get("id") or "").strip()
+		if not _is_uuid(fg_id):
+			messages.error(request, "ไม่พบรหัสรายการ")
+			return redirect(request.get_full_path())
+		bom = BillOfMaterial.objects.filter(item_id=fg_id).first()
+		if bom is None:
+			messages.error(request, "ไม่พบ BOM ของ FG นี้")
+			return redirect(request.get_full_path())
+		try:
+			with transaction.atomic():
+				bom.delete()  # CASCADE → child BillOfMaterialItemMater rows
+		except ProtectedError:
+			messages.error(request, "ลบไม่ได้: BOM นี้ถูกใช้งานอยู่")
+			return redirect(request.get_full_path())
+		except Exception as e:
+			messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+			return redirect(request.get_full_path())
+		messages.success(request, "ลบ BOM ของ FG สำเร็จ")
+		return redirect(request.get_full_path())
 
 	def _handle_import(self, request, *args, **kwargs):
 		if openpyxl is None:

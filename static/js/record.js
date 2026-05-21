@@ -620,13 +620,25 @@
 				return;
 			}
 
-			// Check if rows already exist with same count — if so, just update defect_id hidden fields
-			const existingHeaderHasContent = headerRowEl && headerRowEl.querySelector('.check-cell input.row-enable');
-			const existingRowCount = rowsWrap.querySelectorAll('.row-enable').length + (existingHeaderHasContent ? 1 : 0);
-			const sameCount = existingRowCount === normalized.length;
+			// Reuse existing rows only when they represent the SAME components
+			// (same component_part_id in the same order). Matching by count
+			// alone breaks when two parts happen to have the same number of
+			// BOM children — the old part's names/photos would remain on
+			// screen while only defect_id changes underneath.
+			const existingComponentHiddens = [];
+			if (headerRowEl) {
+				const h = headerRowEl.querySelector(`input[name="blocks[${gi}][rows][0][component_part_id]"]`);
+				if (h) existingComponentHiddens.push(h);
+			}
+			rowsWrap.querySelectorAll(`input[name^="blocks[${gi}][rows]"][name$="[component_part_id]"]`).forEach(h => existingComponentHiddens.push(h));
 
-			if (sameCount && existingRowCount > 0) {
-				// Update defect_id hidden fields in-place
+			const sameComponents = existingComponentHiddens.length === normalized.length
+				&& existingComponentHiddens.every((h, idx) => (h.value || '') === (normalized[idx]?.id || ''));
+
+			if (sameComponents && existingComponentHiddens.length > 0) {
+				// Same components in same order — only the defect changed.
+				// Update defect_id hidden fields in-place so user-entered
+				// quantities and checkbox state are preserved.
 				const allDefectHiddens = [];
 				if (headerRowEl) {
 					const h = headerRowEl.querySelector(`input[name="blocks[${gi}][rows][0][defect_id]"]`);

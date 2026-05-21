@@ -29,3 +29,5 @@ from core.views.inspection.inspection_model_defect import InspectionModelsDefect
 from core.views.inspection.inspection_result import InspectionResultView
 from core.views.inspection.inspection_error import InspectionErrorView
 from core.views.inspection.inspection_products import InspectionProductsView
+from core.views.inspection.inspection_defect import InspectionDefectView
+from core.views.inspection.inspection_defect_image import InspectionDefectImageView

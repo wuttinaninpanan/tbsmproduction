@@ -2,6 +2,11 @@
 
 {% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+{% endblock %}
+
 {% block title %}BOM Template — TBSMRD{% endblock %}
 
 {% block content %}
@@ -72,6 +77,10 @@
 						</svg>
 						นำเข้าข้อมูล
 					</button>
+					<button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+						<svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd"/></svg>
+						เพิ่ม Item
+					</button>
 					<form method="get" class="flex items-center gap-2">
 						<input type="hidden" name="q" value="{{ q|default:'' }}" />
 						<div class="flex items-center gap-2">
@@ -104,6 +113,7 @@
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Category</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Stage</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Line</th>
+						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">จัดการ</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -124,6 +134,20 @@
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_category_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_stage_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_line_name|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 whitespace-nowrap">
+									<div class="flex items-center justify-center gap-1.5">
+										{% if first.fg_item_id %}
+											<a href="/products/{{ first.fg_item_id }}/" data-row-action
+												class="inline-flex items-center px-2.5 py-1 rounded-md font-semibold text-white bg-amber-500 hover:bg-amber-600 transition text-xs">แก้ไข</a>
+											<button type="button" data-row-action data-open-delete-fg
+												data-id="{{ first.fg_item_id }}"
+												data-label="{{ first.fg_item_code|default:first.fg_sd_code|default:first.fg_part_name }}"
+												class="inline-flex items-center px-2.5 py-1 rounded-md font-semibold text-white bg-red-600 hover:bg-red-700 transition text-xs">ลบ BOM</button>
+										{% else %}
+											<span class="text-xs text-slate-400">-</span>
+										{% endif %}
+									</div>
+								</td>
 							</tr>
 						{% endwith %}
 						{% for r in group.list %}
@@ -141,10 +165,22 @@
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.category_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.stage_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.line_name|default:"-" }}</td>
+								<td class="px-3 py-2 border border-slate-200 whitespace-nowrap">
+									<div class="flex items-center justify-center gap-1.5">
+										{% if r.item_id %}
+											<a href="/products/{{ r.item_id }}/" data-row-action
+												class="inline-flex items-center px-2.5 py-1 rounded-md font-semibold text-white bg-amber-500 hover:bg-amber-600 transition text-xs">แก้ไข</a>
+										{% endif %}
+										<button type="button" data-row-action data-open-delete-row
+											data-id="{{ r.id }}"
+											data-label="{{ r.item_code|default:r.sd_code|default:r.part_name }}"
+											class="inline-flex items-center px-2.5 py-1 rounded-md font-semibold text-white bg-red-600 hover:bg-red-700 transition text-xs">ลบ</button>
+									</div>
+								</td>
 							</tr>
 						{% endfor %}
 					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600 border border-slate-200" colspan="{{ group_colspan }}">ยังไม่มีข้อมูล BOM Item Master</td></tr>
+						<tr><td class="px-4 py-8 text-center text-slate-600 border border-slate-200" colspan="{{ group_colspan|add:1 }}">ยังไม่มีข้อมูล BOM Item Master</td></tr>
 					{% endfor %}
 				</tbody>
 			</table>
@@ -218,6 +254,217 @@
 </section>
 
 <form id="bomTemplateCsrf" class="hidden">{% csrf_token %}</form>
+
+<!-- ACTION FORM -->
+<form id="actionForm" method="post" class="hidden">
+	{% csrf_token %}
+	<input type="hidden" name="action" id="actionField" value="" />
+	<input type="hidden" name="id" id="idField" value="" />
+</form>
+
+<!-- ADD ITEM MODAL — pick existing Item from Products and add to BOM template -->
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
+		<h2 class="text-lg font-extrabold text-slate-900">เพิ่ม Item เข้า BOM Template</h2>
+		<p class="text-xs text-slate-500 mt-1">เลือก Item ที่มีอยู่จาก Products (Item ที่ผูกกับ Line แล้ว) แล้วเพิ่มเข้า BOM template — เป็น FG ใหม่ หรือ Component ของ FG ที่มีอยู่</p>
+		<form id="addForm" method="post" class="mt-4 space-y-4">
+			{% csrf_token %}
+			<input type="hidden" name="action" value="add_to_bom" />
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Source Item (จาก Products) <span class="text-red-600">*</span></label>
+				<select id="addSourceItem" name="source_item_id" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+					<option value="">-- เลือก Item --</option>
+					{% for p in available_products %}
+						<option value="{{ p.id }}">{{ p.item_code|default:"-" }} | {{ p.sd_code|default:"-" }} | {{ p.part_number|default:"-" }} — {{ p.part_name|default:"-" }}</option>
+					{% endfor %}
+				</select>
+				<p class="text-xs text-slate-500 mt-1">รายการนี้คือ Item_list ที่มีอยู่และผูกกับ Line แล้ว (เหมือนหน้า /products/)</p>
+			</div>
+
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">รูปแบบการเพิ่ม</label>
+				<div class="mt-2 space-y-2">
+					<label class="flex items-start gap-2 cursor-pointer">
+						<input type="radio" name="add_mode" value="fg" class="mt-1" checked />
+						<span class="text-sm">
+							<span class="font-semibold">เพิ่มเป็น FG ใหม่</span>
+							<span class="block text-xs text-slate-500">สร้าง BillOfMaterial header สำหรับ Item นี้ — จะแสดงเป็นแถว FG (level 0)</span>
+						</span>
+					</label>
+					<label class="flex items-start gap-2 cursor-pointer">
+						<input type="radio" name="add_mode" value="component" class="mt-1" />
+						<span class="text-sm">
+							<span class="font-semibold">เพิ่มเป็น Component ของ FG ที่มีอยู่</span>
+							<span class="block text-xs text-slate-500">สร้าง BillOfMaterialItemMater linking source Item เข้าไปใน BOM ของ FG ที่เลือก</span>
+						</span>
+					</label>
+				</div>
+			</div>
+
+			<div id="componentFields" class="hidden space-y-3 rounded-lg bg-slate-50 border border-slate-200 p-3">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Parent FG <span class="text-red-600">*</span></label>
+					<select id="addParentItem" name="parent_item_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+						<option value="">-- เลือก Parent FG --</option>
+						{% for f in fg_items %}
+							<option value="{{ f.id }}">{{ f.item_code|default:"-" }} | {{ f.sd_code|default:"-" }} | {{ f.part_number|default:"-" }} — {{ f.part_name|default:"-" }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="grid grid-cols-3 gap-3">
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Quantity</label>
+						<input name="quantity" type="number" step="0.0001" value="1" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Unit</label>
+						<input name="unit" type="text" value="PCS" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Sequence <span class="text-xs text-slate-500">(ว่างได้)</span></label>
+						<input name="sequence" type="number" min="1" placeholder="auto" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+				</div>
+			</div>
+
+			<div class="flex items-center justify-end gap-2 pt-2">
+				<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+				<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<!-- DELETE BOM ROW MODAL (child row) -->
+<div id="deleteRowModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-md rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
+		<h2 class="text-lg font-extrabold text-slate-900">ลบรายการ BOM</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบรายการ BOM นี้หรือไม่?</p>
+		<div class="mt-1 text-xs text-slate-500" id="deleteRowLabel"></div>
+		<p class="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">หมายเหตุ: ลบเฉพาะการผูก component-in-BOM (BillOfMaterialItemMater) เท่านั้น Item_list ของ component ยังคงอยู่</p>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="deleteRowSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</div>
+	</div>
+</div>
+
+<!-- DELETE FG BOM MODAL -->
+<div id="deleteFgModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-md rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
+		<h2 class="text-lg font-extrabold text-slate-900">ลบ BOM ของ FG</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบ BOM ของ FG นี้หรือไม่?</p>
+		<div class="mt-1 text-xs text-slate-500" id="deleteFgLabel"></div>
+		<p class="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">⚠ การลบจะลบ BOM header + component lines ภายใต้ FG นี้ทั้งหมด (CASCADE) Item_list ของ FG ยังคงอยู่ (ไม่ถูกลบ)</p>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="deleteFgSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</div>
+	</div>
+</div>
+
+<script>
+(() => {
+	const init = () => {
+		const addModal = document.getElementById('addModal');
+		const deleteRowModal = document.getElementById('deleteRowModal');
+		const deleteFgModal = document.getElementById('deleteFgModal');
+		const actionForm = document.getElementById('actionForm');
+		const actionField = document.getElementById('actionField');
+		const idField = document.getElementById('idField');
+		const deleteRowLabel = document.getElementById('deleteRowLabel');
+		const deleteFgLabel = document.getElementById('deleteFgLabel');
+
+		function openModal(el) { if (!el) return; el.classList.remove('hidden'); el.classList.add('flex'); }
+		function closeModal(el) { if (!el) return; el.classList.add('hidden'); el.classList.remove('flex'); }
+		function closeAll() { closeModal(addModal); closeModal(deleteRowModal); closeModal(deleteFgModal); }
+
+		['addSourceItem', 'addParentItem'].forEach(id => {
+			const el = document.getElementById(id);
+			if (el && !el.tomselect && window.TomSelect) {
+				new TomSelect(el, {
+					allowEmptyOption: true,
+					maxOptions: false,
+					placeholder: id === 'addSourceItem' ? 'พิมพ์เพื่อค้นหา Item...' : 'พิมพ์เพื่อค้นหา Parent FG...',
+				});
+			}
+		});
+
+		const componentFields = document.getElementById('componentFields');
+		const parentSelect = document.getElementById('addParentItem');
+		function applyAddMode() {
+			const mode = (document.querySelector('input[name="add_mode"]:checked') || {}).value || 'fg';
+			if (mode === 'component') {
+				componentFields.classList.remove('hidden');
+				if (parentSelect) parentSelect.setAttribute('required', 'required');
+			} else {
+				componentFields.classList.add('hidden');
+				if (parentSelect) {
+					parentSelect.removeAttribute('required');
+					if (parentSelect.tomselect) parentSelect.tomselect.setValue('');
+					else parentSelect.value = '';
+				}
+			}
+		}
+		document.querySelectorAll('input[name="add_mode"]').forEach(r =>
+			r.addEventListener('change', applyAddMode));
+		applyAddMode();
+
+		document.querySelectorAll('[data-modal-close]').forEach(b =>
+			b.addEventListener('click', closeAll));
+		document.querySelectorAll('[data-modal-backdrop]').forEach(b =>
+			b.addEventListener('click', closeAll));
+
+		const openAddBtn = document.getElementById('openAddModal');
+		if (openAddBtn) openAddBtn.addEventListener('click', () => openModal(addModal));
+
+		document.querySelectorAll('[data-open-delete-row]').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				idField.value = btn.dataset.id || '';
+				deleteRowLabel.textContent = btn.dataset.label || '';
+				openModal(deleteRowModal);
+			});
+		});
+		const deleteRowSubmit = document.getElementById('deleteRowSubmit');
+		if (deleteRowSubmit) deleteRowSubmit.addEventListener('click', () => {
+			actionField.value = 'delete_bom_row';
+			actionForm.submit();
+		});
+
+		document.querySelectorAll('[data-open-delete-fg]').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				idField.value = btn.dataset.id || '';
+				deleteFgLabel.textContent = btn.dataset.label || '';
+				openModal(deleteFgModal);
+			});
+		});
+		const deleteFgSubmit = document.getElementById('deleteFgSubmit');
+		if (deleteFgSubmit) deleteFgSubmit.addEventListener('click', () => {
+			actionField.value = 'delete_fg_bom';
+			actionForm.submit();
+		});
+
+		// Stop propagation so row-click navigation doesn't fire when clicking
+		// any of the action buttons / links in the จัดการ column.
+		document.querySelectorAll('[data-row-action]').forEach(el => {
+			el.addEventListener('click', e => e.stopPropagation());
+		});
+	};
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+})();
+</script>
 
 {% load static %}
 <script src="{% static 'js/bom_template.js' %}?v=2" defer></script>

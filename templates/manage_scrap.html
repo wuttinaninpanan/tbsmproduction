@@ -118,7 +118,7 @@
 								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id|default:'' }}" />
 							</td>
 							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
-							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.username|default:"-" }}</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.get_short_name|default:"-" }}</td>
 							<td class="px-4 py-3 whitespace-nowrap">
 								{% if r.created_by.profile %}
 									{% if r.created_by.profile.shift == 'shift_a' %}
@@ -160,7 +160,7 @@
 										data-open-edit-row
 										data-id="{{ r.id|default:'' }}"
 										data-created-at="{{ r.created_at|localtime|date:"Y-m-d H:i"|default:"" }}"
-										data-username="{{ r.created_by.username|default:'' }}"
+										data-username="{{ r.created_by.get_short_name|default:'' }}"
 										data-shift="{% if r.created_by.profile %}{{ r.created_by.profile.shift|default:'shift_day' }}{% else %}—{% endif %}"
 										data-line-code="{{ r.production_line.code|default:'' }}"
 										data-part-id="{{ r.part_number.id|default:'' }}"

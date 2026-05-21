@@ -13,7 +13,7 @@ from django.shortcuts import redirect
 from core.models.bill_of_material_item_master import BillOfMaterialItemMater
 from core.models.inspection.inspection_item import InspectionItem
 from core.models.inspection.inspection_model import InspectionModels
-from core.models.bill_of_material import BillOfMaterial
+from core.models.item_line import ItemLine
 
 
 def _is_uuid(value: str) -> bool:
@@ -74,6 +74,7 @@ class InspectionItemView(TemplateView):
             per_page = 100
 
         qs = InspectionItem.objects.select_related(
+            "bill_of_material_item_master__bom__item",
             "bill_of_material_item_master__component",
             "inspection_model"
         )
@@ -83,20 +84,59 @@ class InspectionItemView(TemplateView):
                 Q(name__icontains=q)
                 | Q(inspection_model__class_name__icontains=q)
                 | Q(class_name_bom__icontains=q)
-                | Q(bill_of_material_item_master__component__sku__icontains=q)
+                | Q(bill_of_material_item_master__bom__item__sd_code__icontains=q)
+                | Q(bill_of_material_item_master__bom__item__sku__icontains=q)
+                | Q(bill_of_material_item_master__bom__item__part_name__icontains=q)
+                | Q(bill_of_material_item_master__component__part_name__icontains=q)
             )
 
         qs = qs.order_by("name")
         paginator = Paginator(qs, per_page)
         page_obj = paginator.get_page(page)
 
+        # Build a map: fg_item_id -> [line_name, ...] so we can group rows by Line
+        # without changing any data. This is a frontend-only grouping.
+        page_fg_ids = [
+            obj.bill_of_material_item_master.bom.item_id
+            for obj in page_obj.object_list
+            if obj.bill_of_material_item_master
+            and obj.bill_of_material_item_master.bom_id
+            and obj.bill_of_material_item_master.bom.item_id
+        ]
+        fg_line_map: dict = {}
+        if page_fg_ids:
+            for il in (
+                ItemLine.objects
+                .filter(item_id__in=page_fg_ids)
+                .select_related("line")
+            ):
+                fg_line_map.setdefault(il.item_id, []).append(
+                    getattr(il.line, "line_name", "") or ""
+                )
+
         rows = []
         for obj in page_obj.object_list:
             bom_master = obj.bill_of_material_item_master
             bom_label = ""
+            fg_id = None
+            fg_sd_code = ""
+            fg_part_name = ""
 
-            if bom_master and bom_master.component_id:
-                bom_label = f"{bom_master.component.sku} — {bom_master.component.part_name}"
+            if bom_master and bom_master.bom_id and bom_master.bom.item_id:
+                product = bom_master.bom.item
+                fg_id = product.id
+                fg_sd_code = product.sd_code or product.sku or ""
+                fg_part_name = product.part_name or ""
+                component_name = (
+                    bom_master.component.part_name
+                    if bom_master.component_id else ""
+                )
+                if component_name and component_name != product.part_name:
+                    bom_label = f"{fg_sd_code} — {fg_part_name} [{component_name}]"
+                else:
+                    bom_label = f"{fg_sd_code} — {fg_part_name}"
+
+            line_names = sorted({ln for ln in fg_line_map.get(fg_id, []) if ln}) if fg_id else []
 
             rows.append({
                 "id": str(obj.id),
@@ -108,9 +148,48 @@ class InspectionItemView(TemplateView):
                 "inspection_model_class": getattr(obj.inspection_model, "class_name", "") if obj.inspection_model_id else "",
                 "is_exist": obj.is_exist,
                 "camera_number": obj.camera_number,
+                "line_names": line_names,
+                "fg_sd_code": fg_sd_code,
+                "fg_part_name": fg_part_name,
+            })
+
+        # Nested grouping (frontend-only): Line → FG (เบอร์งาน) → items.
+        # Items belonging to multiple Lines appear under each Line's section;
+        # within a Line they are further grouped by FG sd_code (the "เบอร์งาน").
+        nested: dict = {}
+        for r in rows:
+            line_keys = r["line_names"] if r["line_names"] else ["(ไม่ระบุ Line)"]
+            fg_key = r["fg_sd_code"] or "(ไม่ระบุเบอร์งาน)"
+            fg_label = (
+                f"{r['fg_sd_code']} — {r['fg_part_name']}"
+                if r["fg_sd_code"] and r["fg_part_name"]
+                else (r["fg_sd_code"] or "(ไม่ระบุเบอร์งาน)")
+            )
+            for ln in line_keys:
+                line_bucket = nested.setdefault(ln, {})
+                fg_bucket = line_bucket.setdefault(fg_key, {"label": fg_label, "items": []})
+                fg_bucket["items"].append(r)
+
+        grouped_rows = []
+        for ln, fg_map in sorted(nested.items()):
+            fg_groups = []
+            line_count = 0
+            for fg_key, payload in sorted(fg_map.items()):
+                fg_groups.append({
+                    "fg_key": fg_key,
+                    "fg_label": payload["label"],
+                    "items": payload["items"],
+                    "count": len(payload["items"]),
+                })
+                line_count += len(payload["items"])
+            grouped_rows.append({
+                "line_name": ln,
+                "fg_groups": fg_groups,
+                "count": line_count,
             })
 
         ctx["rows"] = rows
+        ctx["grouped_rows"] = grouped_rows
         ctx["q"] = q
         ctx["page_obj"] = page_obj
         ctx["paginator"] = paginator
@@ -119,38 +198,18 @@ class InspectionItemView(TemplateView):
         ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
         ctx["total_count"] = paginator.count
 
-        # ctx["bom_items"] = list(
-        #     BillOfMaterialItemMater.objects.select_related("component")
-        #     .order_by("component__sku")
-        #     .values("id", "component__sku", "component__part_name")
-        # )
-
-       # 🔥 สร้าง map จาก sku → latest_eci
-        bom_map = {
-            b.item.sku: b.latest_eci
-            for b in BillOfMaterial.objects.select_related("item")
-        }
-
-        bom_items = []
-
-        for b in BillOfMaterialItemMater.objects.select_related("component").order_by("component__sku"):
-            latest_eci = ""
-
-            bom = BillOfMaterial.objects.filter(id=b.bom_id).first()  # 👈 ตัวนี้ถูกแล้ว
-            if bom:
-                latest_eci = bom.latest_eci or ""
-
-            bom_items.append({
-                "id": b.id,
-                "component__sku": latest_eci,
-                "component__part_name": b.component.part_name,
-            })
-
-        ctx["bom_items"] = bom_items
-
-        ctx["bom_items"] = bom_items
-
-        ctx["bom_items"] = bom_items
+        ctx["bom_items"] = list(
+            BillOfMaterialItemMater.objects
+            .select_related("bom__item", "component")
+            .order_by("bom__item__sd_code", "sequence")
+            .values(
+                "id",
+                "bom__item__sd_code",
+                "bom__item__sku",
+                "bom__item__part_name",
+                "component__part_name",
+            )
+        )
 
         ctx["inspection_models_list"] = list(
             InspectionModels.objects.order_by("class_name").values("id", "class_name")

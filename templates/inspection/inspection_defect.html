@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Inspection Defects — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการ Inspection Defects</h1>
+			<p class="text-sm text-slate-600 mt-1">บันทึก Defect ของ Inspection ที่อิงข้อมูลจาก Scrap Record</p>
+		</div>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	<!-- SEARCH -->
+	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">SD Code</label>
+				<input name="sd_code" value="{{ q_sd|default:'' }}" placeholder="ค้นหาด้วย SD Code"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">QR (Work)</label>
+				<input name="qr_work" value="{{ q_qr|default:'' }}" placeholder="ค้นหาด้วย QR"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">วันที่ (จาก)</label>
+				<input name="date_from" type="date" value="{{ q_date_from|default:'' }}"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">วันที่ (ถึง)</label>
+				<input name="date_to" type="date" value="{{ q_date_to|default:'' }}"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
+			<div class="md:col-span-2 flex items-end">
+				<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+					<svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd"/></svg>
+					ค้นหา
+				</button>
+			</div>
+		</div>
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+			<div class="text-xs text-slate-600">ทั้งหมด {{ total_count|default:0 }} รายการ</div>
+			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+		</div>
+	</form>
+
+	<!-- TABLE -->
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="font-extrabold text-slate-800">Inspection Defects</div>
+				<div class="flex items-center gap-2">
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="sd_code" value="{{ q_sd|default:'' }}" />
+						<input type="hidden" name="qr_work" value="{{ q_qr|default:'' }}" />
+						<input type="hidden" name="date_from" value="{{ q_date_from|default:'' }}" />
+						<input type="hidden" name="date_to" value="{{ q_date_to|default:'' }}" />
+						<span class="text-sm text-gray-700">Show</span>
+						<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+							<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+							<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+							<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
+						</select>
+						<span class="text-sm text-gray-700">entries</span>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">วันที่</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD Code</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">QR (Work)</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect Mode</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Image</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Result</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Scrap Record</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for r in rows %}
+					<tr class="hover:bg-slate-50">
+						<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.created_at|default:"-" }}</td>
+						<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
+						<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.qr_work|default:"-" }}</td>
+						<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.defect_name|default:"-" }}</td>
+						<td class="px-4 py-3">
+							{% if r.photo_url %}
+								<a href="{{ r.photo_url }}" target="_blank" rel="noreferrer">
+									<img src="{{ r.photo_url }}" alt="defect image" class="w-12 h-12 rounded-md object-cover border border-slate-300 bg-slate-100 hover:opacity-80 transition" />
+								</a>
+							{% else %}
+								<span class="text-xs text-slate-400">-</span>
+							{% endif %}
+						</td>
+						<td class="px-4 py-3 text-slate-700">{{ r.result|default:"-" }}</td>
+						<td class="px-4 py-3 text-xs text-slate-500">{{ r.scrap_label|default:"-" }}</td>
+					</tr>
+					{% empty %}
+					<tr><td class="px-4 py-8 text-center text-slate-600" colspan="7">รอผล Defect จากเครื่อง Inspection...</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+
+		{% if page_obj and paginator and paginator.num_pages > 1 %}
+			<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+				<p class="text-sm text-gray-700">Showing <span class="font-medium">{{ page_obj.start_index }}</span> to <span class="font-medium">{{ page_obj.end_index }}</span> of <span class="font-medium">{{ rows_total }}</span> results</p>
+				<nav class="isolate inline-flex -space-x-px rounded-md shadow-xs">
+					{% if page_obj.has_previous %}
+						<a href="?sd_code={{ q_sd|urlencode }}&qr_work={{ q_qr|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-500 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">‹</a>
+					{% endif %}
+					{% for item in page_items %}
+						{% if item %}
+							{% if item == page_obj.number %}
+								<span class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">{{ item }}</span>
+							{% else %}
+								<a href="?sd_code={{ q_sd|urlencode }}&qr_work={{ q_qr|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">{{ item }}</a>
+							{% endif %}
+						{% else %}
+							<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">…</span>
+						{% endif %}
+					{% endfor %}
+					{% if page_obj.has_next %}
+						<a href="?sd_code={{ q_sd|urlencode }}&qr_work={{ q_qr|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-500 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">›</a>
+					{% endif %}
+				</nav>
+			</div>
+		{% endif %}
+	</div>
+</section>
+
+{% endblock %}

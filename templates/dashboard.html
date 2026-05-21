@@ -191,7 +191,7 @@
 							<tr class="hover:bg-slate-50">
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
 								{% if is_staff %}
-									<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.username|default:"-" }}</td>
+									<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.get_short_name|default:"-" }}</td>
 									<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.profile.shift|default:"-" }}</td>
 								{% endif %}
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.production_line.code|default:"-" }}</td>
