@@ -1,8 +1,0 @@
-{
-  "devDependencies": {
-    "cross-env": "^10.1.0"
-  },
-  "scripts": {
-    "dev": "cross-env NODE_ENV=development node app.js"
-  }
-}

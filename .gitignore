@@ -18,3 +18,18 @@ Thumbs.db
 *.log
 local_settings.py
 db.sqlite3
+*.sqlite3
+
+# Node
+node_modules/
+
+# Local env / secrets (each machine creates its own — see README)
+.env
+.env.local
+
+# Uploaded media (stored per-machine, not in git)
+media/
+
+# Scratch / generated output
+_bom_info.json
+_sheet_names.json
