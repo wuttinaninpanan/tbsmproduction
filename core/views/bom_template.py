@@ -50,6 +50,16 @@ def _excel_to_str(value) -> str:
 	return str(value).strip()
 
 
+def _excel_number(value):
+	"""Return a float so Excel treats the cell as numeric; "" for empty/None."""
+	if value is None:
+		return ""
+	try:
+		return float(value)
+	except (TypeError, ValueError):
+		return ""
+
+
 def _row_get_first(row: dict, *keys: str) -> str:
 	for k in keys:
 		if not k:
@@ -125,12 +135,21 @@ def _generate_unique_sku(*, part_number: str, sd_code: str) -> str:
 
 
 def download_bom_data_excel(request):
-	"""Export the current BOM Item Master data as XLSX, in the same column
-	layout as the import template so the file can be edited and re-imported.
+	"""Export the current BOM data as XLSX.
 
-	Rows are ordered by FG group, depth-first within each FG. Extra reference
-	columns (item_code, stage) are appended at the right for visibility — the
-	importer ignores them.
+	Rows are ordered by FG group, depth-first within each FG. Each row carries:
+	  * the level columns (0..10) + component identity (Item Code, M2M, SD Code,
+	    Part No., Part Name, Category, Stage, Line);
+	  * BOM line data — Quantity / Unit / Sequence — i.e. how the item is used in
+	    its immediate parent (blank on the top-level FG row);
+	  * BOM header data — Revision / Latest ECI / Scrap % — taken from the BOM
+	    owned by the item on that row (blank for leaf items with no sub-BOM);
+	  * extra Item_list fields — SKU, Weight, Purchased Price, Cost, Comment,
+	    Portion, Side, InOut, Way.
+
+	The import-relevant headers (SD Code, M2M, Part No., Quantity, Unit, ...) keep
+	their names so the file can still be edited and re-imported; the importer
+	ignores the extra reference columns.
 	"""
 	if openpyxl is None:
 		return HttpResponse(
@@ -148,6 +167,10 @@ def download_bom_data_excel(request):
 			"component",
 			"component__stage",
 			"component__category",
+			"component__portion",
+			"component__side",
+			"component__inout",
+			"component__way",
 		)
 		.all()
 	)
@@ -155,6 +178,12 @@ def download_bom_data_excel(request):
 	item_line_map: dict = {}
 	for il in ItemLine.objects.select_related("line").all():
 		item_line_map.setdefault(il.item_id, il.line)
+
+	# item_id -> the BillOfMaterial header owned by that item (FG / sub-assembly).
+	# Used to surface revision / latest_eci / scrap_percent on the item's row.
+	bom_by_item_id: dict = {
+		b.item_id: b for b in BillOfMaterial.objects.all()
+	}
 
 	children_by_parent: dict = {}
 	parent_items: dict = {}
@@ -183,13 +212,30 @@ def download_bom_data_excel(request):
 		prefix = getattr(stage, "code_prefix", "") or ""
 		return f"{name} — {prefix}" if prefix else (name or "")
 
-	def _row_for(item, level=0, m2m=""):
+	def _row_for(item, level=0, m2m="", bom_row=None):
 		category = getattr(item, "category", None)
 		stage = getattr(item, "stage", None)
 		line = item_line_map.get(getattr(item, "id", None))
+		own_bom = bom_by_item_id.get(getattr(item, "id", None))
+		portion = getattr(item, "portion", None)
+		side = getattr(item, "side", None)
+		inout = getattr(item, "inout", None)
+		way = getattr(item, "way", None)
+
 		level_cells = [""] * 11
 		if isinstance(level, int) and 0 <= level <= 10:
 			level_cells[level] = level
+
+		# How this item is used inside its immediate parent (blank for FG rows).
+		qty = _excel_number(getattr(bom_row, "quantity", None)) if bom_row else ""
+		unit = (getattr(bom_row, "unit", "") or "") if bom_row else ""
+		sequence = getattr(bom_row, "sequence", "") if bom_row else ""
+
+		# BOM header owned by this item (FG / sub-assembly); blank for leaf items.
+		revision = (getattr(own_bom, "revision", "") or "") if own_bom else ""
+		latest_eci = (getattr(own_bom, "latest_eci", "") or "") if own_bom else ""
+		scrap = _excel_number(getattr(own_bom, "scrap_percent", None)) if own_bom else ""
+
 		return level_cells + [
 			getattr(item, "item_code", "") or "",
 			m2m or "",
@@ -199,6 +245,24 @@ def download_bom_data_excel(request):
 			getattr(category, "name", "") or "" if category else "",
 			_stage_display(stage),
 			getattr(line, "line_name", "") or "" if line else "",
+			# --- BOM line (BillOfMaterialItemMater) ---
+			qty,
+			unit,
+			sequence,
+			# --- BOM header (BillOfMaterial) ---
+			revision,
+			latest_eci,
+			scrap,
+			# --- Item_list extras ---
+			getattr(item, "sku", "") or "",
+			_excel_number(getattr(item, "weight", None)),
+			_excel_number(getattr(item, "purchased_price", None)),
+			_excel_number(getattr(item, "cost", None)),
+			getattr(item, "comment", "") or "",
+			getattr(portion, "title", "") or "" if portion else "",
+			getattr(side, "title", "") or "" if side else "",
+			getattr(inout, "title", "") or "" if inout else "",
+			getattr(way, "title", "") or "" if way else "",
 		]
 
 	output_rows: list = []
@@ -215,7 +279,7 @@ def download_bom_data_excel(request):
 			if row_key in emitted:
 				continue
 			emitted.add(row_key)
-			output_rows.append(_row_for(comp, level=level + 1, m2m=parent_code))
+			output_rows.append(_row_for(comp, level=level + 1, m2m=parent_code, bom_row=r))
 			if comp.id not in visiting:
 				visiting.add(comp.id)
 				try:
@@ -240,6 +304,21 @@ def download_bom_data_excel(request):
 		"Category",
 		"Stage",
 		"Line",
+		"Quantity",
+		"Unit",
+		"Sequence",
+		"Revision",
+		"Latest ECI",
+		"Scrap %",
+		"SKU",
+		"Weight (kg)",
+		"Purchased Price",
+		"Cost",
+		"Comment",
+		"Portion",
+		"Side",
+		"InOut",
+		"Way",
 	]
 
 	wb = openpyxl.Workbook()
