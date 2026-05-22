@@ -333,3 +333,8 @@ poetry run python manage.py loaddata core/management/seeds/master_seed.json
 ```
 poetry run python manage.py seed_load --no-input
 ```
+
+### Build แบบไม่กระทบDB
+```
+docker compose up -d --no-deps --force-recreate web
+```
