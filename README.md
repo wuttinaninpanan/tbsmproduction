@@ -301,18 +301,35 @@ psql -U tbapp_user -d tbapp_db
 \dt
 ```
 
-### วิธีใช้บน server
+
+### การDump data ปัจจุบัน
 ```
-git pull
-./scripts/deploy_seed.sh
-หรือ manually:
+poetry run python manage.py seed_dump
 
+```
+### การโหลดData ที่Dumpใว้เข้าฐานข้อมูล
 
-python manage.py migrate
-python manage.py seed_load --no-input
-วิธี regenerate seed (เมื่อ DB เปลี่ยนและอยาก snapshot ใหม่)
+มี 3 วิธี เลือกตามสถานการณ์
 
-python manage.py seed_dump
-git add core/management/seeds/master_seed.json
-git commit -m "Update seed snapshot"
+**1) โหลดอัตโนมัติตอน migrate (เฉพาะฐานข้อมูลว่าง)**
+เมื่อ clone โปรเจกต์ลงเครื่องใหม่ / ฐานข้อมูลยังว่าง (ยังไม่มี user) แค่รัน migrate ระบบจะโหลด `master_seed.json` ให้อัตโนมัติ
+ถ้าฐานข้อมูลมีข้อมูลอยู่แล้ว จะ **ไม่ทำอะไร** (ไม่ทับข้อมูลเดิม)
+```
+poetry run python manage.py migrate
+```
+ปิดการโหลดอัตโนมัติได้ด้วย env (ใส่ใน .env.local)
+```
+DISABLE_AUTO_SEED=1
+```
+
+**2) โหลดแบบ merge/upsert (ไม่ลบของเดิม)**
+โหลดเข้าฐานที่มีข้อมูลอยู่แล้ว — แถวที่ primary key ซ้ำจะถูก "เขียนทับ" ด้วยข้อมูลจากไฟล์, แถว PK ใหม่จะถูกเพิ่ม, ส่วนแถวเดิมที่ไม่มีในไฟล์จะ **ไม่ถูกลบ**
+```
+poetry run python manage.py loaddata core/management/seeds/master_seed.json
+```
+
+**3) โหลดแบบ mirror เต็ม (ลบของเดิมทั้งหมดแล้วโหลดใหม่)**
+อันตราย — ลบทุกแถวใน seed tables แล้วโหลดจากไฟล์ ทำให้ข้อมูลตรงกับไฟล์เป๊ะ
+```
+poetry run python manage.py seed_load --no-input
 ```
