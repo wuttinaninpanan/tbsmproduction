@@ -9,6 +9,7 @@ from .auditlog import AuditLogViews
 from .bom_template import BomTemplateView
 from .products import ProductsView
 from .product_detail import ProductDetailView
+from .item_list import ItemListView
 from .manage_settings import ManageSettingsViews
 from .manage_settings_defect_by_category import ManageSettingsDefectByCategoryView
 from .manage_businesspartner import ManageBusinessPartnerViews
@@ -33,3 +34,4 @@ from core.views.inspection.inspection_defect import InspectionDefectView
 from core.views.inspection.inspection_defect_image import InspectionDefectImageView
 from core.views.inspection.machine_line import MachineLineView
 from core.views.inspection.machine_inspection import MachineInspectionView
+from core.views.inspection.machine_product_inspection import MachineProductInspectionView
