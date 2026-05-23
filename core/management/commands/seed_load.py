@@ -35,6 +35,8 @@ DEFAULT_INPUT = Path("core/management/seeds/master_seed.json")
 DELETE_ORDER = [
     # Scrap & inspection
     "core.ScrapRecord",
+    "core.MachineLine",
+    "core.Machine",
     "core.InspectionResult",
     "core.InspectionError",
     "core.InspectionProducts",
@@ -61,6 +63,7 @@ DELETE_ORDER = [
 
     # Lookups
     "core.DefectMode",
+    "core.Department",
     "core.Line",
     "core.LineProcess",
     "core.Process",

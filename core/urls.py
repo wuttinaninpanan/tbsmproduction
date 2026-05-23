@@ -1,6 +1,7 @@
 from django.urls import path
 from core.views import HomeViews , LoginViews , LogoutView , ContactViews , AboutViews , ProfileViews , ManageUserViews , AuditLogViews , ManageLineViews,ManageLineEditViews,LineItemSearchView,DashboardViews,RecordViews,ManageScrapViews,MonthlyComponentPartReportViews,ScrapWeightReportViews,ManageSettingsViews,ManageSettingsDefectByCategoryView,ManageBusinessPartnerViews,ManageAddressPartnerViews,ManageContactViews,BomTemplateView,ProductsView,ProductDetailView
 from core.views import InspectionItemView, InspectionModelssView, InspectionModelsDefectView, InspectionResultView, InspectionErrorView, InspectionProductsView, InspectionDefectView, InspectionDefectImageView
+from core.views import MachineLineView, MachineInspectionView
 
 
 
@@ -38,4 +39,7 @@ urlpatterns = [
     path('inspection/inspection_products/', InspectionProductsView.as_view(), name="inspection_products"),
     path('inspection/inspection_defect/', InspectionDefectView.as_view(), name="inspection_defect"),
     path('inspection/inspection_defect_image/', InspectionDefectImageView.as_view(), name="inspection_defect_image"),
+
+    path('inspection/machine/', MachineLineView.as_view(), name="inspection_machine"),
+    path('inspection/machine/<uuid:machine_id>/', MachineInspectionView.as_view(), name="inspection_machine_detail"),
 ]

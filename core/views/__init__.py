@@ -31,3 +31,5 @@ from core.views.inspection.inspection_error import InspectionErrorView
 from core.views.inspection.inspection_products import InspectionProductsView
 from core.views.inspection.inspection_defect import InspectionDefectView
 from core.views.inspection.inspection_defect_image import InspectionDefectImageView
+from core.views.inspection.machine_line import MachineLineView
+from core.views.inspection.machine_inspection import MachineInspectionView

@@ -45,6 +45,7 @@ SEED_MODELS = [
     "core.LineProcess",
     "core.Line",
     "core.DefectMode",
+    "core.Department",
 
     # Business partner family
     "core.Role",
@@ -70,6 +71,10 @@ SEED_MODELS = [
     "core.InspectionResult",
     "core.InspectionError",
     "core.InspectionProducts",
+
+    # Inspection machine
+    "core.Machine",
+    "core.MachineLine",
 
     # Scrap (operational, but include for end-to-end seed)
     "core.ScrapRecord",
