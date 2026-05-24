@@ -20,7 +20,7 @@ from core.models.way import Way
 from core.services.auditlog import log_event
 
 
-TABS = ("item_stage", "item_category", "defect_mode", "defect_by_category", "way")
+TABS = ("item_stage", "item_category", "defect_mode", "way")
 
 
 def _is_uuid(value: str) -> bool:
@@ -102,14 +102,18 @@ class ManageSettingsViews(TemplateView):
 				for o in page_obj.object_list
 			]
 		elif tab == "item_category":
-			qs = ItemCategory.objects.all()
+			# Count only the active (is_inlist=True) defect links — the ones that
+			# actually show in the recording dropdown for this category.
+			qs = ItemCategory.objects.annotate(
+				defect_count=Count("category_defects", filter=Q(category_defects__is_inlist=True))
+			)
 			if q:
 				qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
 			qs = qs.order_by("name")
 			paginator = Paginator(qs, per_page)
 			page_obj = paginator.get_page(page)
 			rows = [
-				{"id": str(o.id), "name": o.name, "description": o.description}
+				{"id": str(o.id), "name": o.name, "description": o.description, "defect_count": o.defect_count}
 				for o in page_obj.object_list
 			]
 		elif tab == "defect_mode":
@@ -138,7 +142,7 @@ class ManageSettingsViews(TemplateView):
 				}
 				for o in page_obj.object_list
 			]
-		elif tab == "way":
+		else:  # way
 			qs = Way.objects.all()
 			if q:
 				qs = qs.filter(Q(title__icontains=q))
@@ -147,22 +151,6 @@ class ManageSettingsViews(TemplateView):
 			page_obj = paginator.get_page(page)
 			rows = [
 				{"id": str(o.id), "title": o.title}
-				for o in page_obj.object_list
-			]
-		else:  # defect_by_category — list categories with defect counts; managed on a per-category page
-			qs = ItemCategory.objects.annotate(defect_count=Count("category_defects"))
-			if q:
-				qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
-			qs = qs.order_by("name")
-			paginator = Paginator(qs, per_page)
-			page_obj = paginator.get_page(page)
-			rows = [
-				{
-					"id": str(o.id),
-					"name": o.name,
-					"description": o.description or "",
-					"defect_count": o.defect_count,
-				}
 				for o in page_obj.object_list
 			]
 
@@ -180,8 +168,10 @@ class ManageSettingsViews(TemplateView):
 		ctx["count_item_stage"] = ItemStage.objects.count()
 		ctx["count_item_category"] = ItemCategory.objects.count()
 		ctx["count_defect_mode"] = DefectMode.objects.count()
-		ctx["count_defect_by_category"] = DefectByCategory.objects.count()
 		ctx["count_way"] = Way.objects.count()
+
+		# Category options for the "เพิ่มรายการของเสีย" modal (defect_mode tab).
+		ctx["categories"] = list(ItemCategory.objects.order_by("name").values("id", "name"))
 
 		return ctx
 
@@ -385,15 +375,32 @@ class ManageSettingsViews(TemplateView):
 		if not p["name_th"] or not p["name_en"] or not p["name_jp"]:
 			messages.error(request, "กรุณากรอกชื่อ Defect mode ให้ครบทั้ง TH/EN/JP")
 			return redirect(request.get_full_path())
+		# Category is required: the new defect is linked to it via DefectByCategory.
+		category_id = (request.POST.get("category_id") or "").strip()
+		if not _is_uuid(category_id):
+			messages.error(request, "กรุณาเลือก Category")
+			return redirect(request.get_full_path())
+		category = ItemCategory.objects.filter(pk=category_id).first()
+		if category is None:
+			messages.error(request, "ไม่พบ Category ที่เลือก")
+			return redirect(request.get_full_path())
 		try:
 			with transaction.atomic():
 				if DefectMode.objects.filter(name_en__iexact=p["name_en"]).exists():
 					raise IntegrityError("Defect mode ซ้ำ: name_en มีอยู่แล้ว")
 				obj = DefectMode.objects.create(**p, user=request.user)
-				transaction.on_commit(
-					lambda: log_event(request, action="defectmode:create", message="เพิ่ม defect mode", metadata={"id": str(obj.pk), "name_en": p["name_en"]})
+				DefectByCategory.objects.create(
+					category=category,
+					defect_mode=obj,
+					title=f"{category.name} - {obj.name_en}".strip(),
+					description="",
+					is_inlist=True,
+					user=request.user,
 				)
-			messages.success(request, "เพิ่ม Defect mode สำเร็จ")
+				transaction.on_commit(
+					lambda: log_event(request, action="defectmode:create", message="เพิ่ม defect mode", metadata={"id": str(obj.pk), "name_en": p["name_en"], "category_id": str(category.id)})
+				)
+			messages.success(request, f"เพิ่มรายการของเสียสำเร็จ และผูกกับ Category “{category.name}”")
 		except IntegrityError as e:
 			messages.error(request, f"บันทึกไม่สำเร็จ (ข้อมูลซ้ำหรือผิดเงื่อนไข): {e}")
 		except Exception as e:

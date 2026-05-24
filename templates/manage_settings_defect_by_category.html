@@ -15,6 +15,7 @@
 			</nav>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">{{ category.name }}</h1>
 			{% if category.description %}<p class="text-sm text-slate-600 mt-1">{{ category.description }}</p>{% endif %}
+			<p class="text-sm text-slate-600 mt-1">แสดงเฉพาะ Defect ที่ผูกกับ category นี้ • ติ๊ก/เอาออก = แสดง/ซ่อนใน dropdown ตอนบันทึกของเสีย (กด “บันทึก”) • ปุ่ม “ลบ” = เอา defect ออกจาก category นี้ (ถ้าไม่ได้ผูกกับ category อื่น จะลบออกจากระบบด้วย)</p>
 		</div>
 		<a href="{{ back_url }}" class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 self-start">
 			<svg viewBox="0 0 20 20" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clip-rule="evenodd"/></svg>
@@ -22,288 +23,240 @@
 		</a>
 	</header>
 
-	{# Search + toolbar #}
-	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
-		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
-			<div class="md:col-span-5">
-				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input name="q" value="{{ q|default:'' }}" placeholder="พิมพ์เพื่อค้นหา defect ใน category นี้"
-					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-			</div>
-			<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
-			<div class="md:col-span-2 flex items-end">
-				<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
-					ค้นหา
-				</button>
-			</div>
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
+			{% endfor %}
 		</div>
-		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-			<div class="text-xs text-slate-600">ทั้งหมด {{ rows_total|default:0 }} รายการ</div>
-			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+	{% endif %}
+
+	{# ---- Add a Defect to this category (search typeahead) ---- #}
+	<form method="post" id="addDefectForm" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+		{% csrf_token %}
+		<input type="hidden" name="action" value="dbc_add" />
+		<input type="hidden" name="defect_mode_id" id="addDefectId" />
+		<label class="block text-sm font-semibold text-slate-700">เพิ่ม Defect เข้า list</label>
+		<div class="mt-1 flex flex-col gap-2 sm:flex-row sm:items-start">
+			<div id="addDefectWrap" class="relative w-full sm:max-w-md">
+				<input id="addDefectSearch" type="text" autocomplete="off" placeholder="พิมพ์ชื่อ Defect (EN / TH / JP) เพื่อค้นหา"
+					class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+				<ul id="addDefectOptions" class="hidden absolute z-20 mt-1 w-full max-h-64 overflow-auto rounded-md border border-slate-200 bg-white shadow-lg"></ul>
+			</div>
+			<button type="submit" id="addDefectBtn" disabled
+				class="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+				<svg viewBox="0 0 20 20" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd"/></svg>
+				เพิ่ม
+			</button>
 		</div>
+		<p class="mt-2 text-xs text-slate-500">ค้นหาจากรายการ Defect ทั้งหมด แล้วเลือกเพื่อผูกเข้ากับ category นี้ (defect ที่ผูกแล้วจะไม่แสดงในการค้นหา)</p>
 	</form>
 
-	{# Table + add button toolbar #}
-	<div class="rounded-2xl border border-slate-200 overflow-hidden">
-		<div class="bg-slate-100 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-			<div class="font-extrabold text-slate-800">Defect modes ใน "{{ category.name }}"</div>
-			<div class="flex items-center gap-2">
-				<button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
-					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
-						<path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd" />
-					</svg>
-					เพิ่ม Defect
-				</button>
-				<form method="get" class="flex items-center gap-2">
-					<input type="hidden" name="q" value="{{ q|default:'' }}" />
-					<div class="flex items-center gap-2">
-						<span class="text-sm text-gray-700">Show</span>
-						<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
-							<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-							<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
-							<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
-							<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
-						</select>
-						<span class="text-sm text-gray-700">entries</span>
-					</div>
-				</form>
+	<form method="post" id="syncForm">
+		{% csrf_token %}
+		<input type="hidden" name="action" value="dbc_sync" />
+
+		{# Toolbar: search (client-side) + bulk actions #}
+		<div class="rounded-t-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+			<div class="w-full sm:max-w-sm">
+				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+				<input id="defectSearch" type="text" autocomplete="off" placeholder="พิมพ์ชื่อ Defect (EN / TH / JP)"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="text-sm text-slate-600">เลือกแล้ว <span id="selectedCount" class="font-bold text-slate-900">{{ selected_count }}</span> / {{ total_defects }}</span>
+				<button type="button" id="selectAllBtn" class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100">เลือกที่แสดง</button>
+				<button type="button" id="clearAllBtn" class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100">ล้างที่แสดง</button>
 			</div>
 		</div>
 
-		<div class="overflow-x-auto">
-			<table class="min-w-full text-sm">
-				<thead class="bg-white text-slate-800">
-					<tr>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Title</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description</th>
-						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">In-list</th>
-						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
-					</tr>
-				</thead>
-				<tbody class="divide-y divide-slate-200">
-					{% for r in rows %}
-						<tr class="hover:bg-slate-50">
-							<td class="px-4 py-3 text-slate-900 whitespace-nowrap">
-								<div class="font-semibold">{{ r.defect_name_en|default:'-' }}</div>
-								<div class="text-xs text-slate-500">{{ r.defect_name_th }}{% if r.defect_name_jp %} / {{ r.defect_name_jp }}{% endif %}</div>
-							</td>
-							<td class="px-4 py-3 text-slate-700">{{ r.title|default:'-' }}</td>
-							<td class="px-4 py-3 text-slate-700">{{ r.description|default:'-' }}</td>
-							<td class="px-4 py-3 text-center">
-								{% if r.is_inlist %}
-									<span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-xs font-semibold">Yes</span>
-								{% else %}
-									<span class="inline-flex items-center rounded-full bg-slate-100 text-slate-600 px-2.5 py-0.5 text-xs font-semibold">No</span>
-								{% endif %}
-							</td>
-							<td class="px-4 py-3">
-								<div class="flex items-center justify-center gap-2">
-									<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
-										data-id="{{ r.id }}"
-										data-defect-mode-id="{{ r.defect_mode_id }}"
-										data-title="{{ r.title }}" data-description="{{ r.description }}"
-										data-is-inlist="{% if r.is_inlist %}1{% else %}0{% endif %}">แก้ไข</button>
-									<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
-										data-id="{{ r.id }}" data-label="{{ r.title|default:r.defect_name_en }}">ลบ</button>
-								</div>
-							</td>
-						</tr>
-					{% empty %}
-						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="5">ยังไม่มี defect mode สำหรับ category นี้ กดปุ่ม "เพิ่ม Defect" เพื่อเริ่มต้น</td></tr>
+		{# List — every checkbox stays in the DOM; search only hides rows #}
+		<div class="border-x border-slate-200">
+			{% if defects %}
+				<ul id="defectList" class="divide-y divide-slate-200">
+					{% for d in defects %}
+						<li data-defect-item data-search="{{ d.name_en|lower }} {{ d.name_th|lower }} {{ d.name_jp|lower }}"
+							class="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-slate-50">
+							<span class="min-w-0 flex-1">
+								<span class="block font-semibold text-slate-900 truncate">{{ d.name_en|default:'-' }}</span>
+								<span class="block text-xs text-slate-500 truncate">{{ d.name_th }}{% if d.name_jp %} / {{ d.name_jp }}{% endif %}</span>
+							</span>
+							<label class="inline-flex items-center gap-2 shrink-0 cursor-pointer">
+								<span class="text-xs text-slate-500">แสดง</span>
+								<input type="checkbox" name="defect_mode_ids" value="{{ d.id }}" {% if d.checked %}checked{% endif %}
+									data-defect-checkbox class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+							</label>
+							<button type="button" data-delete-defect data-id="{{ d.id }}" data-label="{{ d.name_en|default:d.name_th }}"
+								class="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition">ลบ</button>
+						</li>
 					{% endfor %}
-				</tbody>
-			</table>
+				</ul>
+				<div id="noMatch" class="hidden py-8 text-center text-sm text-slate-500">ไม่พบ Defect ที่ตรงกับคำค้นหา</div>
+			{% else %}
+				<div class="py-8 px-4 text-center text-sm text-slate-600">
+					ยังไม่มี Defect ที่ผูกกับ category นี้ — ไปเพิ่มได้ที่
+					<a href="{% url 'manage_settings' %}?tab=defect_mode" class="font-semibold text-indigo-600 hover:underline">แท็บ Defect Mode</a>
+					(เลือก category นี้ตอนสร้าง) หรือใช้ช่อง “เพิ่ม Defect เข้า list” ด้านบน
+				</div>
+			{% endif %}
 		</div>
 
-		{# Pagination #}
-		{% if page_obj and paginator %}
-			<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
-				<p class="text-sm text-gray-700">
-					Showing <span class="font-medium">{{ page_obj.start_index }}</span> to <span class="font-medium">{{ page_obj.end_index }}</span> of <span class="font-medium">{{ rows_total }}</span> results
-				</p>
-				{% if paginator.num_pages > 1 %}
-					<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md">
-						{% if page_obj.has_previous %}
-							<a href="?q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">‹</a>
-						{% else %}
-							<span class="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-300 ring-1 ring-inset ring-gray-200">‹</span>
-						{% endif %}
-						{% for item in page_items %}
-							{% if item %}
-								{% if item == page_obj.number %}
-									<span aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">{{ item }}</span>
-								{% else %}
-									<a href="?q={{ q|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">{{ item }}</a>
-								{% endif %}
-							{% else %}
-								<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">...</span>
-							{% endif %}
-						{% endfor %}
-						{% if page_obj.has_next %}
-							<a href="?q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">›</a>
-						{% else %}
-							<span class="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-300 ring-1 ring-inset ring-gray-200">›</span>
-						{% endif %}
-					</nav>
-				{% endif %}
+		{# Sticky save bar #}
+		<div class="sticky bottom-0 z-10 rounded-b-2xl border border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-5 py-3 flex items-center justify-between">
+			<span class="text-sm text-slate-600">เลือกแล้ว <span class="font-bold text-slate-900" data-selected-mirror>{{ selected_count }}</span> รายการ</span>
+			<div class="flex items-center gap-2">
+				<a href="{{ back_url }}" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ยกเลิก</a>
+				<button type="submit" class="px-5 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
 			</div>
-		{% endif %}
-	</div>
+		</div>
+	</form>
 </section>
 
-{# Hidden action form #}
-<form id="actionForm" method="post" class="hidden">
+{# Hidden form + confirm modal for per-row delete (kept outside syncForm) #}
+<form method="post" id="deleteForm" class="hidden">
 	{% csrf_token %}
-	<input type="hidden" name="action" id="actionField" value="" />
-	<input type="hidden" name="id" id="idField" value="" />
-	<input type="hidden" name="defect_mode_id" id="f_defect_mode_id" value="" />
-	<input type="hidden" name="title" id="f_title" value="" />
-	<input type="hidden" name="description" id="f_description" value="" />
-	<input type="hidden" name="is_inlist" id="f_is_inlist" value="" />
+	<input type="hidden" name="action" value="dbc_delete" />
+	<input type="hidden" name="defect_mode_id" id="deleteDefectId" />
 </form>
 
-{# ADD modal #}
-<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
-	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-2xl rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close"><span class="text-slate-700 text-xl">×</span></button>
-		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่ม Defect ใน "{{ category.name }}"</h2>
-		<div class="mt-4 space-y-4">
-			<div><label class="block text-sm font-semibold text-slate-700">Defect mode</label>
-				<select id="add_defect_mode_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
-					<option value="">เลือก Defect mode</option>
-					{% for d in all_defects %}<option value="{{ d.id }}">{{ d.name_en }} / {{ d.name_th }}</option>{% endfor %}
-				</select></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Title (ปล่อยว่างเพื่อให้สร้างอัตโนมัติ)</label>
-				<input id="add_title" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Description</label>
-				<input id="add_description" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
-			<label class="inline-flex items-center gap-2">
-				<input id="add_is_inlist" type="checkbox" class="h-4 w-4" />
-				<span class="text-sm text-slate-700">In-list</span>
-			</label>
-		</div>
-		<div class="mt-5 flex items-center justify-end gap-2">
-			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-			<button id="addSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
-		</div>
-	</div>
-</div>
-
-{# EDIT modal #}
-<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
-	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-2xl rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close"><span class="text-slate-700 text-xl">×</span></button>
-		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไข Defect</h2>
-		<div class="mt-4 space-y-4">
-			<div><label class="block text-sm font-semibold text-slate-700">Defect mode</label>
-				<select id="edit_defect_mode_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
-					<option value="">เลือก Defect mode</option>
-					{% for d in all_defects %}<option value="{{ d.id }}">{{ d.name_en }} / {{ d.name_th }}</option>{% endfor %}
-				</select></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Title</label>
-				<input id="edit_title" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Description</label>
-				<input id="edit_description" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
-			<label class="inline-flex items-center gap-2">
-				<input id="edit_is_inlist" type="checkbox" class="h-4 w-4" />
-				<span class="text-sm text-slate-700">In-list</span>
-			</label>
-		</div>
-		<div class="mt-5 flex items-center justify-end gap-2">
-			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
-		</div>
-	</div>
-</div>
-
-{# DELETE modal #}
 <div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
-	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close"><span class="text-slate-700 text-xl">×</span></button>
-		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">ยืนยันการลบ</h2>
-		<p class="text-sm text-slate-700 mt-2">ต้องการลบรายการนี้หรือไม่?</p>
-		<div class="mt-2 text-xs text-slate-500 break-words" id="deleteLabel"></div>
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-del-backdrop></div>
+	<div class="relative w-full max-w-md rounded-2xl shadow-2xl bg-white p-6">
+		<h2 class="text-lg font-extrabold text-slate-900">ยืนยันการลบ Defect</h2>
+		<p class="text-sm text-slate-700 mt-2">ลบ <span id="deleteLabel" class="font-semibold"></span> ออกจาก category นี้?</p>
+		<p class="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">⚠ ถ้า defect นี้ไม่ได้ผูกกับ category อื่น จะถูกลบออกจากระบบทั้งหมด (ยกเว้นมีประวัติบันทึกของเสียอ้างอิงอยู่ จะเก็บ defect ไว้)</p>
 		<div class="mt-5 flex items-center justify-end gap-2">
-			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-			<button id="deleteSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-del-close>ยกเลิก</button>
+			<button type="button" id="deleteConfirmBtn" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
 		</div>
 	</div>
 </div>
 
 <script>
 (() => {
-	const $ = (id) => document.getElementById(id);
-	const setField = (id, val) => { const el = $(id); if (el) el.value = val ?? ""; };
-	const getInput = (id) => ($(id)?.value || "").trim();
-	const getCheckbox = (id) => ($(id)?.checked ? "1" : "0");
+	const search = document.getElementById("defectSearch");
+	const list = document.getElementById("defectList");
+	const noMatch = document.getElementById("noMatch");
+	const items = Array.from(document.querySelectorAll("[data-defect-item]"));
+	const checkboxes = Array.from(document.querySelectorAll("[data-defect-checkbox]"));
+	const countEls = [
+		document.getElementById("selectedCount"),
+		...document.querySelectorAll("[data-selected-mirror]"),
+	].filter(Boolean);
 
-	const actionForm = $("actionForm");
-	const actionField = $("actionField");
-	const idField = $("idField");
+	const updateCount = () => {
+		const n = checkboxes.filter((c) => c.checked).length;
+		countEls.forEach((el) => { el.textContent = n; });
+	};
 
-	const addModal = $("addModal");
-	const editModal = $("editModal");
-	const deleteModal = $("deleteModal");
+	const visibleItems = () => items.filter((el) => !el.classList.contains("hidden"));
 
-	const openModal = (el) => { if (!el) return; el.classList.remove("hidden"); el.classList.add("flex"); };
-	const closeModal = (el) => { if (!el) return; el.classList.add("hidden"); el.classList.remove("flex"); };
-	const closeAll = () => { closeModal(addModal); closeModal(editModal); closeModal(deleteModal); };
-
-	document.querySelectorAll("[data-modal-close]").forEach((b) => b.addEventListener("click", closeAll));
-	document.querySelectorAll("[data-modal-backdrop]").forEach((b) => b.addEventListener("click", closeAll));
-	document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
-
-	$("openAddModal")?.addEventListener("click", () => {
-		addModal.querySelectorAll("input[type=text], input:not([type]), input[type=email], select").forEach((el) => { el.value = ""; });
-		addModal.querySelectorAll("input[type=checkbox]").forEach((el) => { el.checked = false; });
-		openModal(addModal);
-	});
-	$("addSubmit")?.addEventListener("click", () => {
-		setField("f_defect_mode_id", getInput("add_defect_mode_id"));
-		setField("f_title", getInput("add_title"));
-		setField("f_description", getInput("add_description"));
-		setField("f_is_inlist", getCheckbox("add_is_inlist"));
-		actionField.value = "dbc_create";
-		idField.value = "";
-		actionForm.submit();
-	});
-
-	document.querySelectorAll("[data-open-edit]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			const ds = btn.dataset;
-			idField.value = ds.id || "";
-			setField("edit_defect_mode_id", ds.defectModeId);
-			setField("edit_title", ds.title);
-			setField("edit_description", ds.description);
-			const cb = $("edit_is_inlist");
-			if (cb) cb.checked = ds.isInlist === "1";
-			openModal(editModal);
+	const applyFilter = () => {
+		const q = (search?.value || "").trim().toLowerCase();
+		let shown = 0;
+		items.forEach((el) => {
+			const hit = !q || (el.dataset.search || "").includes(q);
+			el.classList.toggle("hidden", !hit);
+			if (hit) shown += 1;
 		});
+		if (noMatch) noMatch.classList.toggle("hidden", shown !== 0);
+		if (list) list.classList.toggle("hidden", shown === 0);
+	};
+
+	search?.addEventListener("input", applyFilter);
+	checkboxes.forEach((c) => c.addEventListener("change", updateCount));
+
+	document.getElementById("selectAllBtn")?.addEventListener("click", () => {
+		visibleItems().forEach((el) => {
+			const cb = el.querySelector("[data-defect-checkbox]");
+			if (cb) cb.checked = true;
+		});
+		updateCount();
 	});
-	$("editSubmit")?.addEventListener("click", () => {
-		setField("f_defect_mode_id", getInput("edit_defect_mode_id"));
-		setField("f_title", getInput("edit_title"));
-		setField("f_description", getInput("edit_description"));
-		setField("f_is_inlist", getCheckbox("edit_is_inlist"));
-		actionField.value = "dbc_update";
-		actionForm.submit();
+	document.getElementById("clearAllBtn")?.addEventListener("click", () => {
+		visibleItems().forEach((el) => {
+			const cb = el.querySelector("[data-defect-checkbox]");
+			if (cb) cb.checked = false;
+		});
+		updateCount();
 	});
 
-	const deleteLabel = $("deleteLabel");
-	document.querySelectorAll("[data-open-delete]").forEach((btn) => {
+	// Per-row delete — uses a separate form so it never triggers the bulk save.
+	const deleteForm = document.getElementById("deleteForm");
+	const deleteIdField = document.getElementById("deleteDefectId");
+	const deleteModal = document.getElementById("deleteModal");
+	const deleteLabel = document.getElementById("deleteLabel");
+	const showDel = () => { deleteModal?.classList.remove("hidden"); deleteModal?.classList.add("flex"); };
+	const hideDel = () => { deleteModal?.classList.add("hidden"); deleteModal?.classList.remove("flex"); };
+	document.querySelectorAll("[data-delete-defect]").forEach((btn) => {
 		btn.addEventListener("click", () => {
-			idField.value = btn.dataset.id || "";
+			if (deleteIdField) deleteIdField.value = btn.dataset.id || "";
 			if (deleteLabel) deleteLabel.textContent = btn.dataset.label || "";
-			openModal(deleteModal);
+			showDel();
 		});
 	});
-	$("deleteSubmit")?.addEventListener("click", () => {
-		actionField.value = "dbc_delete";
-		actionForm.submit();
+	document.querySelectorAll("[data-del-close], [data-del-backdrop]").forEach((b) => b.addEventListener("click", hideDel));
+	document.getElementById("deleteConfirmBtn")?.addEventListener("click", () => {
+		if (deleteForm && deleteIdField && deleteIdField.value) deleteForm.submit();
+	});
+	document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideDel(); });
+
+	updateCount();
+})();
+</script>
+
+{{ available_defects|json_script:"availableDefectsData" }}
+<script>
+(() => {
+	const dataEl = document.getElementById("availableDefectsData");
+	if (!dataEl) return;
+	let data = [];
+	try { data = JSON.parse(dataEl.textContent) || []; } catch (e) { data = []; }
+
+	const input = document.getElementById("addDefectSearch");
+	const box = document.getElementById("addDefectOptions");
+	const chosen = document.getElementById("addDefectId");
+	const btn = document.getElementById("addDefectBtn");
+	const form = document.getElementById("addDefectForm");
+	if (!input || !box || !chosen || !btn || !form) return;
+
+	const clearChoice = () => { chosen.value = ""; btn.disabled = true; };
+	const hide = () => box.classList.add("hidden");
+
+	const render = (list) => {
+		box.innerHTML = "";
+		if (!list.length) { hide(); return; }
+		list.slice(0, 20).forEach((d) => {
+			const li = document.createElement("li");
+			li.className = "px-3 py-2 hover:bg-indigo-50 cursor-pointer text-sm";
+			const sub = [d.name_th, d.name_jp].filter(Boolean).join(" / ");
+			li.innerHTML = '<span class="font-semibold text-slate-900"></span>'
+				+ '<span class="text-slate-500"></span>';
+			li.children[0].textContent = d.name_en || "-";
+			if (sub) li.children[1].textContent = " — " + sub;
+			li.addEventListener("mousedown", (e) => {
+				e.preventDefault();
+				input.value = d.name_en || d.name_th || d.name_jp || "";
+				chosen.value = d.id;
+				btn.disabled = false;
+				hide();
+			});
+			box.appendChild(li);
+		});
+		box.classList.remove("hidden");
+	};
+
+	input.addEventListener("input", () => {
+		clearChoice();
+		const q = input.value.trim().toLowerCase();
+		if (!q) { hide(); return; }
+		render(data.filter((d) =>
+			((d.name_en || "") + " " + (d.name_th || "") + " " + (d.name_jp || "")).toLowerCase().includes(q)
+		));
+	});
+	document.addEventListener("click", (e) => { if (!e.target.closest("#addDefectWrap")) hide(); });
+	form.addEventListener("submit", (e) => {
+		if (!chosen.value) { e.preventDefault(); alert("กรุณาเลือก Defect จากรายการที่ค้นหา"); }
 	});
 })();
 </script>

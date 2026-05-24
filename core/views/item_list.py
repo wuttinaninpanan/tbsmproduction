@@ -1,15 +1,47 @@
 from __future__ import annotations
 
+import uuid
+from decimal import Decimal, InvalidOperation
+
+from django.contrib import messages
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
 from core.auth.decorators import staff_required
+from core.models.bill_of_material_item_master import BillOfMaterialItemMater
 from core.models.item_category import ItemCategory
 from core.models.item_line import ItemLine
 from core.models.item_list import Item_list
 from core.models.item_stage import ItemStage
+
+# Tabs available on the Item List page. Each maps to a queryset filter.
+ALLOWED_TABS = {"all", "nosd", "no_partno", "no_partname", "no_bom", "add"}
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        uuid.UUID(str(value))
+    except Exception:
+        return False
+    return True
+
+
+def _safe_decimal(value, default: Decimal = Decimal("0")) -> Decimal:
+    if value is None:
+        return default
+    if isinstance(value, Decimal):
+        return value
+    value = str(value).strip()
+    if value == "":
+        return default
+    try:
+        return Decimal(value)
+    except (InvalidOperation, ValueError):
+        return default
 
 
 def _page_items(num_pages: int, current: int) -> list[int | None]:
@@ -42,16 +74,40 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+def _tab_filter(qs, tab: str):
+    """Narrow a queryset to the rows belonging to the given tab."""
+    if tab == "nosd":
+        return qs.filter(sd_code__icontains="NOSD")
+    if tab == "no_partno":
+        return qs.filter(Q(part_number__isnull=True) | Q(part_number__exact=""))
+    if tab == "no_partname":
+        return qs.filter(Q(part_name__isnull=True) | Q(part_name__exact=""))
+    if tab == "no_bom":
+        # Items that are not a child (component) of any BoM — i.e. never
+        # referenced as a component in BillOfMaterialItemMater. Whether the
+        # item is itself a BoM header does not matter.
+        return qs.exclude(
+            id__in=BillOfMaterialItemMater.objects.values("component_id")
+        )
+    # "all" and "add" show the unfiltered set.
+    return qs
+
+
 @method_decorator(staff_required, name="dispatch")
 class ItemListView(TemplateView):
-    """Read-only listing of EVERY item in Item_list (FG, components, raw materials),
-    regardless of Line assignment. (อ่านอย่างเดียว)"""
+    """Listing of EVERY item in Item_list (FG, components, raw materials),
+    regardless of Line assignment, organised into tabs. The "Add new" tab
+    exposes a form for creating a new item."""
 
     template_name = "item_list.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         request = self.request
+
+        tab = (request.GET.get("tab") or "all").strip().lower()
+        if tab not in ALLOWED_TABS:
+            tab = "all"
 
         q = (request.GET.get("q") or "").strip()
         per_page_raw = (request.GET.get("per_page") or "").strip()
@@ -65,11 +121,32 @@ class ItemListView(TemplateView):
         if per_page not in allowed_per_page:
             per_page = 100
 
-        qs = (
+        base_qs = (
             Item_list.objects
             .select_related("category", "stage", "portion", "side", "inout", "way")
             .order_by("item_code", "sd_code")
         )
+
+        # Per-tab totals (independent of the search box) for the tab badges.
+        ctx["count_all"] = base_qs.count()
+        ctx["count_nosd"] = _tab_filter(base_qs, "nosd").count()
+        ctx["count_no_partno"] = _tab_filter(base_qs, "no_partno").count()
+        ctx["count_no_partname"] = _tab_filter(base_qs, "no_partname").count()
+        ctx["count_no_bom"] = _tab_filter(base_qs, "no_bom").count()
+
+        ctx["tab"] = tab
+        ctx["q"] = q
+        ctx["per_page"] = per_page
+        ctx["categories"] = list(ItemCategory.objects.order_by("name").values("id", "name"))
+        ctx["stages"] = list(
+            ItemStage.objects.order_by("display_name").values("id", "display_name", "code_prefix")
+        )
+
+        # The "Add new" tab is a form only — no listing to build.
+        if tab == "add":
+            return ctx
+
+        qs = _tab_filter(base_qs, tab)
         if q:
             qs = qs.filter(
                 Q(item_code__icontains=q)
@@ -133,16 +210,73 @@ class ItemListView(TemplateView):
             })
 
         ctx["rows"] = rows
-        ctx["q"] = q
         ctx["page_obj"] = page_obj
         ctx["paginator"] = paginator
-        ctx["per_page"] = per_page
         ctx["rows_total"] = paginator.count
         ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
         ctx["total_count"] = paginator.count
-
-        ctx["categories"] = list(ItemCategory.objects.order_by("name").values("id", "name"))
-        ctx["stages"] = list(
-            ItemStage.objects.order_by("display_name").values("id", "display_name", "code_prefix")
-        )
         return ctx
+
+    def post(self, request, *args, **kwargs):
+        action = (request.POST.get("action") or "").strip().lower()
+        if action == "create_item":
+            return self._handle_create_item(request)
+        messages.error(request, "ไม่รองรับการทำงานนี้")
+        return redirect(request.get_full_path())
+
+    def _resolve_fk(self, model, value):
+        value = (value or "").strip()
+        if not value or not _is_uuid(value):
+            return None
+        return model.objects.filter(pk=value).first()
+
+    def _handle_create_item(self, request):
+        sd_code = (request.POST.get("sd_code") or "").strip()
+        part_number = (request.POST.get("part_number") or "").strip()
+        part_name = (request.POST.get("part_name") or "").strip()
+        sku = (request.POST.get("sku") or "").strip()
+        weight = _safe_decimal(request.POST.get("weight") or "0")
+        cost = _safe_decimal(request.POST.get("cost") or "0")
+        purchased_price = _safe_decimal(request.POST.get("purchased_price") or "0")
+        comment = (request.POST.get("comment") or "").strip()
+
+        if not part_number or not part_name or not sku:
+            messages.error(request, "กรุณากรอก Part Number / Part Name / SKU")
+            return redirect(request.get_full_path())
+
+        # กัน SD Code ซ้ำ: หากมีหลายแถวใช้ sd_code เดียวกัน เครื่องจะ map ไม่ได้
+        if sd_code and Item_list.objects.filter(sd_code=sd_code).exists():
+            messages.error(
+                request,
+                f"มี SD Code \"{sd_code}\" อยู่แล้ว — ห้ามเพิ่มซ้ำ "
+                "(ถ้าต้องการแก้ไข ให้เข้าไปแก้ที่รายการเดิม)",
+            )
+            return redirect(request.get_full_path())
+
+        category = self._resolve_fk(ItemCategory, request.POST.get("category_id"))
+        stage = self._resolve_fk(ItemStage, request.POST.get("stage_id"))
+
+        try:
+            with transaction.atomic():
+                Item_list(
+                    sd_code=sd_code,
+                    part_number=part_number,
+                    part_name=part_name,
+                    sku=sku,
+                    weight=weight,
+                    cost=cost,
+                    purchased_price=purchased_price,
+                    comment=comment,
+                    category=category,
+                    stage=stage,
+                    user=request.user,
+                ).save()
+        except IntegrityError as e:
+            messages.error(request, f"เพิ่มไม่สำเร็จ (ข้อมูลซ้ำ): {e}")
+            return redirect(request.get_full_path())
+        except Exception as e:
+            messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+            return redirect(request.get_full_path())
+
+        messages.success(request, "เพิ่ม Item สำเร็จ")
+        return redirect(request.get_full_path())

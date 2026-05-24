@@ -3,9 +3,8 @@ from __future__ import annotations
 import uuid
 
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 from django.http import Http404
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -27,43 +26,17 @@ def _is_uuid(value: str) -> bool:
 	return True
 
 
-def _parse_bool(value) -> bool:
-	v = (value or "").strip().lower()
-	return v in {"1", "true", "t", "yes", "y", "on"}
-
-
-def _page_items(num_pages: int, current: int) -> list[int | None]:
-	if num_pages <= 0:
-		return []
-	if num_pages <= 10:
-		return list(range(1, num_pages + 1))
-	items: list[int | None] = [1]
-	if current > 4:
-		items.append(None)
-	start = max(2, current - 1)
-	end = min(num_pages - 1, current + 1)
-	if current <= 4:
-		start, end = 2, 4
-	if current >= num_pages - 3:
-		start, end = num_pages - 3, num_pages - 1
-	for n in range(start, end + 1):
-		if 1 < n < num_pages:
-			items.append(n)
-	if current < num_pages - 3:
-		items.append(None)
-	items.append(num_pages)
-	compressed: list[int | None] = []
-	for it in items:
-		if compressed and compressed[-1] == it:
-			continue
-		if it is None and compressed and compressed[-1] is None:
-			continue
-		compressed.append(it)
-	return compressed
-
-
 @method_decorator(staff_required, name="dispatch")
 class ManageSettingsDefectByCategoryView(TemplateView):
+	"""Pick-list editor: tick which Defect modes belong to a category.
+
+	The whole defect-mode catalogue is rendered as a checkbox grid; ticking a
+	box means a DefectByCategory row exists for (category, defect_mode) with
+	``is_inlist=True`` (the flag the recording/scrap screens filter on).
+	Search filters the grid client-side, so every checkbox is always submitted
+	and the save can safely reconcile against the full catalogue.
+	"""
+
 	template_name = "manage_settings_defect_by_category.html"
 
 	def _get_category(self):
@@ -77,166 +50,226 @@ class ManageSettingsDefectByCategoryView(TemplateView):
 
 	def get_context_data(self, **kwargs):
 		ctx = super().get_context_data(**kwargs)
-		request = self.request
 		category = self._get_category()
 
-		q = (request.GET.get("q") or "").strip()
-		page = (request.GET.get("page") or "1").strip() or "1"
-		try:
-			per_page = int((request.GET.get("per_page") or "100").strip())
-		except Exception:
-			per_page = 100
-		if per_page not in {100, 200, 500, 1000}:
-			per_page = 100
-
-		qs = (
+		# Show ONLY defects linked to this category (those with a
+		# DefectByCategory row). A box is ticked when that link is active
+		# (is_inlist=True) → the defect shows in the recording dropdown.
+		links = (
 			DefectByCategory.objects
-			.select_related("defect_mode")
 			.filter(category=category)
+			.select_related("defect_mode")
+			.order_by("defect_mode__name_en", "defect_mode__name_th")
 		)
-		if q:
-			qs = qs.filter(
-				Q(title__icontains=q)
-				| Q(description__icontains=q)
-				| Q(defect_mode__name_th__icontains=q)
-				| Q(defect_mode__name_en__icontains=q)
-				| Q(defect_mode__name_jp__icontains=q)
-			)
-		qs = qs.order_by("defect_mode__name_en", "title")
-		paginator = Paginator(qs, per_page)
-		page_obj = paginator.get_page(page)
-		rows = [
+		defects_by_id: dict[str, dict] = {}
+		for link in links:
+			d = link.defect_mode
+			if d is None:
+				continue
+			key = str(d.id)
+			entry = defects_by_id.get(key)
+			if entry is None:
+				defects_by_id[key] = {
+					"id": key,
+					"name_en": d.name_en or "",
+					"name_th": d.name_th or "",
+					"name_jp": d.name_jp or "",
+					"checked": bool(link.is_inlist),
+				}
+			else:
+				# Defensive: collapse any duplicate (category, defect) rows.
+				entry["checked"] = entry["checked"] or bool(link.is_inlist)
+		defects = list(defects_by_id.values())
+
+		# Defects NOT yet linked to this category — options for the Add search.
+		linked_ids = set(defects_by_id.keys())
+		available_defects = [
 			{
-				"id": str(o.id),
-				"defect_mode_id": str(o.defect_mode_id) if o.defect_mode_id else "",
-				"defect_name_en": getattr(o.defect_mode, "name_en", "") or "",
-				"defect_name_th": getattr(o.defect_mode, "name_th", "") or "",
-				"defect_name_jp": getattr(o.defect_mode, "name_jp", "") or "",
-				"title": o.title or "",
-				"description": o.description or "",
-				"is_inlist": bool(o.is_inlist),
+				"id": str(d.id),
+				"name_en": d.name_en or "",
+				"name_th": d.name_th or "",
+				"name_jp": d.name_jp or "",
 			}
-			for o in page_obj.object_list
+			for d in DefectMode.objects.order_by("name_en", "name_th")
+			if str(d.id) not in linked_ids
 		]
 
 		ctx["category"] = category
-		ctx["q"] = q
-		ctx["per_page"] = per_page
-		ctx["rows"] = rows
-		ctx["rows_total"] = paginator.count
-		ctx["page_obj"] = page_obj
-		ctx["paginator"] = paginator
-		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
-		ctx["all_defects"] = list(
-			DefectMode.objects.order_by("name_en", "name_th").values("id", "name_th", "name_en", "name_jp")
-		)
-		ctx["back_url"] = reverse("manage_settings") + "?tab=defect_by_category"
+		ctx["defects"] = defects
+		ctx["total_defects"] = len(defects)
+		ctx["selected_count"] = sum(1 for d in defects if d["checked"])
+		ctx["available_defects"] = available_defects
+		ctx["back_url"] = reverse("manage_settings") + "?tab=item_category"
 		return ctx
 
 	# ------------------------------------------------------------------ POST
 
 	def post(self, request, *args, **kwargs):
 		action = (request.POST.get("action") or "").strip().lower()
-		handler = {
-			"dbc_create": self._dbc_create,
-			"dbc_update": self._dbc_update,
-			"dbc_delete": self._dbc_delete,
-		}.get(action)
-		if handler is None:
-			messages.error(request, "ไม่รู้จัก action")
-			return redirect(request.get_full_path())
-		return handler(request, *args, **kwargs)
+		if action == "dbc_sync":
+			return self._dbc_sync(request)
+		if action == "dbc_add":
+			return self._dbc_add(request)
+		if action == "dbc_delete":
+			return self._dbc_delete(request)
+		messages.error(request, "ไม่รู้จัก action")
+		return redirect(request.get_full_path())
 
-	def _payload(self, request):
-		return {
-			"defect_mode_id": (request.POST.get("defect_mode_id") or "").strip(),
-			"title": (request.POST.get("title") or "").strip(),
-			"description": (request.POST.get("description") or "").strip(),
-			"is_inlist": _parse_bool(request.POST.get("is_inlist") or ""),
-		}
-
-	def _dbc_create(self, request, *args, **kwargs):
+	def _dbc_delete(self, request):
+		"""Unlink a defect from this category. If it is left linked to no other
+		category, delete the DefectMode too — unless scrap history protects it."""
 		category = self._get_category()
-		p = self._payload(request)
-		if not _is_uuid(p["defect_mode_id"]):
-			messages.error(request, "กรุณาเลือก Defect mode")
-			return redirect(request.get_full_path())
-		defect = DefectMode.objects.filter(pk=p["defect_mode_id"]).first()
+		defect_id = (request.POST.get("defect_mode_id") or "").strip()
+		if not _is_uuid(defect_id):
+			messages.error(request, "ไม่พบรหัส Defect")
+			return redirect("manage_settings_defect_by_category", category_id=category.id)
+		defect = DefectMode.objects.filter(pk=defect_id).first()
 		if defect is None:
-			messages.error(request, "ไม่พบ Defect mode")
-			return redirect(request.get_full_path())
-		title = p["title"] or f"{category.name} - {defect.name_en}".strip()
+			messages.error(request, "ไม่พบ Defect")
+			return redirect("manage_settings_defect_by_category", category_id=category.id)
+		name = defect.name_en or defect.name_th or defect.name_jp or ""
+		try:
+			with transaction.atomic():
+				# 1) unlink from THIS category
+				removed, _ = DefectByCategory.objects.filter(category=category, defect_mode=defect).delete()
+				# 2) if no other category still links it, try to remove the defect
+				still_linked = DefectByCategory.objects.filter(defect_mode=defect).exists()
+				defect_deleted = False
+				if removed and not still_linked:
+					try:
+						with transaction.atomic():
+							defect.delete()
+						defect_deleted = True
+					except ProtectedError:
+						defect_deleted = False  # used by scrap/defect-stat history → keep it
+				transaction.on_commit(
+					lambda: log_event(
+						request,
+						action="defectmodecategory:delete",
+						message="unlink defect from category",
+						metadata={
+							"category_id": str(category.id),
+							"defect_mode_id": defect_id,
+							"defect_deleted": defect_deleted,
+						},
+					)
+				)
+		except Exception as e:
+			messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+			return redirect("manage_settings_defect_by_category", category_id=category.id)
+
+		if not removed:
+			messages.info(request, f"“{name}” ไม่ได้ผูกกับ category นี้")
+		elif defect_deleted:
+			messages.success(request, f"ลบ “{name}” ออกจาก category นี้ และลบออกจากระบบแล้ว (ไม่ได้ผูกกับ category อื่น)")
+		elif not still_linked:
+			messages.success(request, f"ลบ “{name}” ออกจาก category นี้แล้ว — ยังเก็บ defect ไว้ในระบบเพราะมีประวัติการบันทึกของเสียอ้างอิงอยู่")
+		else:
+			messages.success(request, f"ลบ “{name}” ออกจาก category นี้แล้ว (ยังผูกกับ category อื่นอยู่)")
+		return redirect("manage_settings_defect_by_category", category_id=category.id)
+
+	def _dbc_add(self, request):
+		"""Link an existing DefectMode to this category (from the Add search)."""
+		category = self._get_category()
+		defect_id = (request.POST.get("defect_mode_id") or "").strip()
+		if not _is_uuid(defect_id):
+			messages.error(request, "กรุณาเลือก Defect จากรายการ")
+			return redirect("manage_settings_defect_by_category", category_id=category.id)
+		defect = DefectMode.objects.filter(pk=defect_id).first()
+		if defect is None:
+			messages.error(request, "ไม่พบ Defect ที่เลือก")
+			return redirect("manage_settings_defect_by_category", category_id=category.id)
 		try:
 			with transaction.atomic():
 				existing = DefectByCategory.objects.filter(category=category, defect_mode=defect).first()
-				if existing:
-					existing.title = title
-					existing.description = p["description"]
-					existing.is_inlist = p["is_inlist"]
-					existing.save(update_fields=["title", "description", "is_inlist", "updated_at"])
-					transaction.on_commit(
-						lambda: log_event(request, action="defectmodecategory:create_as_update", message="create->update", metadata={"id": str(existing.id), "category_id": str(category.id)})
-					)
-					messages.success(request, "บันทึกสำเร็จ (อัปเดตรายการเดิม)")
+				if existing is not None:
+					# Already linked (e.g. hidden) — just make sure it shows.
+					if not existing.is_inlist:
+						existing.is_inlist = True
+						existing.save(update_fields=["is_inlist", "updated_at"])
+						messages.success(request, f"“{defect.name_en}” อยู่ใน list อยู่แล้ว — เปิดแสดงให้แล้ว")
+					else:
+						messages.info(request, f"“{defect.name_en}” อยู่ใน list อยู่แล้ว")
 				else:
-					obj = DefectByCategory.objects.create(
+					DefectByCategory.objects.create(
 						category=category,
 						defect_mode=defect,
-						title=title,
-						description=p["description"],
-						is_inlist=p["is_inlist"],
+						title=f"{category.name} - {defect.name_en}".strip(),
+						description="",
+						is_inlist=True,
 						user=request.user,
 					)
 					transaction.on_commit(
-						lambda: log_event(request, action="defectmodecategory:create", message="create", metadata={"id": str(obj.id), "category_id": str(category.id)})
+						lambda: log_event(
+							request,
+							action="defectmodecategory:add",
+							message="add defect to category",
+							metadata={"category_id": str(category.id), "defect_mode_id": str(defect.id)},
+						)
 					)
-					messages.success(request, "เพิ่มข้อมูลสำเร็จ")
+					messages.success(request, f"เพิ่ม “{defect.name_en}” เข้า list แล้ว")
 		except Exception as e:
 			messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 		return redirect("manage_settings_defect_by_category", category_id=category.id)
 
-	def _dbc_update(self, request, *args, **kwargs):
+	def _dbc_sync(self, request):
 		category = self._get_category()
-		obj_id = (request.POST.get("id") or "").strip()
-		if not _is_uuid(obj_id):
-			messages.error(request, "ไม่พบรหัสรายการ")
-			return redirect(request.get_full_path())
-		p = self._payload(request)
-		if not _is_uuid(p["defect_mode_id"]):
-			messages.error(request, "กรุณาเลือก Defect mode")
-			return redirect(request.get_full_path())
-		obj = DefectByCategory.objects.filter(pk=obj_id, category=category).first()
-		if obj is None:
-			messages.error(request, "ไม่พบรายการ")
-			return redirect(request.get_full_path())
-		defect = DefectMode.objects.filter(pk=p["defect_mode_id"]).first()
-		if defect is None:
-			messages.error(request, "ไม่พบ Defect mode")
-			return redirect(request.get_full_path())
-		obj.defect_mode = defect
-		obj.title = p["title"] or f"{category.name} - {defect.name_en}".strip()
-		obj.description = p["description"]
-		obj.is_inlist = p["is_inlist"]
-		obj.save(update_fields=["defect_mode", "title", "description", "is_inlist", "updated_at"])
-		transaction.on_commit(
-			lambda: log_event(request, action="defectmodecategory:update", message="update", metadata={"id": obj_id, "category_id": str(category.id)})
-		)
-		messages.success(request, "แก้ไขข้อมูลสำเร็จ")
-		return redirect("manage_settings_defect_by_category", category_id=category.id)
 
-	def _dbc_delete(self, request, *args, **kwargs):
-		category = self._get_category()
-		obj_id = (request.POST.get("id") or "").strip()
-		if not _is_uuid(obj_id):
-			messages.error(request, "ไม่พบรหัสรายการ")
-			return redirect(request.get_full_path())
-		obj = DefectByCategory.objects.filter(pk=obj_id, category=category).first()
-		if obj is None:
-			messages.error(request, "ไม่พบรายการ")
-			return redirect(request.get_full_path())
-		obj.delete()
-		transaction.on_commit(
-			lambda: log_event(request, action="defectmodecategory:delete", message="delete", metadata={"id": obj_id, "category_id": str(category.id)})
-		)
-		messages.success(request, "ลบข้อมูลสำเร็จ")
+		# The set of defect_mode ids the user ticked, restricted to real defects.
+		submitted = {
+			v.strip()
+			for v in request.POST.getlist("defect_mode_ids")
+			if _is_uuid(v.strip())
+		}
+
+		# Only defects already linked to this category appear in the grid, so we
+		# only ever toggle existing rows — never create or delete. Linking a
+		# defect to a category happens at defect creation (Defect Mode tab).
+		existing_by_defect: dict[str, list[DefectByCategory]] = {}
+		for row in DefectByCategory.objects.filter(category=category):
+			existing_by_defect.setdefault(str(row.defect_mode_id), []).append(row)
+
+		checked_ids = submitted & set(existing_by_defect)
+
+		shown = hidden = 0
+		try:
+			with transaction.atomic():
+				# Ticked → is_inlist=True (show), unticked → is_inlist=False
+				# (hide but keep the link, so the defect never goes orphan).
+				for did, rows in existing_by_defect.items():
+					target = did in checked_ids
+					for row in rows:
+						if row.is_inlist != target:
+							row.is_inlist = target
+							row.save(update_fields=["is_inlist", "updated_at"])
+							if target:
+								shown += 1
+							else:
+								hidden += 1
+
+				transaction.on_commit(
+					lambda: log_event(
+						request,
+						action="defectmodecategory:sync",
+						message="toggle defect visibility for category",
+						metadata={
+							"category_id": str(category.id),
+							"shown": shown,
+							"hidden": hidden,
+						},
+					)
+				)
+		except Exception as e:
+			messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+			return redirect("manage_settings_defect_by_category", category_id=category.id)
+
+		if shown or hidden:
+			parts = []
+			if shown:
+				parts.append(f"เปิดแสดง {shown}")
+			if hidden:
+				parts.append(f"ซ่อน {hidden}")
+			messages.success(request, "บันทึกสำเร็จ: " + ", ".join(parts) + " รายการ")
+		else:
+			messages.info(request, "ไม่มีการเปลี่ยนแปลง")
 		return redirect("manage_settings_defect_by_category", category_id=category.id)

@@ -47,6 +47,7 @@
 				return "way_create";
 			}
 			// defect_mode
+			setField("f_category_id", getInput("add_category_id"));
 			setField("f_name_th", getInput("add_name_th"));
 			setField("f_name_en", getInput("add_name_en"));
 			setField("f_name_jp", getInput("add_name_jp"));
@@ -109,11 +110,20 @@
 			addModal.querySelectorAll("input[type=checkbox]").forEach((el) => { el.checked = false; });
 			openModal(addModal);
 		});
-		$("addSubmit")?.addEventListener("click", () => submitOnce($("addSubmit"), () => {
-			actionField.value = collectAdd();
-			idField.value = "";
-			actionForm.submit();
-		}));
+		$("addSubmit")?.addEventListener("click", () => {
+			// Category is required when adding a defect mode.
+			if (tab === "defect_mode" && !getInput("add_category_id")) {
+				const sel = $("add_category_id");
+				if (sel) { sel.classList.add("ring-2", "ring-red-500", "border-red-500"); sel.focus(); }
+				alert("กรุณาเลือก Category");
+				return;
+			}
+			submitOnce($("addSubmit"), () => {
+				actionField.value = collectAdd();
+				idField.value = "";
+				actionForm.submit();
+			});
+		});
 
 		// Edit
 		document.querySelectorAll("[data-open-edit]").forEach((btn) => {

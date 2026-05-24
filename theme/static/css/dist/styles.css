@@ -71,7 +71,10 @@
     --color-pink-50: oklch(97.1% 0.014 343.198);
     --color-pink-200: oklch(89.9% 0.061 343.231);
     --color-pink-300: oklch(82.3% 0.12 346.018);
+    --color-rose-100: oklch(94.1% 0.03 12.58);
     --color-rose-500: oklch(64.5% 0.246 16.439);
+    --color-rose-600: oklch(58.6% 0.253 17.585);
+    --color-rose-700: oklch(51.4% 0.222 16.935);
     --color-slate-50: oklch(98.4% 0.003 247.858);
     --color-slate-100: oklch(96.8% 0.007 247.896);
     --color-slate-200: oklch(92.9% 0.013 255.508);
@@ -2394,6 +2397,9 @@
   .ml-1 {
     margin-left: calc(var(--spacing) * 1);
   }
+  .ml-2 {
+    margin-left: calc(var(--spacing) * 2);
+  }
   .ml-4 {
     margin-left: calc(var(--spacing) * 4);
   }
@@ -3267,6 +3273,9 @@
       background-color: color-mix(in oklab, var(--color-red-950) 60%, transparent);
     }
   }
+  .bg-rose-100 {
+    background-color: var(--color-rose-100);
+  }
   .bg-slate-50 {
     background-color: var(--color-slate-50);
   }
@@ -3756,6 +3765,12 @@
   .text-rose-500 {
     color: var(--color-rose-500);
   }
+  .text-rose-600 {
+    color: var(--color-rose-600);
+  }
+  .text-rose-700 {
+    color: var(--color-rose-700);
+  }
   .text-sky-500 {
     color: var(--color-sky-500);
   }
@@ -4029,6 +4044,16 @@
   @media (hover: hover) {
     .hover\:bg-indigo-50:hover {
       background-color: var(--color-indigo-50);
+    }
+  }
+  @media (hover: hover) {
+    .hover\:bg-indigo-50\/60:hover {
+      background-color: color-mix(in srgb, oklch(96.2% 0.018 272.314) 60%, transparent);
+    }
+    @supports (color: color-mix(in lab, red, red)) {
+      .hover\:bg-indigo-50\/60:hover {
+        background-color: color-mix(in oklab, var(--color-indigo-50) 60%, transparent);
+      }
     }
   }
   @media (hover: hover) {
@@ -4403,6 +4428,11 @@
   @media (width >= 48rem) {
     .md\:col-span-5 {
       grid-column: span 5 / span 5;
+    }
+  }
+  @media (width >= 48rem) {
+    .md\:col-span-6 {
+      grid-column: span 6 / span 6;
     }
   }
   @media (width >= 48rem) {

@@ -2,11 +2,6 @@
 
 {% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-{% endblock %}
-
 {% block title %}Products — TBSMRD{% endblock %}
 
 {% block content %}
@@ -54,10 +49,6 @@
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 				<div class="font-extrabold text-slate-800">Products</div>
 				<div class="flex items-center gap-2">
-					<button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
-						<svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd"/></svg>
-						เพิ่ม Product
-					</button>
 					<form method="get" class="flex items-center gap-2">
 						<input type="hidden" name="q" value="{{ q|default:'' }}" />
 						<div class="flex items-center gap-2">
@@ -228,83 +219,6 @@
 	<input type="hidden" name="id" id="idField" value="" />
 </form>
 
-<!-- ADD MODAL -->
-<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
-	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
-		<h2 class="text-lg font-extrabold text-slate-900">เพิ่ม Product</h2>
-		<p class="text-xs text-slate-500 mt-1">หมายเหตุ: รายการจะแสดงในตารางนี้ก็ต่อเมื่อมีการผูก Line</p>
-		<form id="addForm" method="post" class="mt-4 space-y-4">
-			{% csrf_token %}
-			<input type="hidden" name="action" value="create_item" />
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">SD Code</label>
-					<input name="sd_code" type="text" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-				</div>
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Part Number <span class="text-red-600">*</span></label>
-					<input name="part_number" type="text" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-				</div>
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Part Name <span class="text-red-600">*</span></label>
-					<input name="part_name" type="text" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-				</div>
-			</div>
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">SKU <span class="text-red-600">*</span></label>
-					<input name="sku" type="text" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-				</div>
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Weight (kg)</label>
-					<input name="weight" type="number" step="0.01" value="0" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-				</div>
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Cost</label>
-					<input name="cost" type="number" step="0.01" value="0" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-				</div>
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Purchased</label>
-					<input name="purchased_price" type="number" step="0.01" value="0" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-				</div>
-			</div>
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Category</label>
-					<select name="category_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-						<option value="">(ไม่ระบุ)</option>
-						{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
-					</select>
-				</div>
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Stage</label>
-					<select name="stage_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-						<option value="">(ไม่ระบุ)</option>
-						{% for s in stages %}<option value="{{ s.id }}">{{ s.display_name }}{% if s.code_prefix %} — {{ s.code_prefix }}{% endif %}</option>{% endfor %}
-					</select>
-				</div>
-				<div>
-					<label class="block text-sm font-semibold text-slate-700">Line(s)</label>
-					<select id="addLines" name="line_ids" multiple class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-						{% for l in lines %}<option value="{{ l.id }}">{{ l.line_name }}</option>{% endfor %}
-					</select>
-					<p class="text-xs text-slate-500 mt-1">ต้องเลือก Stage ก่อนถึงจะผูก Line ได้</p>
-				</div>
-			</div>
-			<div>
-				<label class="block text-sm font-semibold text-slate-700">Comment</label>
-				<input name="comment" type="text" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-			</div>
-			<div class="flex items-center justify-end gap-2 pt-2">
-				<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-				<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
-			</div>
-		</form>
-	</div>
-</div>
-
 <!-- DELETE MODAL -->
 <div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
 	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
@@ -324,7 +238,6 @@
 <script>
 (() => {
 	const init = () => {
-		const addModal = document.getElementById('addModal');
 		const deleteModal = document.getElementById('deleteModal');
 		const actionForm = document.getElementById('actionForm');
 		const actionField = document.getElementById('actionField');
@@ -333,24 +246,12 @@
 
 		function openModal(el) { if (!el) return; el.classList.remove('hidden'); el.classList.add('flex'); }
 		function closeModal(el) { if (!el) return; el.classList.add('hidden'); el.classList.remove('flex'); }
-		function closeAll() { closeModal(addModal); closeModal(deleteModal); }
-
-		const addLinesEl = document.getElementById('addLines');
-		if (addLinesEl && !addLinesEl.tomselect) {
-			new TomSelect(addLinesEl, {
-				plugins: ['remove_button'],
-				maxOptions: 500,
-				placeholder: 'พิมพ์เพื่อค้นหา Line...',
-			});
-		}
+		function closeAll() { closeModal(deleteModal); }
 
 		document.querySelectorAll('[data-modal-close]').forEach(b =>
 			b.addEventListener('click', closeAll));
 		document.querySelectorAll('[data-modal-backdrop]').forEach(b =>
 			b.addEventListener('click', closeAll));
-
-		const openAddBtn = document.getElementById('openAddModal');
-		if (openAddBtn) openAddBtn.addEventListener('click', () => openModal(addModal));
 
 		document.querySelectorAll('[data-open-delete]').forEach(btn => {
 			btn.addEventListener('click', (e) => {

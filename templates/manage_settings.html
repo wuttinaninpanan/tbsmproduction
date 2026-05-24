@@ -9,7 +9,7 @@
 	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 		<div>
 			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">ตั้งค่าทั่วไป</h1>
-			<p class="text-sm text-slate-600 mt-1">จัดการข้อมูลพื้นฐาน: Item Stage, Item Category, Defect Mode, Defect Mode Category, Way</p>
+			<p class="text-sm text-slate-600 mt-1">จัดการข้อมูลพื้นฐาน: Item Stage, Item Category, Defect Mode, Way</p>
 		</div>
 	</header>
 
@@ -23,9 +23,6 @@
 		</a>
 		<a href="?tab=defect_mode" class="px-4 py-2 -mb-px border-b-2 text-sm font-semibold {% if tab == 'defect_mode' %}border-indigo-600 text-indigo-700{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300{% endif %}">
 			Defect Mode <span class="ml-1 inline-flex items-center justify-center text-xs rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ count_defect_mode }}</span>
-		</a>
-		<a href="?tab=defect_by_category" class="px-4 py-2 -mb-px border-b-2 text-sm font-semibold {% if tab == 'defect_by_category' %}border-indigo-600 text-indigo-700{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300{% endif %}">
-			Defect Mode Category <span class="ml-1 inline-flex items-center justify-center text-xs rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ count_defect_by_category }}</span>
 		</a>
 		<a href="?tab=way" class="px-4 py-2 -mb-px border-b-2 text-sm font-semibold {% if tab == 'way' %}border-indigo-600 text-indigo-700{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300{% endif %}">
 			Way <span class="ml-1 inline-flex items-center justify-center text-xs rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ count_way }}</span>
@@ -61,19 +58,16 @@
 				{% if tab == 'item_stage' %}Item Stages
 				{% elif tab == 'item_category' %}Item Categories
 				{% elif tab == 'defect_mode' %}Defect Modes
-				{% elif tab == 'way' %}Ways
-				{% else %}Defect Mode Categories
+				{% else %}Ways
 				{% endif %}
 			</div>
 			<div class="flex items-center gap-2">
-				{% if tab != 'defect_by_category' %}
 				<button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
 					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
 						<path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd" />
 					</svg>
-					เพิ่มข้อมูล
+					{% if tab == 'defect_mode' %}เพิ่มรายการของเสีย{% else %}เพิ่มข้อมูล{% endif %}
 				</button>
-				{% endif %}
 				<form method="get" class="flex items-center gap-2">
 					<input type="hidden" name="tab" value="{{ tab }}" />
 					<input type="hidden" name="q" value="{{ q|default:'' }}" />
@@ -98,13 +92,14 @@
 						<tr>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Name</th>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Display name</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 						</tr>
 					{% elif tab == 'item_category' %}
 						<tr>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Name</th>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ของเสีย</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 						</tr>
 					{% elif tab == 'defect_mode' %}
 						<tr>
@@ -112,18 +107,12 @@
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">EN</th>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">JP</th>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description (EN)</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
-						</tr>
-					{% elif tab == 'way' %}
-						<tr>
-							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Title</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 						</tr>
 					{% else %}
 						<tr>
-							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Category</th>
-							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จำนวน Defect</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Title</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 						</tr>
 					{% endif %}
 				</thead>
@@ -134,7 +123,7 @@
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name|default:'-' }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.display_name|default:'-' }}</td>
 								<td class="px-4 py-3">
-									<div class="flex items-center justify-center gap-2">
+									<div class="flex items-center justify-end gap-2">
 										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
 											data-id="{{ r.id }}" data-name="{{ r.name }}" data-display-name="{{ r.display_name }}">แก้ไข</button>
 										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
@@ -146,8 +135,13 @@
 							<tr class="hover:bg-slate-50">
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name|default:'-' }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.description|default:'-' }}</td>
+								<td class="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">ตั้งค่าของเสียแล้ว {{ r.defect_count }} รายการ</td>
 								<td class="px-4 py-3">
-									<div class="flex items-center justify-center gap-2">
+									<div class="flex items-center justify-end gap-2">
+										<a href="{% url 'manage_settings_defect_by_category' category_id=r.id %}"
+											class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+											จัดการ Defect
+										</a>
 										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
 											data-id="{{ r.id }}" data-name="{{ r.name }}" data-description="{{ r.description }}">แก้ไข</button>
 										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
@@ -162,7 +156,7 @@
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_jp|default:'-' }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.description_en|default:'-' }}</td>
 								<td class="px-4 py-3">
-									<div class="flex items-center justify-center gap-2">
+									<div class="flex items-center justify-end gap-2">
 										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
 											data-id="{{ r.id }}"
 											data-name-th="{{ r.name_th }}" data-name-en="{{ r.name_en }}" data-name-jp="{{ r.name_jp }}"
@@ -172,24 +166,16 @@
 									</div>
 								</td>
 							</tr>
-						{% elif tab == 'way' %}
+						{% else %}
 							<tr class="hover:bg-slate-50">
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.title|default:'-' }}</td>
 								<td class="px-4 py-3">
-									<div class="flex items-center justify-center gap-2">
+									<div class="flex items-center justify-end gap-2">
 										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
 											data-id="{{ r.id }}" data-title="{{ r.title }}">แก้ไข</button>
 										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
 											data-id="{{ r.id }}" data-label="{{ r.title }}">ลบ</button>
 									</div>
-								</td>
-							</tr>
-						{% else %}
-							<tr class="hover:bg-indigo-50 cursor-pointer transition" data-row-href="{% url 'manage_settings_defect_by_category' category_id=r.id %}">
-								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name|default:'-' }}</td>
-								<td class="px-4 py-3 text-slate-700">{{ r.description|default:'-' }}</td>
-								<td class="px-4 py-3 text-center">
-									<span class="inline-flex items-center rounded-full bg-indigo-100 text-indigo-800 px-2.5 py-0.5 text-xs font-semibold">{{ r.defect_count }}</span>
 								</td>
 							</tr>
 						{% endif %}
@@ -258,6 +244,9 @@
 	{# field used by way section #}
 	<input type="hidden" name="title" id="f_title" value="" />
 
+	{# field used by defect_mode add: links the new defect to a category #}
+	<input type="hidden" name="category_id" id="f_category_id" value="" />
+
 </form>
 
 {# ----------------------- ADD modal ----------------------- #}
@@ -265,7 +254,7 @@
 	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
 	<div class="relative w-full max-w-2xl rounded-2xl shadow-2xl bg-white p-6">
 		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close"><span class="text-slate-700 text-xl">×</span></button>
-		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900" id="addTitle">เพิ่มข้อมูล</h2>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900" id="addTitle">{% if tab == 'defect_mode' %}เพิ่มรายการของเสีย{% else %}เพิ่มข้อมูล{% endif %}</h2>
 		<div class="mt-4 space-y-4">
 			{% if tab == 'item_stage' %}
 				<div><label class="block text-sm font-semibold text-slate-700">Name</label>
@@ -278,6 +267,11 @@
 				<div><label class="block text-sm font-semibold text-slate-700">Description</label>
 					<input id="add_description" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
 			{% elif tab == 'defect_mode' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Category <span class="text-red-600">*</span></label>
+					<select id="add_category_id" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
+						<option value="">เลือก Category</option>
+						{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+					</select></div>
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 					<div><label class="block text-sm font-semibold text-slate-700">TH</label>
 						<input id="add_name_th" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
@@ -365,5 +359,5 @@
 
 {% load static %}
 <script>window.__SETTINGS_TAB__ = "{{ tab }}";</script>
-<script src="{% static 'js/manage_settings.js' %}?v=20260516-dedup" defer></script>
+<script src="{% static 'js/manage_settings.js' %}?v=20260524-defectcat" defer></script>
 {% endblock %}
