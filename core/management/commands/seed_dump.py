@@ -78,6 +78,11 @@ SEED_MODELS = [
 
     # Scrap (operational, but include for end-to-end seed)
     "core.ScrapRecord",
+
+    # Production recording backbone (parents before children)
+    "core.ProductionRecord",
+    "core.ProcessDefect",
+    "core.ProcessDefectScrap",
 ]
 
 

@@ -5,29 +5,23 @@
 {% block title %}Production Scrap Record — TBSMRD{% endblock %}
 
 {% block content %}
-<section class="space-y-8">
+<section class="space-y-6">
 	<style>
-		/* Fallback to keep columns aligned even if Tailwind isn't applied */
-		.record-row{display:flex;align-items:flex-start;gap:1.25rem}
-		.photo-cell,.qty-cell{position:relative}
-		.qty-cell select{position:relative;z-index:2}
-		.check-cell{display:flex;justify-content:center;align-items:center;padding-top:0}
-		.record-col-line{width:13rem;flex:0 0 13rem}
-		.record-col-part{width:11rem;flex:0 0 11rem}
-		.record-col-defect{width:13rem;flex:0 0 13rem}
-		.record-col-scrap{width:13rem;flex:0 0 13rem}
-		.record-col-check{width:5.5rem;flex:0 0 5.5rem}
-		.record-col-photo{width:13rem;flex:0 0 13rem}
-		.record-col-qty{width:8rem;flex:0 0 8rem}
-		/* Always-visible chevron for Production line inputs */
-		.datalist-chevron{position:absolute;right:.5rem;top:50%;transform:translateY(-50%);color:rgb(100 116 139);cursor:pointer;display:flex;align-items:center;justify-content:center;width:2.25rem;height:2.25rem}
-		/* Hide native datalist dropdown indicator so only one chevron shows */
+		/* Hide native datalist indicator so only our chevron shows */
 		.production-line-input{appearance:none;-webkit-appearance:none}
 		.production-line-input::-webkit-calendar-picker-indicator{display:none !important}
 		.production-line-input::-webkit-list-button{display:none !important}
-		/* Locked (copied) fields */
-		.locked-field{background-color:rgb(241 245 249) !important;color:rgb(71 85 105) !important;cursor:not-allowed !important}
-		.locked-field:disabled{opacity:1 !important}
+		.dl-wrap{position:relative}
+		.dl-chevron{position:absolute;right:.4rem;top:50%;transform:translateY(-50%);color:rgb(100 116 139);cursor:pointer;display:flex;align-items:center;justify-content:center;width:2rem;height:2rem}
+		/* Defect section: defect inputs (left 50%) + sub-part details (right 50%) */
+		.defect-section{background-color:rgba(255,255,255,.7)}
+		.ds-grid{display:flex;flex-direction:column;gap:1rem}
+		.ds-left,.ds-right{min-width:0}
+		@media (min-width:1024px){.ds-grid{flex-direction:row}.ds-left,.ds-right{flex:1 1 0}}
+		/* Equal-height headers so the first input row lines up with the first scrap row */
+		.ds-head{min-height:2rem;margin-bottom:.4rem}
+		/* Right-side columns: select-all | image | part name | qty */
+		.scrap-grid{display:grid;grid-template-columns:5.5rem 3rem 1fr 4.5rem;gap:.5rem;align-items:center}
 	</style>
 
 	<header>
@@ -37,60 +31,18 @@
 	<form id="record-form" action="/record/" method="post" class="space-y-6">
 		{% csrf_token %}
 
-		<!-- Board -->
-		<div class="rounded-2xl bg-orange-50 p-4 sm:p-6">
-			<div class="overflow-x-auto">
-				<div class="min-w-max">
-					<!-- Column headers -->
-					<div class="flex items-end gap-5 text-sm font-extrabold text-slate-900">
-						<div class="w-52 shrink-0 record-col-line">Production line</div>
-						<div class="w-44 shrink-0 record-col-part">SD number</div>
-						<div class="w-52 shrink-0 record-col-defect">Defect mode</div>
-						<div class="w-24 shrink-0 record-col-check flex items-center justify-center">
-							<label class="inline-flex flex-row items-center justify-center gap-1 select-none">
-								<input id="select-all-0" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" aria-label="เลือกทั้งหมด" />
-								<span class="text-[10px] leading-tight font-semibold text-slate-700 whitespace-nowrap text-center">เลือกทั้งหมด</span>
-							</label>
-						</div>
-						<div class="w-52 shrink-0 record-col-photo">Photo (Ref)</div>
-						<div class="w-56 shrink-0 record-col-scrap">Part name</div>
-						<div class="w-32 shrink-0 record-col-qty">Quantity</div>
-					</div>
-
-					<!-- Groups -->
-					<div id="scrap-groups" class="mt-3 space-y-6"></div>
-
-				</div>
-			</div>
-
-			<div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-				<div class="flex items-center justify-end gap-2">
-					<button id="add-group" type="button" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
-						เพิ่ม
-					</button>
-					<button id="remove-group" type="button" class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition">
-						ลบ
-					</button>
-				</div>
-			</div>
-		</div>
-
+		<div id="blocks" class="space-y-6"></div>
 
 		<!-- Actions -->
-		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
-			<div class="hidden sm:block w-28"></div>
-			<div class="flex items-center justify-center gap-4">
-				<button id="clear" type="button"
-						class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold
-							   bg-amber-400 hover:bg-amber-500 text-white transition">
-					Clear
-				</button>
-				<button type="submit"
-						class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold
-							   bg-blue-600 hover:bg-blue-700 text-white transition">
-					Save
-				</button>
-			</div>
+		<div class="flex items-center justify-center gap-4 pt-2">
+			<button id="clear" type="button"
+					class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold bg-amber-400 hover:bg-amber-500 text-white transition">
+				Clear
+			</button>
+			<button type="submit"
+					class="inline-flex items-center justify-center px-8 py-2 rounded-lg font-semibold bg-blue-600 hover:bg-blue-700 text-white transition">
+				Save
+			</button>
 		</div>
 	</form>
 </section>
@@ -111,27 +63,116 @@
 	{{ record_data|json_script:"record-data" }}
 {% endif %}
 
-<template id="group-template">
-	<div class="scrap-group">
-		<div class="space-y-0">
-			<!-- rows will be inserted here -->
+{# ---- One block = one product / lot ---- #}
+<template id="block-template">
+	<div class="product-block rounded-2xl bg-orange-50 p-4 sm:p-6 space-y-4">
+		{# Product header — keyed once #}
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+			<div>
+				<label class="block text-sm font-extrabold text-slate-900 mb-1">Production line</label>
+				<div class="dl-wrap">
+					<input data-line type="text" autocomplete="off" placeholder="กรุณาใส่หรือสแกน Production line"
+						class="production-line-input w-full rounded-md border border-slate-300 bg-white pl-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					<div class="dl-chevron" data-line-chevron aria-hidden="true">
+						<svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd"/></svg>
+					</div>
+					<datalist data-line-list></datalist>
+				</div>
+			</div>
+			<div>
+				<label class="block text-sm font-extrabold text-slate-900 mb-1">SD number</label>
+				<div class="dl-wrap">
+					<input data-sd type="text" autocomplete="off" placeholder="กรุณาใส่หรือสแกน SD number"
+						class="production-line-input w-full rounded-md border border-slate-300 bg-white pl-3 pr-9 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					<div class="dl-chevron" data-sd-chevron aria-hidden="true">
+						<svg viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd"/></svg>
+					</div>
+					<datalist data-sd-list></datalist>
+				</div>
+			</div>
+			<div>
+				<label class="block text-sm font-extrabold text-slate-900 mb-1">Production Qty</label>
+				<input data-prodqty type="number" min="0" step="1" inputmode="numeric" placeholder="จำนวนที่ผลิต"
+					class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
 		</div>
-		<div class="mt-6 border-t border-slate-300"></div>
+
+		{# Defect sections #}
+		<div data-defect-sections class="space-y-3"></div>
+
+		<div class="flex items-center gap-2">
+			<button type="button" data-add-defect
+				class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">เพิ่ม</button>
+			<button type="button" data-remove-defect
+				class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed">ลบ</button>
+		</div>
 	</div>
 </template>
 
-<template id="row-template">
-	<div class="scrap-row record-row flex items-start gap-5">
-		<div class="w-52 shrink-0 record-col-line line-cell"></div>
-		<div class="w-44 shrink-0 record-col-part part-cell"></div>
-		<div class="w-52 shrink-0 record-col-defect defect-cell"></div>
-		<div class="w-24 shrink-0 record-col-check check-cell"></div>
-		<div class="w-52 shrink-0 record-col-photo photo-cell"></div>
-		<div class="w-56 shrink-0 record-col-scrap scrap-cell"></div>
-		<div class="w-32 shrink-0 record-col-qty qty-cell"></div>
+{# ---- One defect section = one ProcessDefect ---- #}
+<template id="defect-section-template">
+	<div class="defect-section rounded-xl border border-orange-200 p-4">
+		<div class="ds-grid">
+			{# Left: defect mode + defect qty — labels row, then inputs (inputs align with first scrap row) #}
+			<div class="ds-left">
+				<div class="ds-head flex items-end gap-3">
+					<div class="flex-1 min-w-0 text-sm font-extrabold text-slate-900">Defect mode</div>
+					<div class="w-28 shrink-0 text-sm font-extrabold text-slate-900">จำนวนของเสีย</div>
+				</div>
+				<div class="flex items-start gap-3">
+					<div class="flex-1 min-w-0">
+						<select data-defect class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
+						<input data-comment type="text" placeholder="ระบุ defect อื่นๆ"
+							class="hidden mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+						<p class="text-xs text-slate-600 mt-1" data-defect-hint>เลือก Defect mode</p>
+					</div>
+					<div class="w-28 shrink-0">
+						<input data-defqty type="number" min="0" step="1" value="0" inputmode="numeric"
+							class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					</div>
+				</div>
+			</div>
+
+			{# Right: sub-part (scrap) details — column header then rows #}
+			<div class="ds-right">
+				<div class="ds-head scrap-grid items-end text-[10px] font-bold text-slate-700">
+					<label class="flex items-center justify-center gap-1 leading-tight text-center select-none cursor-pointer">
+						<input type="checkbox" data-select-all class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+						เลือกทั้งหมด
+					</label>
+					<div class="text-center">รูปภาพ</div>
+					<div>รายละเอียดพาร์ทที่เสีย</div>
+					<div class="text-center">Qtty</div>
+				</div>
+				<div data-scraps class="space-y-2"></div>
+				<div data-scraps-empty class="hidden text-sm text-slate-500 italic py-3">เลือก SD number ก่อน เพื่อแสดงรายการพาร์ทย่อย</div>
+			</div>
+		</div>
+	</div>
+</template>
+
+{# ---- One scrap row = one ProcessDefectScrap (first row = FG) ---- #}
+<template id="scrap-row-template">
+	<div class="scrap-row scrap-grid rounded-lg border border-slate-200 bg-white px-2 py-2">
+		<div class="flex justify-center">
+			<input type="checkbox" data-enable value="1" class="h-4 w-4 rounded border-slate-300" />
+		</div>
+		<div class="flex justify-center">
+			<a data-photo href="#" class="block">
+				<img data-photo-img class="w-10 h-10 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="" />
+			</a>
+		</div>
+		<div class="min-w-0">
+			<input data-name type="text" readonly class="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 focus:outline-none" />
+			<input type="hidden" data-cpid />
+			<input type="hidden" data-defid />
+			<input type="hidden" data-cpname />
+		</div>
+		<input data-qty type="number" min="0" step="1" value="0" inputmode="numeric"
+			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
 	</div>
 </template>
 
 {% load static %}
-<script src="{% static 'js/record.js' %}?v=4" defer></script>
+<script src="{% static 'js/record.js' %}?v=14" defer></script>
 {% endblock %}

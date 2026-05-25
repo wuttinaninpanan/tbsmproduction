@@ -156,7 +156,7 @@
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-end gap-2">
 									<button type="button"
-										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition whitespace-nowrap{% if not can_edit %} hidden{% endif %}"
 										data-open-edit-row
 										data-id="{{ r.id|default:'' }}"
 										data-created-at="{{ r.created_at|localtime|date:"Y-m-d H:i"|default:"" }}"

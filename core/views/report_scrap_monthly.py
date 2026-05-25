@@ -13,7 +13,7 @@ from core.auth.decorators import staff_required
 from core.models.item_line import ItemLine
 from core.models.item_list import Item_list
 from core.models.line import Line
-from core.models.scrap_record import ScrapRecord
+from core.models.process_defect import ProcessDefectScrap
 
 try:
 	import openpyxl  # type: ignore
@@ -66,28 +66,34 @@ class MonthlyComponentPartReportViews(TemplateView):
         days_in_month = calendar.monthrange(year, month)[1]
         days = list(range(1, days_in_month + 1))
 
-        records_qs = ScrapRecord.objects.select_related("production_line", "part_number").filter(
+        # New backbone: one scrapped-component entry = one ProcessDefectScrap,
+        # tied to its produced part via process_defect → production_record.
+        records_qs = ProcessDefectScrap.objects.filter(
             created_at__gte=start_dt,
             created_at__lt=end_dt,
         )
         if selected_line:
-            records_qs = records_qs.filter(production_line__line_name__iexact=selected_line)
+            records_qs = records_qs.filter(
+                process_defect__production_record__line__line_name__iexact=selected_line
+            )
 
         # Calendar-day bucket (00:00–00:00). Keep it explicit so DB truncation is stable.
         day_field = ExpressionWrapper(TruncDate("created_at"), output_field=DateField())
 
-        # Aggregate by (line, SD number) so repeated records collapse to one row.
+        # Aggregate by (produced line, produced SD number, day).
+        line_key = "process_defect__production_record__line_id"
+        sd_key = "process_defect__production_record__item__sd_code"
         agg = (
             records_qs.annotate(work_date=day_field)
-            .values("production_line_id", "part_number__sd_code", "work_date")
-            .annotate(total=Sum("quantity"), part_name=Max("part_number__part_name"))
+            .values(line_key, sd_key, "work_date")
+            .annotate(total=Sum("quantity"), part_name=Max("process_defect__production_record__item__part_name"))
         )
 
         key_day_totals: dict[tuple[UUID, str, int], int] = {}
         key_part_name: dict[tuple[UUID, str], str] = {}
         for r in agg:
-            line_id = r.get("production_line_id")
-            sd_code = (r.get("part_number__sd_code") or "").strip()
+            line_id = r.get(line_key)
+            sd_code = (r.get(sd_key) or "").strip()
             work_date = r.get("work_date")
             total = int(r.get("total") or 0)
             part_name = (r.get("part_name") or "").strip()

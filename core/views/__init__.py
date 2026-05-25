@@ -35,3 +35,4 @@ from core.views.inspection.inspection_defect_image import InspectionDefectImageV
 from core.views.inspection.machine_line import MachineLineView
 from core.views.inspection.machine_inspection import MachineInspectionView
 from core.views.inspection.machine_product_inspection import MachineProductInspectionView
+from core.views.inspection.scrap_dashboard import InspectionScrapDashboardView

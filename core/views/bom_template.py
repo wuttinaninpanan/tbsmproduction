@@ -21,12 +21,47 @@ from core.models.item_line import ItemLine
 from core.models.item_list import Item_list, extract_item_number, format_item_code
 from core.models.item_stage import ItemStage
 from core.models.line import Line
+from core.models.portion import Portion
+from core.models.side import Side
+from core.models.inout import InOut
+from core.models.way import Way
 
 
 try:
 	import openpyxl  # type: ignore
 except Exception:  # pragma: no cover
 	openpyxl = None
+
+
+# Single canonical sheet layout shared by export, the import template, and the
+# importer — so a file exported here can be edited and re-imported unchanged.
+# Columns "0".."10" mark the tree level; hierarchy on import is driven by M2M
+# (the parent item's Item Code).
+BOM_SHEET_HEADERS = [str(n) for n in range(11)] + [
+	"Item Code",
+	"M2M",
+	"SD Code",
+	"Part No.",
+	"Part Name",
+	"Category",
+	"Stage",
+	"Line",
+	"Quantity",
+	"Unit",
+	"Sequence",
+	"Revision",
+	"Latest ECI",
+	"Scrap %",
+	"SKU",
+	"Weight (kg)",
+	"Purchased Price",
+	"Cost",
+	"Comment",
+	"Portion",
+	"Side",
+	"InOut",
+	"Way",
+]
 
 
 def _normalized_key(key: str) -> str:
@@ -295,31 +330,7 @@ def download_bom_data_excel(request):
 		output_rows.append(_row_for(fg_item, level=0, m2m="-"))
 		dfs(fg_item, 0)
 
-	headers = [str(n) for n in range(11)] + [
-		"Item Code",
-		"M2M",
-		"SD Code",
-		"Part No.",
-		"Part Name",
-		"Category",
-		"Stage",
-		"Line",
-		"Quantity",
-		"Unit",
-		"Sequence",
-		"Revision",
-		"Latest ECI",
-		"Scrap %",
-		"SKU",
-		"Weight (kg)",
-		"Purchased Price",
-		"Cost",
-		"Comment",
-		"Portion",
-		"Side",
-		"InOut",
-		"Way",
-	]
+	headers = BOM_SHEET_HEADERS
 
 	wb = openpyxl.Workbook()
 	ws = wb.active
@@ -341,11 +352,12 @@ def download_bom_data_excel(request):
 
 
 def download_bom_import_template(request):
-	"""Download an XLSX template for bulk-importing BOM rows.
+	"""Download an XLSX template that matches the export layout (BOM_SHEET_HEADERS).
 
-	Each row represents one item (component or FG). ``parent_sd_code`` /
-	``parent_part_number`` point to the parent BOM owner. Leave them blank to
-	mark the row as a top-level FG.
+	Hierarchy is driven by ``M2M`` = the parent item's **Item Code** (leave blank
+	or "-" for a top-level FG). The level columns 0..10 are visual only. Because
+	M2M references an Item Code, parents must already exist (e.g. when round-
+	tripping an exported file); brand-new parents have no Item Code yet.
 	"""
 	if openpyxl is None:
 		return HttpResponse(
@@ -354,25 +366,22 @@ def download_bom_import_template(request):
 			content_type="text/plain; charset=utf-8",
 		)
 
-	headers = [
-		"sd_code",
-		"part_number",
-		"part_name",
-		"parent_sd_code",
-		"parent_part_number",
-		"quantity",
-		"unit",
-		"category",
-		"line",
-	]
+	headers = BOM_SHEET_HEADERS
+	idx = {h: i for i, h in enumerate(headers)}
+
+	def make_row(level, **vals):
+		r = [""] * len(headers)
+		if isinstance(level, int) and 0 <= level <= 10:
+			r[idx[str(level)]] = level
+		for key, value in vals.items():
+			r[idx[key]] = value
+		return r
+
 	rows = [
-		# FG row — no parent
-		["150-15", "71013-X1424", "FRAME SUB-ASSY, FR SEAT BACK, RH", "", "", "", "", "", ""],
-		# Children of the FG above
-		["GP2-01", "71151-X1401", "FRAME, FR SEAT BACK, RH", "150-15", "71013-X1424", 1, "PCS", "", ""],
-		["FP2-01", "71162-X1411", "PLATE, FR SEAT BACK, LWR", "150-15", "71013-X1424", 1, "PCS", "", ""],
-		# Sub-component of GP2-01 above
-		["STT001", "SOLVEST-114-00", "SOLVEST114 (20 kg./Pail)", "GP2-01", "71151-X1401", 0.5, "KG", "", ""],
+		make_row(0, **{"Item Code": "G000001", "M2M": "-", "SD Code": "150-15", "Part No.": "71013-X1424", "Part Name": "FRAME SUB-ASSY, FR SEAT BACK, RH", "Revision": "A"}),
+		make_row(1, **{"Item Code": "W000002", "M2M": "G000001", "SD Code": "GP2-01", "Part No.": "71151-X1401", "Part Name": "FRAME, FR SEAT BACK, RH", "Quantity": 1, "Unit": "PCS", "Sequence": 1, "Revision": "A"}),
+		make_row(1, **{"M2M": "G000001", "SD Code": "FP2-01", "Part No.": "71162-X1411", "Part Name": "PLATE, FR SEAT BACK, LWR", "Quantity": 1, "Unit": "PCS", "Sequence": 2}),
+		make_row(2, **{"M2M": "W000002", "SD Code": "STT001", "Part No.": "SOLVEST-114-00", "Part Name": "SOLVEST114 (20 kg./Pail)", "Quantity": 0.5, "Unit": "KG", "Sequence": 1}),
 	]
 
 	wb = openpyxl.Workbook()
@@ -382,7 +391,8 @@ def download_bom_import_template(request):
 	for r in rows:
 		ws.append(r)
 	for col in range(1, len(headers) + 1):
-		ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 22
+		width = 5 if col <= 11 else 22
+		ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = width
 
 	response = HttpResponse(
 		content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1020,12 +1030,21 @@ class BomTemplateView(TemplateView):
 		items_existing = 0
 		fg_count = 0
 		bom_links_created = 0
+		bom_links_updated = 0
 		bom_links_duplicate = 0
 		parent_not_found = 0
 		skipped = 0
 		bom_cache: dict = {}
 		seq_by_parent: dict = {}
 		line_assignments: list = []
+
+		# Master lookups keyed by the displayed value (lower-cased) — the same
+		# values the export writes, so a round-tripped file resolves cleanly.
+		cat_by_name = {(c.name or "").strip().lower(): c for c in ItemCategory.objects.all() if c.name}
+		portion_by_title = {(p.title or "").strip().lower(): p for p in Portion.objects.all() if p.title}
+		side_by_title = {(s.title or "").strip().lower(): s for s in Side.objects.all() if s.title}
+		inout_by_title = {(i.title or "").strip().lower(): i for i in InOut.objects.all() if i.title}
+		way_by_title = {(w.title or "").strip().lower(): w for w in Way.objects.all() if w.title}
 
 		def _lookup_or_create(sd_code, part_number, part_name):
 			"""Return (item, created_flag). Looks up by (sd_code, part_number);
@@ -1048,21 +1067,86 @@ class BomTemplateView(TemplateView):
 			items_created += 1
 			return item, True
 
+		def _apply_item_fields(item, row):
+			"""Write the editable Item_list columns (everything except Stage /
+			item_code, which the reclassify step owns). Blank cells are left
+			unchanged; FK columns that don't resolve are skipped, not wiped."""
+			changed: list = []
+			pname = _row_get_first(row, "part_name", "partname", "name")
+			if pname and item.part_name != pname:
+				item.part_name = pname
+				changed.append("part_name")
+			sku = _row_get_first(row, "sku")
+			if sku and item.sku != sku and not Item_list.objects.filter(sku__iexact=sku).exclude(pk=item.pk).exists():
+				item.sku = sku
+				changed.append("sku")
+			comment = _row_get_first(row, "comment")
+			if comment and item.comment != comment:
+				item.comment = comment
+				changed.append("comment")
+			for field, key in (("weight", "weight_kg"), ("purchased_price", "purchased_price"), ("cost", "cost")):
+				raw = _excel_to_str(row.get(key)).strip()
+				if raw != "":
+					val = _safe_decimal(raw)
+					if getattr(item, field) != val:
+						setattr(item, field, val)
+						changed.append(field)
+			cat_name = _row_get_first(row, "category", "category_name")
+			if cat_name and cat_name.lower() != "(ไม่ระบุ)":
+				cat = cat_by_name.get(cat_name.lower())
+				if cat and item.category_id != cat.id:
+					item.category = cat
+					changed.append("category")
+			for field, key, lookup in (
+				("portion", "portion", portion_by_title),
+				("side", "side", side_by_title),
+				("inout", "inout", inout_by_title),
+				("way", "way", way_by_title),
+			):
+				title = _row_get_first(row, key)
+				if title:
+					obj = lookup.get(title.lower())
+					if obj and getattr(item, f"{field}_id") != obj.id:
+						setattr(item, field, obj)
+						changed.append(field)
+			if changed:
+				item.save(update_fields=changed + ["updated_at"])
+
+		def _apply_own_bom_header(item, row):
+			"""Set Revision / Latest ECI / Scrap % on the BOM owned by this item
+			(those columns describe the item's own header, not its parent's)."""
+			rev = _row_get_first(row, "revision")
+			eci = _row_get_first(row, "latest_eci")
+			scrap_raw = _excel_to_str(row.get("scrap")).strip()
+			if not (rev or eci or scrap_raw):
+				return
+			bom, _ = BillOfMaterial.objects.get_or_create(
+				item=item,
+				defaults={"revision": "A", "latest_eci": "", "user": request.user},
+			)
+			h_changed: list = []
+			if rev and bom.revision != rev:
+				bom.revision = rev
+				h_changed.append("revision")
+			if eci and bom.latest_eci != eci:
+				bom.latest_eci = eci
+				h_changed.append("latest_eci")
+			if scrap_raw != "":
+				sc = _safe_decimal(scrap_raw)
+				if bom.scrap_percent != sc:
+					bom.scrap_percent = sc
+					h_changed.append("scrap_percent")
+			if h_changed:
+				bom.save(update_fields=h_changed + ["updated_at"])
+
 		try:
 			with transaction.atomic():
 				for row in _parse_xlsx(upload):
 					sd_code = _row_get_first(row, "sd_code", "sdcode", "sd")
-					part_number = _row_get_first(row, "part_number", "part_no", "partnumber", "pn")
+					part_number = _row_get_first(row, "part_no", "part_number", "partnumber", "pn")
 					part_name = _row_get_first(row, "part_name", "partname", "name")
-					parent_sd = _row_get_first(
-						row, "parent_sd_code", "parent_sd", "parent_sdcode", "m2m"
-					)
-					parent_pn = _row_get_first(
-						row, "parent_part_number", "parent_part_no", "parent_pn"
-					)
-					quantity_raw = _excel_to_str(row.get("quantity")).strip()
-					unit = _excel_to_str(row.get("unit")).strip() or "PCS"
-					category_name = _row_get_first(row, "category", "category_name")
+					# Parent is identified by M2M = the parent item's Item Code.
+					m2m = _row_get_first(row, "m2m", "parent_item_code")
 					line_name = _row_get_first(row, "line", "line_name")
 
 					if not sd_code or not part_number:
@@ -1070,65 +1154,70 @@ class BomTemplateView(TemplateView):
 						continue
 
 					item, _new = _lookup_or_create(sd_code, part_number, part_name)
+					_apply_item_fields(item, row)
+					# A sub-assembly / FG owns its own BOM header (Revision/Scrap%…).
+					_apply_own_bom_header(item, row)
 
-					# Optionally apply category if specified.
-					if category_name and category_name.lower() != "(ไม่ระบุ)":
-						cat = ItemCategory.objects.filter(name__iexact=category_name).first()
-						if cat and item.category_id != cat.id:
-							item.category = cat
-							item.save(update_fields=["category", "updated_at"])
-
-					# Resolve parent if any.
-					parent_item = None
-					if parent_sd:
-						parent_qs = Item_list.objects.filter(sd_code__iexact=parent_sd)
-						if parent_pn:
-							parent_qs = parent_qs.filter(part_number__iexact=parent_pn)
-						parent_item = parent_qs.first()
+					is_fg = m2m in ("", "-")
+					if is_fg:
+						# Top-level FG → ensure it owns a BOM header.
+						BillOfMaterial.objects.get_or_create(
+							item=item,
+							defaults={"revision": "A", "latest_eci": "", "user": request.user},
+						)
+						fg_count += 1
+					else:
+						parent_item = Item_list.objects.filter(item_code__iexact=m2m).first()
 						if parent_item is None:
 							parent_not_found += 1
 							skipped += 1
 							continue
-
-					if parent_item is None:
-						# No parent → this row is an FG. Ensure it owns a BOM header.
-						BillOfMaterial.objects.get_or_create(
-							item=item,
-							defaults={
-								"revision": "A",
-								"latest_eci": "",
-								"user": request.user,
-							},
-						)
-						fg_count += 1
-					else:
 						bom = bom_cache.get(parent_item.id)
 						if bom is None:
 							bom, _ = BillOfMaterial.objects.get_or_create(
 								item=parent_item,
-								defaults={
-									"revision": "A",
-									"latest_eci": "",
-									"user": request.user,
-								},
+								defaults={"revision": "A", "latest_eci": "", "user": request.user},
 							)
 							bom_cache[parent_item.id] = bom
 
-						if BillOfMaterialItemMater.objects.filter(
-							bom=bom, component=item
-						).exists():
-							bom_links_duplicate += 1
+						quantity = _safe_decimal(
+							_excel_to_str(row.get("quantity")).strip(), default=Decimal("1")
+						)
+						unit = _excel_to_str(row.get("unit")).strip() or "PCS"
+						seq_raw = _excel_to_str(row.get("sequence")).strip()
+						try:
+							file_seq = int(float(seq_raw)) if seq_raw else None
+						except (ValueError, TypeError):
+							file_seq = None
+						existing = BillOfMaterialItemMater.objects.filter(bom=bom, component=item).first()
+						if existing is not None:
+							# Re-import of an edited file → apply qty/unit/sequence changes.
+							e_changed: list = []
+							if existing.quantity != quantity:
+								existing.quantity = quantity
+								e_changed.append("quantity")
+							if existing.unit != unit:
+								existing.unit = unit
+								e_changed.append("unit")
+							if file_seq is not None and existing.sequence != file_seq:
+								existing.sequence = file_seq
+								e_changed.append("sequence")
+							if e_changed:
+								existing.save(update_fields=e_changed + ["updated_at"])
+								bom_links_updated += 1
+							else:
+								bom_links_duplicate += 1
 						else:
-							quantity = _safe_decimal(quantity_raw, default=Decimal("1"))
-							seq_by_parent[parent_item.id] = (
-								seq_by_parent.get(parent_item.id, 0) + 1
-							)
+							sequence = file_seq
+							if sequence is None:
+								seq_by_parent[parent_item.id] = seq_by_parent.get(parent_item.id, 0) + 1
+								sequence = seq_by_parent[parent_item.id]
 							BillOfMaterialItemMater.objects.create(
 								bom=bom,
 								component=item,
 								quantity=quantity,
 								unit=unit,
-								sequence=seq_by_parent[parent_item.id],
+								sequence=sequence,
 								user=request.user,
 							)
 							bom_links_created += 1
@@ -1168,10 +1257,12 @@ class BomTemplateView(TemplateView):
 			parts.append(f"FG {fg_count}")
 		if bom_links_created:
 			parts.append(f"ผูก BOM {bom_links_created}")
+		if bom_links_updated:
+			parts.append(f"อัปเดต BOM {bom_links_updated}")
 		if bom_links_duplicate:
 			parts.append(f"BOM ซ้ำ {bom_links_duplicate}")
 		if parent_not_found:
-			parts.append(f"ไม่พบ parent {parent_not_found}")
+			parts.append(f"ไม่พบ parent จาก M2M {parent_not_found}")
 		if skipped:
 			parts.append(f"ข้าม {skipped}")
 		messages.success(request, "นำเข้าสำเร็จ — " + ", ".join(parts))

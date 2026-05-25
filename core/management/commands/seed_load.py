@@ -33,6 +33,11 @@ DEFAULT_INPUT = Path("core/management/seeds/master_seed.json")
 # Each entry must be valid `apps.get_model(...)` syntax: `app_label.ModelName`
 # (case-sensitive, exact class name).
 DELETE_ORDER = [
+    # Production recording backbone (children first)
+    "core.ProcessDefectScrap",
+    "core.ProcessDefect",
+    "core.ProductionRecord",
+
     # Scrap & inspection
     "core.ScrapRecord",
     "core.MachineLine",

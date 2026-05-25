@@ -154,6 +154,8 @@ class ProductDetailView(TemplateView):
 		cost = _safe_decimal(request.POST.get("cost") or "0")
 		purchased_price = _safe_decimal(request.POST.get("purchased_price") or "0")
 		comment = (request.POST.get("comment") or "").strip()
+		reference_image = request.FILES.get("reference_image")
+		clear_image = (request.POST.get("clear_image") or "").strip() in {"1", "true", "on", "yes"}
 
 		if not sd_code or not part_number or not part_name:
 			messages.error(request, "กรุณากรอก SD Code / Part number / Part name")
@@ -188,6 +190,15 @@ class ProductDetailView(TemplateView):
 				item.side = side
 				item.inout = inout
 				item.way = way
+				# Reference image: clear, replace, or leave as-is.
+				if clear_image:
+					if item.reference_image:
+						item.reference_image.delete(save=False)
+					item.reference_image = None
+				elif reference_image is not None:
+					if item.reference_image:
+						item.reference_image.delete(save=False)
+					item.reference_image = reference_image
 				# Full save() so the model auto-generates item_code if stage is
 				# newly set and item_code is empty.
 				item.save()

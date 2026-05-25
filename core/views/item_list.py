@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
@@ -100,6 +101,11 @@ class ItemListView(TemplateView):
     exposes a form for creating a new item."""
 
     template_name = "item_list.html"
+
+    def get(self, request, *args, **kwargs):
+        if (request.GET.get("action") or "").strip().lower() == "import_template":
+            return self._import_template_response()
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -221,6 +227,8 @@ class ItemListView(TemplateView):
         action = (request.POST.get("action") or "").strip().lower()
         if action == "create_item":
             return self._handle_create_item(request)
+        if action == "import_excel":
+            return self._handle_import_excel(request)
         messages.error(request, "ไม่รองรับการทำงานนี้")
         return redirect(request.get_full_path())
 
@@ -239,6 +247,7 @@ class ItemListView(TemplateView):
         cost = _safe_decimal(request.POST.get("cost") or "0")
         purchased_price = _safe_decimal(request.POST.get("purchased_price") or "0")
         comment = (request.POST.get("comment") or "").strip()
+        reference_image = request.FILES.get("reference_image")
 
         if not part_number or not part_name or not sku:
             messages.error(request, "กรุณากรอก Part Number / Part Name / SKU")
@@ -267,6 +276,7 @@ class ItemListView(TemplateView):
                     cost=cost,
                     purchased_price=purchased_price,
                     comment=comment,
+                    reference_image=reference_image,
                     category=category,
                     stage=stage,
                     user=request.user,
@@ -279,4 +289,174 @@ class ItemListView(TemplateView):
             return redirect(request.get_full_path())
 
         messages.success(request, "เพิ่ม Item สำเร็จ")
+        return redirect(request.get_full_path())
+
+    # ---- Bulk import from Excel -------------------------------------------
+
+    # Column header → model field. Several aliases map to the same field.
+    IMPORT_COLUMNS = [
+        "sd_code", "part_number", "part_name", "sku",
+        "weight", "cost", "purchased_price", "comment", "category", "stage",
+    ]
+    IMPORT_ALIASES = {
+        "sd_code": {"sd_code", "sd", "sdcode", "sd_no"},
+        "part_number": {"part_number", "part_no", "partno", "partnumber"},
+        "part_name": {"part_name", "partname"},
+        "sku": {"sku"},
+        "weight": {"weight", "weight_kg", "weight_(kg)"},
+        "cost": {"cost"},
+        "purchased_price": {"purchased_price", "purchased", "purchase_price"},
+        "comment": {"comment", "remark", "note"},
+        "category": {"category", "category_name"},
+        "stage": {"stage", "stage_name"},
+    }
+
+    def _import_template_response(self):
+        try:
+            import openpyxl  # type: ignore
+            from openpyxl.styles import Font, PatternFill
+            from openpyxl.utils import get_column_letter
+        except Exception:
+            messages.error(self.request, "ไม่สามารถสร้างเทมเพลตได้ (ไม่มี openpyxl)")
+            return redirect("/item-list/?tab=add")
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Items"
+        ws.append(self.IMPORT_COLUMNS)
+        fill = PatternFill(start_color="1E293B", end_color="1E293B", fill_type="solid")
+        font = Font(color="FFFFFF", bold=True)
+        for cell in ws[1]:
+            cell.fill = fill
+            cell.font = font
+        ws.append(["SD-EXAMPLE", "PN-0001", "Example Part", "SKU-0001", 1.5, 0, 0, "", "", ""])
+        for i, w in enumerate([16, 18, 28, 16, 10, 10, 16, 24, 18, 18], start=1):
+            ws.column_dimensions[get_column_letter(i)].width = w
+        resp = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        resp["Content-Disposition"] = 'attachment; filename="item_import_template.xlsx"'
+        wb.save(resp)
+        return resp
+
+    def _handle_import_excel(self, request):
+        try:
+            import openpyxl  # type: ignore
+        except Exception:
+            messages.error(request, "ไม่สามารถอ่านไฟล์ Excel ได้ (ไม่มี openpyxl)")
+            return redirect(request.get_full_path())
+
+        f = request.FILES.get("excel_file")
+        if not f:
+            messages.error(request, "กรุณาเลือกไฟล์ Excel (.xlsx)")
+            return redirect(request.get_full_path())
+        try:
+            wb = openpyxl.load_workbook(f, data_only=True, read_only=True)
+        except Exception as e:
+            messages.error(request, f"เปิดไฟล์ไม่สำเร็จ: {e}")
+            return redirect(request.get_full_path())
+
+        ws = wb.active
+        row_iter = ws.iter_rows(values_only=True)
+        try:
+            header = next(row_iter)
+        except StopIteration:
+            messages.error(request, "ไฟล์ว่าง — ไม่มีหัวคอลัมน์")
+            return redirect(request.get_full_path())
+
+        def _norm(s) -> str:
+            return str(s or "").strip().lower().replace(" ", "_")
+
+        rev = {alias: field for field, al in self.IMPORT_ALIASES.items() for alias in al}
+        col: dict[str, int] = {}
+        for idx, h in enumerate(header):
+            field = rev.get(_norm(h))
+            if field and field not in col:
+                col[field] = idx
+
+        missing = [c for c in ("part_number", "part_name", "sku") if c not in col]
+        if missing:
+            messages.error(
+                request,
+                "ไฟล์ขาดคอลัมน์ที่จำเป็น: " + ", ".join(missing)
+                + " (หัวคอลัมน์ต้องมี part_number, part_name, sku)",
+            )
+            return redirect(request.get_full_path())
+
+        cat_by_name = {c.name.strip().lower(): c for c in ItemCategory.objects.all() if c.name}
+        stage_by_name: dict[str, ItemStage] = {}
+        for s in ItemStage.objects.all():
+            if s.display_name:
+                stage_by_name[s.display_name.strip().lower()] = s
+            if getattr(s, "code_prefix", ""):
+                stage_by_name.setdefault(s.code_prefix.strip().lower(), s)
+
+        def cell(row, field):
+            i = col.get(field)
+            if i is None or i >= len(row):
+                return None
+            return row[i]
+
+        created = skipped = errors = 0
+        notes: list[str] = []
+        seen_sd: set[str] = set()
+
+        for ri, row in enumerate(row_iter, start=2):
+            if row is None or all((c is None or str(c).strip() == "") for c in row):
+                continue  # blank line
+            part_number = str(cell(row, "part_number") or "").strip()
+            part_name = str(cell(row, "part_name") or "").strip()
+            sku = str(cell(row, "sku") or "").strip()
+            if not part_number or not part_name or not sku:
+                errors += 1
+                if len(notes) < 8:
+                    notes.append(f"แถว {ri}: ขาด part_number/part_name/sku")
+                continue
+
+            sd_code = str(cell(row, "sd_code") or "").strip()
+            if sd_code:
+                low = sd_code.lower()
+                if low in seen_sd or Item_list.objects.filter(sd_code=sd_code).exists():
+                    skipped += 1
+                    if len(notes) < 8:
+                        notes.append(f"แถว {ri}: SD Code \"{sd_code}\" ซ้ำ")
+                    continue
+                seen_sd.add(low)
+
+            category = cat_by_name.get(str(cell(row, "category") or "").strip().lower())
+            stage = stage_by_name.get(str(cell(row, "stage") or "").strip().lower())
+            try:
+                # Each row in its own savepoint so one failure doesn't poison the
+                # rest, and the auto item_code sees prior rows' committed codes.
+                with transaction.atomic():
+                    Item_list(
+                        sd_code=sd_code,
+                        part_number=part_number,
+                        part_name=part_name,
+                        sku=sku,
+                        weight=_safe_decimal(cell(row, "weight")),
+                        cost=_safe_decimal(cell(row, "cost")),
+                        purchased_price=_safe_decimal(cell(row, "purchased_price")),
+                        comment=str(cell(row, "comment") or "").strip(),
+                        category=category,
+                        stage=stage,
+                        user=request.user,
+                    ).save()
+                created += 1
+            except Exception as e:
+                errors += 1
+                if len(notes) < 8:
+                    notes.append(f"แถว {ri}: {e}")
+
+        summary = [f"นำเข้าสำเร็จ {created} รายการ"]
+        if skipped:
+            summary.append(f"ข้ามซ้ำ {skipped}")
+        if errors:
+            summary.append(f"ผิดพลาด {errors}")
+        msg = " · ".join(summary)
+        if notes:
+            msg += " — " + " ; ".join(notes)
+        if created:
+            messages.success(request, msg)
+        else:
+            messages.error(request, "ไม่ได้นำเข้ารายการใด — " + msg)
         return redirect(request.get_full_path())

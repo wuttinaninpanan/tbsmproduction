@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from types import SimpleNamespace
 
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -21,7 +22,7 @@ from core.models.defect_mode import DefectMode
 from core.models.item_line import ItemLine
 from core.models.item_list import Item_list
 from core.models.line import Line
-from core.models.scrap_record import ScrapRecord
+from core.models.process_defect import ProcessDefect, ProcessDefectScrap, ProductionRecord
 from core.services.auditlog import log_event
 
 
@@ -31,6 +32,24 @@ def _is_uuid(value: str) -> bool:
     except Exception:
         return False
     return True
+
+
+def _adapt_scrap(s: ProcessDefectScrap) -> SimpleNamespace:
+    """Present a ProcessDefectScrap as a flat row using the legacy ScrapRecord
+    field names the template/JS expect (production_line, part_number, ...)."""
+    pr = s.process_defect.production_record
+    return SimpleNamespace(
+        id=s.id,
+        created_at=s.created_at,
+        created_by=pr.created_by,
+        production_line=pr.line,       # Line  → str = line_name, .code works
+        part_number=pr.item,           # Item_list (produced part) → .sd_code, .id
+        defect_mode=s.process_defect.defect_mode,
+        component_part=s.component_part,
+        quantity=s.quantity,
+        comment=s.process_defect.comment,
+        photo=None,                    # ProcessDefectScrap has no photo field
+    )
 
 
 def _page_items(num_pages: int, current: int) -> list[int | None]:
@@ -85,13 +104,13 @@ class ManageScrapViews(TemplateView):
         date_from = parse_date(date_from_raw) if date_from_raw else None
         date_to = parse_date(date_to_raw) if date_to_raw else None
 
-        qs = ScrapRecord.objects.select_related(
-            "production_line",
-            "part_number",
-            "defect_mode",
+        qs = ProcessDefectScrap.objects.select_related(
+            "process_defect__production_record__line",
+            "process_defect__production_record__item",
+            "process_defect__production_record__created_by",
+            "process_defect__production_record__created_by__profile",
+            "process_defect__defect_mode",
             "component_part",
-            "created_by",
-            "created_by__profile",
         ).all()
 
         if date_from:
@@ -100,18 +119,19 @@ class ManageScrapViews(TemplateView):
             qs = qs.filter(created_at__date__lte=date_to)
 
         if q:
+            pr = "process_defect__production_record__"
             qs = qs.filter(
-                Q(production_line__line_name__icontains=q)
-                | Q(part_number__part_number__icontains=q)
-                | Q(part_number__sd_code__icontains=q)
-                | Q(part_number__sku__icontains=q)
-                | Q(defect_mode__name_th__icontains=q)
-                | Q(defect_mode__name_en__icontains=q)
+                Q(**{f"{pr}line__line_name__icontains": q})
+                | Q(**{f"{pr}item__part_number__icontains": q})
+                | Q(**{f"{pr}item__sd_code__icontains": q})
+                | Q(**{f"{pr}item__sku__icontains": q})
+                | Q(process_defect__defect_mode__name_th__icontains=q)
+                | Q(process_defect__defect_mode__name_en__icontains=q)
                 | Q(component_part__part_name__icontains=q)
                 | Q(component_part__part_number__icontains=q)
-                | Q(created_by__username__icontains=q)
-                | Q(created_by__first_name__icontains=q)
-                | Q(created_by__profile__shift__icontains=q)
+                | Q(**{f"{pr}created_by__username__icontains": q})
+                | Q(**{f"{pr}created_by__first_name__icontains": q})
+                | Q(**{f"{pr}created_by__profile__shift__icontains": q})
             )
 
         allowed_per_page = {100, 200, 500, 1000}
@@ -126,7 +146,8 @@ class ManageScrapViews(TemplateView):
         paginator = Paginator(qs, per_page)
         page_obj = paginator.get_page(page)
 
-        ctx["component_part_records"] = list(page_obj.object_list)
+        ctx["component_part_records"] = [_adapt_scrap(s) for s in page_obj.object_list]
+        ctx["can_edit"] = bool(getattr(request.user, "is_superuser", False))
         ctx["q"] = q
         ctx["date_from"] = date_from_raw
         ctx["date_to"] = date_to_raw
@@ -152,7 +173,7 @@ class ManageScrapViews(TemplateView):
                 messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
                 return redirect(request.get_full_path())
             with transaction.atomic():
-                deleted, _ = ScrapRecord.objects.filter(pk__in=ids).delete()
+                deleted, _ = ProcessDefectScrap.objects.filter(pk__in=ids).delete()
 
             messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
             transaction.on_commit(
@@ -170,25 +191,26 @@ class ManageScrapViews(TemplateView):
                 return redirect(request.get_full_path())
         if action == "delete":
             obj = (
-                ScrapRecord.objects.select_related(
-                    "production_line",
-                    "part_number",
-                    "defect_mode",
+                ProcessDefectScrap.objects.select_related(
+                    "process_defect__production_record__line",
+                    "process_defect__production_record__item",
+                    "process_defect__defect_mode",
                     "component_part",
                 )
                 .filter(pk=rec_id)
                 .first()
             )
-            deleted, _ = ScrapRecord.objects.filter(pk=rec_id).delete()
+            deleted, _ = ProcessDefectScrap.objects.filter(pk=rec_id).delete()
             if deleted:
                 messages.success(request, "ลบรายการสำเร็จ")
                 meta = {"record_id": rec_id}
                 if obj is not None:
+                    pr = obj.process_defect.production_record
                     meta.update(
                         {
-                            "line_code": getattr(obj.production_line, "code", ""),
-                            "part_number": getattr(obj.part_number, "number", ""),
-                            "defect": getattr(obj.defect_mode, "name", ""),
+                            "line_code": getattr(pr.line, "code", ""),
+                            "part_number": getattr(pr.item, "sd_code", ""),
+                            "defect": getattr(obj.process_defect.defect_mode, "name", ""),
                             "component_part": getattr(obj.component_part, "name", ""),
                             "quantity": obj.quantity,
                         }
@@ -197,7 +219,7 @@ class ManageScrapViews(TemplateView):
                     lambda: log_event(
                         request,
                         action="scrap:delete",
-                        message="ลบ ScrapRecord",
+                        message="ลบ ProcessDefectScrap",
                         metadata=meta,
                     )
                 )
@@ -205,14 +227,17 @@ class ManageScrapViews(TemplateView):
                 messages.error(request, "ไม่พบรายการ")
             return redirect(request.get_full_path())
         if action == "update":
+            # Editing is restricted to Admin (superuser); others may view/delete only.
+            if not getattr(request.user, "is_superuser", False):
+                messages.error(request, "เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่แก้ไขได้")
+                return redirect(request.get_full_path())
+
             line_code = (request.POST.get("line_code") or "").strip()
             part_ref = (request.POST.get("part_number") or "").strip()
             defect_id = (request.POST.get("defect_id") or "").strip()
             component_part_id = (request.POST.get("component_part_id") or "").strip()
             qty_raw = (request.POST.get("quantity") or "").strip()
             comment = (request.POST.get("comment") or "").strip() or None
-            clear_photo = (request.POST.get("clear_photo") or "").strip() in {"1", "true", "on", "yes"}
-            photo = request.FILES.get("photo")
 
             try:
                 quantity = int(qty_raw)
@@ -225,17 +250,23 @@ class ManageScrapViews(TemplateView):
             if not line_code or not part_ref or not _is_uuid(defect_id) or not _is_uuid(component_part_id):
                 messages.error(request, "กรุณาเลือก Line / SD number / Defect / Part name ให้ครบ")
                 return redirect(request.get_full_path())
-            rec = ScrapRecord.objects.filter(pk=rec_id).first()
+
+            rec = (
+                ProcessDefectScrap.objects.select_related("process_defect__production_record")
+                .filter(pk=rec_id)
+                .first()
+            )
             if rec is None:
                 messages.error(request, "ไม่พบรายการ")
                 return redirect(request.get_full_path())
+            pd = rec.process_defect
+            pr = pd.production_record
             old_snapshot = {
-                "line_id": str(rec.production_line_id),
-                "part_id": str(rec.part_number_id),
-                "defect_id": str(rec.defect_mode_id),
+                "line_id": str(pr.line_id),
+                "part_id": str(pr.item_id),
+                "defect_id": str(pd.defect_mode_id),
                 "component_part_id": str(rec.component_part_id),
                 "quantity": rec.quantity,
-                "had_photo": bool(rec.photo),
             }
 
             line = Line.objects.filter(line_name__iexact=line_code).first()
@@ -243,20 +274,9 @@ class ManageScrapViews(TemplateView):
                 messages.error(request, "ไม่พบ Production line")
                 return redirect(request.get_full_path())
             if _is_uuid(part_ref):
-                part = (
-                    Item_list.objects.filter(pk=part_ref)
-                    .filter(item_lines__line=line)
-                    .distinct()
-                    .first()
-                )
+                part = Item_list.objects.filter(pk=part_ref).filter(item_lines__line=line).distinct().first()
             else:
-                # Backward compat: accept part_number text
-                part = (
-                    Item_list.objects.filter(part_number__iexact=part_ref)
-                    .filter(item_lines__line=line)
-                    .distinct()
-                    .first()
-                )
+                part = Item_list.objects.filter(part_number__iexact=part_ref).filter(item_lines__line=line).distinct().first()
             if part is None:
                 messages.error(request, "ไม่พบ SD number ใน Production line ที่เลือก")
                 return redirect(request.get_full_path())
@@ -266,64 +286,65 @@ class ManageScrapViews(TemplateView):
                 return redirect(request.get_full_path())
             component_part = Item_list.objects.filter(pk=component_part_id).first()
             if component_part is None:
-                messages.error(request, "ไม่พบ Component Part")
+                messages.error(request, "ไม่พบ Part name")
                 return redirect(request.get_full_path())
+
             with transaction.atomic():
-                updated_fields: list[str] = []
-                if str(rec.production_line_id) != str(line.id):
-                    rec.production_line = line
-                    updated_fields.append("production_line")
-                if str(rec.part_number_id) != str(part.id):
-                    rec.part_number = part
-                    updated_fields.append("part_number")
-                if str(rec.defect_mode_id) != str(defect.id):
-                    rec.defect_mode = defect
-                    updated_fields.append("defect_mode")
+                changed: list[str] = []
+                # Parent ProductionRecord (line / produced part) — shared by every
+                # defect & scrap of the same production lot.
+                pr_fields: list[str] = []
+                if str(pr.line_id) != str(line.id):
+                    pr.line = line
+                    pr_fields.append("line")
+                if str(pr.item_id) != str(part.id):
+                    pr.item = part
+                    pr_fields.append("item")
+                if pr_fields:
+                    pr.save(update_fields=pr_fields + ["updated_at"])
+                    changed += pr_fields
+                # Parent ProcessDefect (defect mode / comment) — shared by sibling scraps.
+                pd_fields: list[str] = []
+                if str(pd.defect_mode_id) != str(defect.id):
+                    pd.defect_mode = defect
+                    pd_fields.append("defect_mode")
+                if pd.comment != comment:
+                    pd.comment = comment
+                    pd_fields.append("comment")
+                if pd_fields:
+                    pd.save(update_fields=pd_fields + ["updated_at"])
+                    changed += pd_fields
+                # The scrap row itself (component / quantity).
+                rec_fields: list[str] = []
                 if str(rec.component_part_id) != str(component_part.id):
                     rec.component_part = component_part
-                    updated_fields.append("component_part")
-
+                    rec_fields.append("component_part")
                 if rec.quantity != quantity:
                     rec.quantity = quantity
-                    updated_fields.append("quantity")
+                    rec_fields.append("quantity")
+                if rec_fields:
+                    rec.save(update_fields=rec_fields + ["updated_at"])
+                    changed += rec_fields
 
-                if rec.comment != comment:
-                    rec.comment = comment
-                    updated_fields.append("comment")
-
-                if clear_photo:
-                    if rec.photo:
-                        rec.photo.delete(save=False)
-                    rec.photo = None
-                    updated_fields.append("photo")
-                elif photo is not None:
-                    rec.photo = photo
-                    updated_fields.append("photo")
-
-                if updated_fields:
-                    rec.save(update_fields=updated_fields)
+                if changed:
                     messages.success(request, "แก้ไขรายการสำเร็จ")
-
                     new_snapshot = {
-                        "line_id": str(rec.production_line_id),
-                        "part_id": str(rec.part_number_id),
-                        "defect_id": str(rec.defect_mode_id),
+                        "line_id": str(pr.line_id),
+                        "part_id": str(pr.item_id),
+                        "defect_id": str(pd.defect_mode_id),
                         "component_part_id": str(rec.component_part_id),
                         "quantity": rec.quantity,
-                        "had_photo": bool(rec.photo),
                     }
                     transaction.on_commit(
                         lambda: log_event(
                             request,
                             action="scrap:update",
-                            message="แก้ไข ScrapRecord",
+                            message="แก้ไข ProcessDefectScrap",
                             metadata={
                                 "record_id": rec_id,
-                                "changed_fields": [f for f in updated_fields if f != "updated_at"],
+                                "changed_fields": changed,
                                 "old": old_snapshot,
                                 "new": new_snapshot,
-                                "clear_photo": clear_photo,
-                                "photo_uploaded": photo is not None,
                             },
                         )
                     )
@@ -408,9 +429,11 @@ class ManageScrapViews(TemplateView):
             parts_payload = []
             for part_ref in items_by_line.get(line.code, []):
                 part = parts_by_id.get(str(part_ref.id), part_ref)
-                # UX requirement: Part name comes from selected SD number (the part itself).
                 part_display_name = (getattr(part, "part_name", "") or getattr(part, "part_number", "") or getattr(part, "sku", "") or "").strip()
-                comps = [{"id": str(part.id), "name": part_display_name}]
+                # Editable Part name options = the product itself (FG) + its BOM
+                # children — the same set a scrap row can reference.
+                comps = [{"id": str(part.id), "name": f"FG · {part_display_name}".strip()}]
+                comps.extend(components_by_item_id.get(str(part.id), []))
 
                 defect_list = cat_to_defects.get(str(getattr(part, "category_id", ""))) or all_defects
 
@@ -451,13 +474,13 @@ class ManageScrapViews(TemplateView):
         date_from = parse_date(date_from_raw) if date_from_raw else None
         date_to = parse_date(date_to_raw) if date_to_raw else None
 
-        qs = ScrapRecord.objects.select_related(
-            "production_line",
-            "part_number",
-            "defect_mode",
+        qs = ProcessDefectScrap.objects.select_related(
+            "process_defect__production_record__line",
+            "process_defect__production_record__item",
+            "process_defect__production_record__created_by",
+            "process_defect__production_record__created_by__profile",
+            "process_defect__defect_mode",
             "component_part",
-            "created_by",
-            "created_by__profile",
         ).all()
 
         if date_from:
@@ -465,15 +488,16 @@ class ManageScrapViews(TemplateView):
         if date_to:
             qs = qs.filter(created_at__date__lte=date_to)
         if q:
+            pr = "process_defect__production_record__"
             qs = qs.filter(
-                Q(production_line__line_name__icontains=q)
-                | Q(part_number__part_number__icontains=q)
-                | Q(defect_mode__name_th__icontains=q)
-                | Q(defect_mode__name_en__icontains=q)
+                Q(**{f"{pr}line__line_name__icontains": q})
+                | Q(**{f"{pr}item__part_number__icontains": q})
+                | Q(process_defect__defect_mode__name_th__icontains=q)
+                | Q(process_defect__defect_mode__name_en__icontains=q)
                 | Q(component_part__part_name__icontains=q)
-                | Q(created_by__username__icontains=q)
-                | Q(created_by__first_name__icontains=q)
-                | Q(created_by__profile__shift__icontains=q)
+                | Q(**{f"{pr}created_by__username__icontains": q})
+                | Q(**{f"{pr}created_by__first_name__icontains": q})
+                | Q(**{f"{pr}created_by__profile__shift__icontains": q})
             )
 
         qs = qs.order_by("-created_at")
@@ -501,7 +525,8 @@ class ManageScrapViews(TemplateView):
             cell.fill = header_fill
             cell.font = header_font
 
-        for r in qs:
+        for s in qs:
+            r = _adapt_scrap(s)
             shift_display = "-"
             if r.created_by and hasattr(r.created_by, "profile") and r.created_by.profile:
                 shift_value = r.created_by.profile.shift

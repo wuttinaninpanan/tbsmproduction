@@ -14,7 +14,10 @@ from django.views.generic import TemplateView
 from core.auth.decorators import staff_required
 from core.models.defect_by_category import DefectByCategory
 from core.models.defect_mode import DefectMode
+from core.models.defect_stat import DefectStat
 from core.models.item_category import ItemCategory
+from core.models.process_defect import ProcessDefect
+from core.models.scrap_record import ScrapRecord
 from core.services.auditlog import log_event
 
 
@@ -96,7 +99,6 @@ class ManageSettingsDefectByCategoryView(TemplateView):
 
 		ctx["category"] = category
 		ctx["defects"] = defects
-		ctx["total_defects"] = len(defects)
 		ctx["selected_count"] = sum(1 for d in defects if d["checked"])
 		ctx["available_defects"] = available_defects
 		ctx["back_url"] = reverse("manage_settings") + "?tab=item_category"
@@ -116,8 +118,11 @@ class ManageSettingsDefectByCategoryView(TemplateView):
 		return redirect(request.get_full_path())
 
 	def _dbc_delete(self, request):
-		"""Unlink a defect from this category. If it is left linked to no other
-		category, delete the DefectMode too — unless scrap history protects it."""
+		"""Unlink a defect from this category. Delete the DefectMode itself only
+		when it is safe to: it must be linked to no other category AND not used by
+		any defect record (its PK is stored on ScrapRecord/DefectStat rows, so
+		deleting it there would break history). Otherwise keep the DefectMode and
+		just remove the category link."""
 		category = self._get_category()
 		defect_id = (request.POST.get("defect_mode_id") or "").strip()
 		if not _is_uuid(defect_id):
@@ -128,20 +133,30 @@ class ManageSettingsDefectByCategoryView(TemplateView):
 			messages.error(request, "ไม่พบ Defect")
 			return redirect("manage_settings_defect_by_category", category_id=category.id)
 		name = defect.name_en or defect.name_th or defect.name_jp or ""
+		in_records = False
 		try:
 			with transaction.atomic():
 				# 1) unlink from THIS category
 				removed, _ = DefectByCategory.objects.filter(category=category, defect_mode=defect).delete()
-				# 2) if no other category still links it, try to remove the defect
+				# 2) still linked to another category?
 				still_linked = DefectByCategory.objects.filter(defect_mode=defect).exists()
+				# 3) referenced by any defect record? (PK saved on the record rows)
+				#    ProcessDefect is the current recording table; ScrapRecord/
+				#    DefectStat are kept for legacy history still in the DB.
+				in_records = (
+					ProcessDefect.objects.filter(defect_mode=defect).exists()
+					or ScrapRecord.objects.filter(defect_mode=defect).exists()
+					or DefectStat.objects.filter(defect_mode=defect).exists()
+				)
+				# Only delete the DefectMode when nothing else needs it.
 				defect_deleted = False
-				if removed and not still_linked:
+				if removed and not still_linked and not in_records:
 					try:
 						with transaction.atomic():
 							defect.delete()
 						defect_deleted = True
 					except ProtectedError:
-						defect_deleted = False  # used by scrap/defect-stat history → keep it
+						defect_deleted = False  # safety net for any other PROTECT ref → keep it
 				transaction.on_commit(
 					lambda: log_event(
 						request,
@@ -151,6 +166,7 @@ class ManageSettingsDefectByCategoryView(TemplateView):
 							"category_id": str(category.id),
 							"defect_mode_id": defect_id,
 							"defect_deleted": defect_deleted,
+							"in_records": in_records,
 						},
 					)
 				)
@@ -162,10 +178,12 @@ class ManageSettingsDefectByCategoryView(TemplateView):
 			messages.info(request, f"“{name}” ไม่ได้ผูกกับ category นี้")
 		elif defect_deleted:
 			messages.success(request, f"ลบ “{name}” ออกจาก category นี้ และลบออกจากระบบแล้ว (ไม่ได้ผูกกับ category อื่น)")
-		elif not still_linked:
+		elif in_records:
 			messages.success(request, f"ลบ “{name}” ออกจาก category นี้แล้ว — ยังเก็บ defect ไว้ในระบบเพราะมีประวัติการบันทึกของเสียอ้างอิงอยู่")
-		else:
+		elif still_linked:
 			messages.success(request, f"ลบ “{name}” ออกจาก category นี้แล้ว (ยังผูกกับ category อื่นอยู่)")
+		else:
+			messages.success(request, f"ลบ “{name}” ออกจาก category นี้แล้ว")
 		return redirect("manage_settings_defect_by_category", category_id=category.id)
 
 	def _dbc_add(self, request):

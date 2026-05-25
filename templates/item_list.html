@@ -52,11 +52,31 @@
 	</div>
 
 	{% if tab == 'add' %}
+		<!-- IMPORT EXCEL -->
+		<div class="rounded-2xl border border-slate-200 p-5 sm:p-6 mb-4">
+			<div class="flex flex-wrap items-start justify-between gap-3">
+				<div>
+					<h2 class="text-lg font-extrabold text-slate-900">นำเข้าจาก Excel</h2>
+					<p class="text-xs text-slate-500 mt-1">หัวคอลัมน์: <code class="text-slate-700">sd_code, part_number*, part_name*, sku*, weight, cost, purchased_price, comment, category, stage</code> — category/stage ใส่เป็นชื่อ • * = จำเป็น • SD Code ที่ซ้ำจะถูกข้าม</p>
+				</div>
+				<a href="?tab=add&amp;action=import_template" class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ดาวน์โหลดเทมเพลต</a>
+			</div>
+			<form method="post" enctype="multipart/form-data" class="mt-4 flex flex-col sm:flex-row sm:items-end gap-3">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="import_excel" />
+				<div class="flex-1">
+					<label class="block text-sm font-semibold text-slate-700">ไฟล์ Excel (.xlsx)</label>
+					<input name="excel_file" type="file" accept=".xlsx" required class="mt-1 block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+				</div>
+				<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 whitespace-nowrap">นำเข้า</button>
+			</form>
+		</div>
+
 		<!-- ADD FORM -->
 		<div class="rounded-2xl border border-slate-200 p-5 sm:p-6">
 			<h2 class="text-lg font-extrabold text-slate-900">เพิ่ม Item ใหม่</h2>
 			<p class="text-xs text-slate-500 mt-1">สร้างรายการใน Item_list (master) — การผูก Line ทำได้ที่หน้า Products</p>
-			<form method="post" class="mt-4 space-y-4">
+			<form method="post" enctype="multipart/form-data" class="mt-4 space-y-4">
 				{% csrf_token %}
 				<input type="hidden" name="action" value="create_item" />
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -112,7 +132,17 @@
 					<label class="block text-sm font-semibold text-slate-700">Comment</label>
 					<input name="comment" type="text" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
 				</div>
-				<div class="flex items-center justify-end gap-2 pt-2">
+				<div>
+						<label class="block text-sm font-semibold text-slate-700">รูปภาพ (Reference)</label>
+						<div class="mt-1 flex items-center gap-3">
+							<img id="addImagePreview" class="hidden w-16 h-16 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="preview" />
+							<input name="reference_image" type="file" accept="image/*" id="addImageInput"
+								onchange="(function(i){var f=i.files&&i.files[0];var p=document.getElementById('addImagePreview');if(!p)return;if(f){p.src=URL.createObjectURL(f);p.classList.remove('hidden');}else{p.removeAttribute('src');p.classList.add('hidden');}})(this)"
+								class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+						</div>
+						<p class="text-xs text-slate-500 mt-1">อัปโหลดรูปอ้างอิงของชิ้นงาน (ไม่บังคับ)</p>
+					</div>
+					<div class="flex items-center justify-end gap-2 pt-2">
 					<a href="?tab=all" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ยกเลิก</a>
 					<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
 				</div>

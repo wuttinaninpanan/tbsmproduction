@@ -22,86 +22,59 @@
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 		<div class="rounded-2xl border border-slate-200 border-l-4 border-l-sky-500 bg-white p-5 shadow-sm">
 			<div class="flex items-start justify-between gap-3">
-				<div class="text-sm font-semibold text-slate-600">Records วันนี้</div>
-				<svg class="h-6 w-6 text-sky-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M3 3v18h18" />
-					<path d="M7 14l4-4 4 4 6-6" />
-				</svg>
+				<div class="text-sm font-semibold text-slate-600">ผลิตเดือนนี้</div>
+				<svg class="h-6 w-6 text-sky-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>
 			</div>
-			<div class="mt-2 text-3xl font-extrabold text-slate-900">{{ kpi.records_today|default:0 }}</div>
-			<div class="mt-1 text-xs text-slate-500">จำนวนรายการที่บันทึกในวันนี้</div>
-		</div>
-		<div class="rounded-2xl border border-slate-200 border-l-4 border-l-amber-500 bg-white p-5 shadow-sm">
-			<div class="flex items-start justify-between gap-3">
-				<div class="text-sm font-semibold text-slate-600">Records เดือนนี้</div>
-				<svg class="h-6 w-6 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M8 7V3" />
-					<path d="M16 7V3" />
-					<path d="M4 9h16" />
-					<path d="M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
-				</svg>
-			</div>
-			<div class="mt-2 text-3xl font-extrabold text-slate-900">{{ kpi.records_month|default:0 }}</div>
-			<div class="mt-1 text-xs text-slate-500">จำนวนรายการในเดือนปัจจุบัน</div>
-		</div>
-		<div class="rounded-2xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">
-			<div class="flex items-start justify-between gap-3">
-				<div class="text-sm font-semibold text-slate-600">Records ทั้งหมด</div>
-				<svg class="h-6 w-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M12 2v20" />
-					<path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" />
-				</svg>
-			</div>
-			<div class="mt-2 text-3xl font-extrabold text-slate-900">{{ kpi.records_total|default:0 }}</div>
-			<div class="mt-1 text-xs text-slate-500">จำนวนรายการทั้งหมดในระบบ</div>
+			<div class="mt-2 text-3xl font-extrabold text-slate-900">{{ kpi.produced_month|default:0 }}</div>
+			<div class="mt-1 text-xs text-slate-500">วันนี้ {{ kpi.produced_today|default:0 }} • รวมทั้งหมด {{ kpi.produced_total|default:0 }}</div>
 		</div>
 		<div class="rounded-2xl border border-slate-200 border-l-4 border-l-rose-500 bg-white p-5 shadow-sm">
 			<div class="flex items-start justify-between gap-3">
+				<div class="text-sm font-semibold text-slate-600">ของเสียเดือนนี้</div>
+				<svg class="h-6 w-6 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+			</div>
+			<div class="mt-2 text-3xl font-extrabold text-slate-900">{{ kpi.defects_month|default:0 }}</div>
+			<div class="mt-1 text-xs text-slate-500">วันนี้ {{ kpi.defects_today|default:0 }} • รวมทั้งหมด {{ kpi.defects_total|default:0 }}</div>
+		</div>
+		<div class="rounded-2xl border border-slate-200 border-l-4 border-l-amber-500 bg-white p-5 shadow-sm">
+			<div class="flex items-start justify-between gap-3">
+				<div class="text-sm font-semibold text-slate-600">Defect Rate เดือนนี้</div>
+				<svg class="h-6 w-6 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+			</div>
+			<div class="mt-2 text-3xl font-extrabold text-slate-900">{{ kpi.defect_rate_month|default:0 }}<span class="text-lg">%</span></div>
+			<div class="mt-1 text-xs text-slate-500">ทิ้ง (scrap) {{ kpi.scrap_month|default:0 }} ชิ้น</div>
+		</div>
+		<div class="rounded-2xl border border-slate-200 border-l-4 border-l-emerald-600 bg-white p-5 shadow-sm">
+			<div class="flex items-start justify-between gap-3">
 				<div class="text-sm font-semibold text-slate-600">Master Data</div>
-				<svg class="h-6 w-6 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-					<path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" />
-					<path d="M8 7h8" />
-					<path d="M8 11h8" />
-					<path d="M8 15h5" />
-				</svg>
+				<svg class="h-6 w-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>
 			</div>
 			<div class="mt-2 text-sm text-slate-700 space-y-1">
-				<div class="flex items-center justify-between gap-3">
-					<span>Production line</span>
-					<span class="font-extrabold text-slate-900">{{ kpi.lines_total|default:0 }}</span>
-				</div>
-				<div class="flex items-center justify-between gap-3">
-					<span>Part Name</span>
-					<span class="font-extrabold text-slate-900">{{ kpi.component_parts_total|default:0 }}</span>
-				</div>
-				<div class="flex items-center justify-between gap-3">
-					<span>Defect mode</span>
-					<span class="font-extrabold text-slate-900">{{ kpi.defect_modes_total|default:0 }}</span>
-				</div>
+				<div class="flex items-center justify-between gap-3"><span>Production line</span><span class="font-extrabold text-slate-900">{{ kpi.lines_total|default:0 }}</span></div>
+				<div class="flex items-center justify-between gap-3"><span>Part Name</span><span class="font-extrabold text-slate-900">{{ kpi.component_parts_total|default:0 }}</span></div>
+				<div class="flex items-center justify-between gap-3"><span>Defect mode</span><span class="font-extrabold text-slate-900">{{ kpi.defect_modes_total|default:0 }}</span></div>
 			</div>
 		</div>
 	</div>
 
+	<!-- Top 10 Line / Top 10 Item -->
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-		<!-- Top lines this month -->
 		<div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-			<div class="flex items-center justify-between">
-				<div class="font-extrabold text-slate-800">Top Production line (เดือนนี้)</div>
-				{% if is_staff %}
-					<a href="/manage-scrap/" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ดูทั้งหมด</a>
-				{% endif %}
-			</div>
+			<div class="font-extrabold text-slate-800">Top 10 Line (เดือนนี้)</div>
 			<div class="mt-4 space-y-2">
 				{% if top_lines_month %}
 					{% for row in top_lines_month %}
-						<div class="flex items-center justify-between gap-3 rounded-xl bg-white border border-slate-200 px-4 py-3">
-							<div class="min-w-0">
-								<div class="font-semibold text-slate-900 truncate">{{ row.production_line__code|default:"-" }}</div>
-								<div class="text-xs text-slate-500">{{ row.total_records|default:0 }} records</div>
+						<div class="flex items-center justify-between gap-3 rounded-xl bg-white border border-slate-200 px-4 py-2.5">
+							<div class="flex items-center gap-3 min-w-0">
+								<span class="shrink-0 w-6 text-center text-xs font-bold text-slate-400">{{ forloop.counter }}</span>
+								<div class="min-w-0">
+									<div class="font-semibold text-slate-900 truncate">{{ row.line|default:"-" }}</div>
+									<div class="text-xs text-slate-500">ผลิต {{ row.produced }} • ของเสีย {{ row.defects }}</div>
+								</div>
 							</div>
-							<div class="text-right">
-								<div class="text-sm text-slate-600">Qty</div>
-								<div class="text-lg font-extrabold text-slate-900">{{ row.total_qty|default:0 }}</div>
+							<div class="text-right shrink-0">
+								<div class="text-xs text-slate-500">Rate</div>
+								<div class="text-base font-extrabold {% if row.rate > 2 %}text-rose-600{% else %}text-slate-900{% endif %}">{{ row.rate }}%</div>
 							</div>
 						</div>
 					{% endfor %}
@@ -111,19 +84,25 @@
 			</div>
 		</div>
 
-		<!-- Top defect modes this month — doughnut chart -->
-		<div class="rounded-2xl border border-slate-200 bg-white p-5">
-			<div class="flex items-center justify-between">
-				<div class="font-extrabold text-slate-800">Top Defect mode (เดือนนี้)</div>
-				{% if is_staff %}
-					<a href="/manage-settings/?tab=defect_mode" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ดูทั้งหมด</a>
-				{% endif %}
-			</div>
-			<div class="mt-4">
-				{% if top_defect_modes_month %}
-					<div class="relative" style="height:220px;">
-						<canvas id="chartTopDefect" aria-label="Top defect mode chart"></canvas>
-					</div>
+		<div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+			<div class="font-extrabold text-slate-800">Top 10 Item (เดือนนี้)</div>
+			<div class="mt-4 space-y-2">
+				{% if top_items_month %}
+					{% for row in top_items_month %}
+						<div class="flex items-center justify-between gap-3 rounded-xl bg-white border border-slate-200 px-4 py-2.5">
+							<div class="flex items-center gap-3 min-w-0">
+								<span class="shrink-0 w-6 text-center text-xs font-bold text-slate-400">{{ forloop.counter }}</span>
+								<div class="min-w-0">
+									<div class="font-semibold text-slate-900 truncate">{{ row.sd|default:"-" }}{% if row.name %} <span class="font-normal text-slate-500">— {{ row.name }}</span>{% endif %}</div>
+									<div class="text-xs text-slate-500">ผลิต {{ row.produced }} • ของเสีย {{ row.defects }}</div>
+								</div>
+							</div>
+							<div class="text-right shrink-0">
+								<div class="text-xs text-slate-500">Rate</div>
+								<div class="text-base font-extrabold {% if row.rate > 2 %}text-rose-600{% else %}text-slate-900{% endif %}">{{ row.rate }}%</div>
+							</div>
+						</div>
+					{% endfor %}
 				{% else %}
 					<div class="text-sm text-slate-600">ยังไม่มีข้อมูลของเดือนนี้</div>
 				{% endif %}
@@ -134,40 +113,35 @@
 	<!-- Charts -->
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 		<div class="rounded-2xl border border-slate-200 bg-white p-5">
-			<div class="flex items-center justify-between gap-3">
-				<div class="font-extrabold text-slate-800">Records รายวัน (14 วันล่าสุด)</div>
-			</div>
-			<div class="mt-4">
-				<canvas id="chartDaily" height="120" aria-label="Daily records chart"></canvas>
-				<noscript>
-					<div class="text-sm text-slate-600">ต้องเปิดใช้งาน JavaScript เพื่อแสดงกราฟ</div>
-				</noscript>
+			<div class="font-extrabold text-slate-800">ผลิต vs ของเสีย รายวัน (14 วันล่าสุด)</div>
+			<div class="mt-4 relative" style="height:240px;">
+				<canvas id="chartDaily" aria-label="Daily produced vs defect chart"></canvas>
 			</div>
 		</div>
 		<div class="rounded-2xl border border-slate-200 bg-white p-5">
-			<div class="flex items-center justify-between gap-3">
-				<div class="font-extrabold text-slate-800">Top Production line (เดือนนี้)</div>
-			</div>
+			<div class="font-extrabold text-slate-800">Top Defect mode (เดือนนี้)</div>
 			<div class="mt-4">
-				<canvas id="chartTopLines" height="120" aria-label="Top lines chart"></canvas>
-				<noscript>
-					<div class="text-sm text-slate-600">ต้องเปิดใช้งาน JavaScript เพื่อแสดงกราฟ</div>
-				</noscript>
+				{% if top_defect_modes_month %}
+					<div class="relative" style="height:240px;"><canvas id="chartTopDefect" aria-label="Top defect mode chart"></canvas></div>
+				{% else %}
+					<div class="text-sm text-slate-600">ยังไม่มีข้อมูลของเดือนนี้</div>
+				{% endif %}
 			</div>
 		</div>
 	</div>
 
-	<!-- Recent activity -->
+	<!-- Daily scrap thrown (ProcessDefectScrap) -->
+	<div class="rounded-2xl border border-slate-200 bg-white p-5">
+		<div class="font-extrabold text-slate-800">จำนวน Scrap ที่ทิ้งรายวัน (14 วันล่าสุด)</div>
+		<div class="mt-4 relative" style="height:240px;">
+			<canvas id="chartScrapDaily" aria-label="Daily scrap chart"></canvas>
+		</div>
+	</div>
+
+	<!-- Recent production records -->
 	<div class="rounded-2xl border border-slate-200 overflow-hidden">
 		<div class="bg-slate-100 px-4 py-3">
-			<div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-				<div class="font-extrabold text-slate-800">
-					{% if is_staff %}รายการล่าสุด{% else %}รายการล่าสุดของคุณ{% endif %}
-				</div>
-				{% if is_staff %}
-					<a href="/manage-scrap/" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ไปหน้าจัดการ</a>
-				{% endif %}
-			</div>
+			<div class="font-extrabold text-slate-800">{% if is_staff %}การผลิตล่าสุด{% else %}การผลิตล่าสุดของคุณ{% endif %}</div>
 		</div>
 		<div class="overflow-x-auto">
 			<table class="min-w-full text-sm">
@@ -179,10 +153,10 @@
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
 						{% endif %}
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part number</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Name</th>
-						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Qty</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">ผลิต</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">ของเสีย</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Defect Rate</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200">
@@ -194,16 +168,16 @@
 									<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.get_short_name|default:"-" }}</td>
 									<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.profile.shift|default:"-" }}</td>
 								{% endif %}
-								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.production_line.code|default:"-" }}</td>
-								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.part_number.number|default:"-" }}</td>
-								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.defect_mode.name|default:"-" }}</td>
-								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.component_part.name|default:"-" }}</td>
-								<td class="px-4 py-3 whitespace-nowrap text-right font-semibold text-slate-900">{{ r.quantity|default:0 }}</td>
+								<td class="px-4 py-3 whitespace-nowrap font-semibold text-slate-900">{{ r.line.line_name|default:"-" }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.item.sd_code|default:"-" }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-right text-slate-900">{{ r.products_quantity|default:0 }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-right text-slate-900">{{ r.total_defect_quantity|default:0 }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-right font-semibold {% if r.defect_rate > 2 %}text-rose-600{% else %}text-slate-900{% endif %}">{{ r.defect_rate }}%</td>
 							</tr>
 						{% endfor %}
 					{% else %}
 						<tr>
-							<td class="px-4 py-6 text-slate-600" colspan="{% if is_staff %}8{% else %}6{% endif %}">ยังไม่มีรายการ</td>
+							<td class="px-4 py-6 text-slate-600" colspan="{% if is_staff %}8{% else %}6{% endif %}">ยังไม่มีรายการผลิต</td>
 						</tr>
 					{% endif %}
 				</tbody>
@@ -219,6 +193,5 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 {% load static %}
-<script src="{% static 'js/dashboard.js' %}" defer></script>
+<script src="{% static 'js/dashboard.js' %}?v=3" defer></script>
 {% endblock %}
-

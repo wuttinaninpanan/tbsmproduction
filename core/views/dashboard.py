@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from django.db.models import Count, Sum
-from django.db.models import F
+from django.db.models import F, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.utils.decorators import method_decorator
@@ -13,7 +12,12 @@ from core.auth.decorators import user_required
 from core.models.defect_mode import DefectMode
 from core.models.item_list import Item_list
 from core.models.line import Line
-from core.models.scrap_record import ScrapRecord
+from core.models.process_defect import ProcessDefect, ProcessDefectScrap, ProductionRecord
+
+
+def _rate(defects, produced) -> float:
+    """Defect rate (%) = defects / produced × 100 (0 when nothing produced)."""
+    return round(defects / produced * 100, 2) if produced else 0.0
 
 
 @method_decorator(user_required, name="dispatch")
@@ -25,101 +29,148 @@ class DashboardViews(TemplateView):
 
         today = timezone.localdate()
         now = timezone.localtime(timezone.now())
-        current_year = today.year
-        current_month = today.month
-
-        records_qs = ScrapRecord.objects.all()
+        year, month = today.year, today.month
         is_staff = bool(self.request.user.is_staff or self.request.user.is_superuser)
 
-        if is_staff:
-            scoped_qs = records_qs
-        else:
-            scoped_qs = records_qs.filter(created_by=self.request.user)
+        # Production backbone: ProductionRecord (qty produced) → ProcessDefect
+        # (qty defective) → ProcessDefectScrap (pieces scrapped).
+        pr_qs = ProductionRecord.objects.all()
+        pd_qs = ProcessDefect.objects.all()
+        scrap_qs = ProcessDefectScrap.objects.all()
+        if not is_staff:
+            user = self.request.user
+            pr_qs = pr_qs.filter(created_by=user)
+            pd_qs = pd_qs.filter(production_record__created_by=user)
+            scrap_qs = scrap_qs.filter(process_defect__production_record__created_by=user)
 
-        recent_qs = scoped_qs
+        pr_month = pr_qs.filter(created_at__year=year, created_at__month=month)
+        pd_month = pd_qs.filter(created_at__year=year, created_at__month=month)
+
+        def _sum(qs, field):
+            return qs.aggregate(s=Sum(field))["s"] or 0
+
+        produced_month = _sum(pr_month, "products_quantity")
+        defects_month = _sum(pd_month, "quantity")
+        produced_today = _sum(pr_qs.filter(created_at__date=today), "products_quantity")
+        defects_today = _sum(pd_qs.filter(created_at__date=today), "quantity")
+        scrap_month = _sum(scrap_qs.filter(created_at__year=year, created_at__month=month), "quantity")
 
         ctx["kpi"] = {
-            "records_today": records_qs.filter(created_at__date=today).count(),
-            "records_month": records_qs.filter(created_at__year=current_year, created_at__month=current_month).count(),
-            "records_total": records_qs.count(),
+            "produced_today": produced_today,
+            "produced_month": produced_month,
+            "produced_total": _sum(pr_qs, "products_quantity"),
+            "defects_today": defects_today,
+            "defects_month": defects_month,
+            "defects_total": _sum(pd_qs, "quantity"),
+            "defect_rate_month": _rate(defects_month, produced_month),
+            "scrap_month": scrap_month,
             "lines_total": Line.objects.count(),
             "parts_total": Item_list.objects.count(),
             "component_parts_total": Item_list.objects.count(),
             "defect_modes_total": DefectMode.objects.count(),
         }
 
-        top_raw = list(
-            scoped_qs.filter(created_at__year=current_year, created_at__month=current_month)
-            .values(line_name=F("production_line__line_name"))
-            .annotate(total_qty=Sum("quantity"), total_records=Count("id"))
-            .order_by("-total_qty", "-total_records", "line_name")[:5]
-        )
-        ctx["top_lines_month"] = [
+        # ---- Top production lines this month (produced / defects / rate) ----
+        prod_by_line = {
+            r["ln"]: int(r["s"] or 0)
+            for r in pr_month.values(ln=F("line__line_name")).annotate(s=Sum("products_quantity"))
+        }
+        def_by_line = {
+            r["ln"]: int(r["s"] or 0)
+            for r in pd_month.values(ln=F("production_record__line__line_name")).annotate(s=Sum("quantity"))
+        }
+        top_lines_month = [
             {
-                "production_line__code": (r.get("line_name") or "-")
-                if (r.get("line_name") is not None)
-                else "-",
-                "total_qty": r.get("total_qty") or 0,
-                "total_records": r.get("total_records") or 0,
+                "line": ln or "-",
+                "produced": prod_by_line.get(ln, 0),
+                "defects": def_by_line.get(ln, 0),
+                "rate": _rate(def_by_line.get(ln, 0), prod_by_line.get(ln, 0)),
             }
-            for r in top_raw
+            for ln in (set(prod_by_line) | set(def_by_line))
         ]
+        # 10 lines with the highest defect rate (tie → more defects, then name).
+        top_lines_month.sort(key=lambda x: (-x["rate"], -x["defects"], x["line"]))
+        ctx["top_lines_month"] = top_lines_month[:10]
 
-        # Charts
+        # ---- Top items this month (produced / defects / rate) ----
+        prod_by_item: dict = {}
+        item_label: dict = {}
+        for r in pr_month.values("item_id", sd=F("item__sd_code"), nm=F("item__part_name")).annotate(s=Sum("products_quantity")):
+            prod_by_item[r["item_id"]] = int(r["s"] or 0)
+            item_label[r["item_id"]] = (r["sd"] or "-", r["nm"] or "")
+        def_by_item: dict = {}
+        for r in pd_month.values(
+            iid=F("production_record__item_id"),
+            sd=F("production_record__item__sd_code"),
+            nm=F("production_record__item__part_name"),
+        ).annotate(s=Sum("quantity")):
+            def_by_item[r["iid"]] = int(r["s"] or 0)
+            item_label.setdefault(r["iid"], (r["sd"] or "-", r["nm"] or ""))
+        top_items_month = []
+        for iid in (set(prod_by_item) | set(def_by_item)):
+            p = prod_by_item.get(iid, 0)
+            d = def_by_item.get(iid, 0)
+            sd, nm = item_label.get(iid, ("-", ""))
+            top_items_month.append(
+                {"sd": sd or "-", "name": nm or "", "produced": p, "defects": d, "rate": _rate(d, p)}
+            )
+        # 10 items with the highest defect rate (tie → more defects, then SD).
+        top_items_month.sort(key=lambda x: (-x["rate"], -x["defects"], x["sd"]))
+        ctx["top_items_month"] = top_items_month[:10]
+
+        # ---- Top defect modes this month (by defective qty) ----
+        top_defect_modes_month = [
+            {"name": r["nm"] or "-", "total_qty": int(r["s"] or 0)}
+            for r in pd_month.values(nm=F("defect_mode__name_th"))
+            .annotate(s=Sum("quantity"))
+            .order_by("-s", "nm")[:6]
+        ]
+        ctx["top_defect_modes_month"] = top_defect_modes_month
+
+        # ---- Daily produced vs defective (last 14 days) ----
         days = 14
         start_date = today - timedelta(days=days - 1)
-        date_labels: list[str] = []
-        date_keys: list[str] = []
+        date_keys, date_labels = [], []
         for i in range(days):
             d = start_date + timedelta(days=i)
             date_keys.append(d.isoformat())
             date_labels.append(d.strftime("%d %b"))
 
-        daily_counts_map = {
-            (row["d"].isoformat() if row.get("d") else ""): int(row.get("c") or 0)
-            for row in scoped_qs.filter(created_at__date__gte=start_date, created_at__date__lte=today)
-            .annotate(d=TruncDate("created_at"))
-            .values("d")
-            .annotate(c=Count("id"))
-        }
-        daily_counts = [daily_counts_map.get(k, 0) for k in date_keys]
-
-        top_defect_raw = list(
-            scoped_qs.filter(created_at__year=current_year, created_at__month=current_month)
-            .values(defect_name=F("defect_mode__name_th"))
-            .annotate(total_qty=Sum("quantity"), total_records=Count("id"))
-            .order_by("-total_qty", "-total_records", "defect_name")[:5]
-        )
-        ctx["top_defect_modes_month"] = [
-            {
-                "name": (r.get("defect_name") or "-"),
-                "total_qty": r.get("total_qty") or 0,
-                "total_records": r.get("total_records") or 0,
+        def _daily_map(qs, field):
+            return {
+                (row["d"].isoformat() if row.get("d") else ""): int(row.get("s") or 0)
+                for row in qs.filter(created_at__date__gte=start_date, created_at__date__lte=today)
+                .annotate(d=TruncDate("created_at"))
+                .values("d")
+                .annotate(s=Sum(field))
             }
-            for r in top_defect_raw
-        ]
 
-        top_line_labels = [r.get("production_line__code") or "-" for r in ctx["top_lines_month"]]
-        top_line_qty = [int(r.get("total_qty") or 0) for r in ctx["top_lines_month"]]
-
-        top_defect_labels = [r.get("name") or "-" for r in ctx["top_defect_modes_month"]]
-        top_defect_qty = [int(r.get("total_qty") or 0) for r in ctx["top_defect_modes_month"]]
+        produced_daily = _daily_map(pr_qs, "products_quantity")
+        defects_daily = _daily_map(pd_qs, "quantity")
+        scrap_daily = _daily_map(scrap_qs, "quantity")  # pieces thrown (ProcessDefectScrap)
 
         ctx["charts"] = {
-            "daily": {"labels": date_labels, "data": daily_counts},
-            "top_lines": {"labels": top_line_labels, "data": top_line_qty},
-            "top_defect": {"labels": top_defect_labels, "data": top_defect_qty},
+            "daily": {
+                "labels": date_labels,
+                "data": [produced_daily.get(k, 0) for k in date_keys],
+                "data2": [defects_daily.get(k, 0) for k in date_keys],
+                "label1": "ผลิต",
+                "label2": "ของเสีย",
+            },
+            "scrap_daily": {
+                "labels": date_labels,
+                "data": [scrap_daily.get(k, 0) for k in date_keys],
+            },
+            "top_defect": {
+                "labels": [x["name"] for x in top_defect_modes_month],
+                "data": [x["total_qty"] for x in top_defect_modes_month],
+            },
         }
 
+        # ---- Recent production records (line · part · produced · defects · rate) ----
         ctx["recent_records"] = list(
-            recent_qs.select_related(
-                "production_line",
-                "part_number",
-                "defect_mode",
-                "component_part",
-                "created_by",
-                "created_by__profile",
-            )
+            pr_qs.select_related("line", "item", "created_by", "created_by__profile")
+            .prefetch_related("defects")
             .order_by("-created_at")[:10]
         )
 

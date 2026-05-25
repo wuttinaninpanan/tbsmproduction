@@ -56,26 +56,12 @@
 		{% csrf_token %}
 		<input type="hidden" name="action" value="dbc_sync" />
 
-		{# Toolbar: search (client-side) + bulk actions #}
-		<div class="rounded-t-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-			<div class="w-full sm:max-w-sm">
-				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input id="defectSearch" type="text" autocomplete="off" placeholder="พิมพ์ชื่อ Defect (EN / TH / JP)"
-					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-			</div>
-			<div class="flex flex-wrap items-center gap-2">
-				<span class="text-sm text-slate-600">เลือกแล้ว <span id="selectedCount" class="font-bold text-slate-900">{{ selected_count }}</span> / {{ total_defects }}</span>
-				<button type="button" id="selectAllBtn" class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100">เลือกที่แสดง</button>
-				<button type="button" id="clearAllBtn" class="px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100">ล้างที่แสดง</button>
-			</div>
-		</div>
-
-		{# List — every checkbox stays in the DOM; search only hides rows #}
-		<div class="border-x border-slate-200">
+		{# List of defects linked to this category #}
+		<div class="rounded-t-2xl border-x border-t border-slate-200">
 			{% if defects %}
 				<ul id="defectList" class="divide-y divide-slate-200">
 					{% for d in defects %}
-						<li data-defect-item data-search="{{ d.name_en|lower }} {{ d.name_th|lower }} {{ d.name_jp|lower }}"
+						<li data-defect-item
 							class="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-slate-50">
 							<span class="min-w-0 flex-1">
 								<span class="block font-semibold text-slate-900 truncate">{{ d.name_en|default:'-' }}</span>
@@ -91,7 +77,6 @@
 						</li>
 					{% endfor %}
 				</ul>
-				<div id="noMatch" class="hidden py-8 text-center text-sm text-slate-500">ไม่พบ Defect ที่ตรงกับคำค้นหา</div>
 			{% else %}
 				<div class="py-8 px-4 text-center text-sm text-slate-600">
 					ยังไม่มี Defect ที่ผูกกับ category นี้ — ไปเพิ่มได้ที่
@@ -134,52 +119,15 @@
 
 <script>
 (() => {
-	const search = document.getElementById("defectSearch");
-	const list = document.getElementById("defectList");
-	const noMatch = document.getElementById("noMatch");
-	const items = Array.from(document.querySelectorAll("[data-defect-item]"));
 	const checkboxes = Array.from(document.querySelectorAll("[data-defect-checkbox]"));
-	const countEls = [
-		document.getElementById("selectedCount"),
-		...document.querySelectorAll("[data-selected-mirror]"),
-	].filter(Boolean);
+	const countEls = Array.from(document.querySelectorAll("[data-selected-mirror]"));
 
 	const updateCount = () => {
 		const n = checkboxes.filter((c) => c.checked).length;
 		countEls.forEach((el) => { el.textContent = n; });
 	};
 
-	const visibleItems = () => items.filter((el) => !el.classList.contains("hidden"));
-
-	const applyFilter = () => {
-		const q = (search?.value || "").trim().toLowerCase();
-		let shown = 0;
-		items.forEach((el) => {
-			const hit = !q || (el.dataset.search || "").includes(q);
-			el.classList.toggle("hidden", !hit);
-			if (hit) shown += 1;
-		});
-		if (noMatch) noMatch.classList.toggle("hidden", shown !== 0);
-		if (list) list.classList.toggle("hidden", shown === 0);
-	};
-
-	search?.addEventListener("input", applyFilter);
 	checkboxes.forEach((c) => c.addEventListener("change", updateCount));
-
-	document.getElementById("selectAllBtn")?.addEventListener("click", () => {
-		visibleItems().forEach((el) => {
-			const cb = el.querySelector("[data-defect-checkbox]");
-			if (cb) cb.checked = true;
-		});
-		updateCount();
-	});
-	document.getElementById("clearAllBtn")?.addEventListener("click", () => {
-		visibleItems().forEach((el) => {
-			const cb = el.querySelector("[data-defect-checkbox]");
-			if (cb) cb.checked = false;
-		});
-		updateCount();
-	});
 
 	// Per-row delete — uses a separate form so it never triggers the bulk save.
 	const deleteForm = document.getElementById("deleteForm");

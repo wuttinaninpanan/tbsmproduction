@@ -20,25 +20,40 @@
 
 		const dailyCanvas = document.getElementById('chartDaily');
 		if (dailyCanvas && charts.daily && Array.isArray(charts.daily.labels)) {
+			const dd = charts.daily;
+			const cBlue = pickColor('text-sky-600');
+			// Optional second series (e.g. produced vs defective). When absent the
+			// chart stays a single red line (used by the inspection scrap dashboard).
+			const hasTwo = Array.isArray(dd.data2);
+			const datasets = [{
+				label: dd.label1 || 'Records',
+				data: dd.data || [],
+				borderColor: hasTwo ? cBlue : cPrimary,
+				backgroundColor: hasTwo ? cBlue : cPrimary,
+				tension: 0.3,
+				fill: false,
+				pointRadius: 2,
+				pointHoverRadius: 4,
+			}];
+			if (hasTwo) {
+				datasets.push({
+					label: dd.label2 || 'ของเสีย',
+					data: dd.data2 || [],
+					borderColor: cPrimary,
+					backgroundColor: cPrimary,
+					tension: 0.3,
+					fill: false,
+					pointRadius: 2,
+					pointHoverRadius: 4,
+				});
+			}
 			new Chart(dailyCanvas, {
 				type: 'line',
-				data: {
-					labels: charts.daily.labels,
-					datasets: [{
-						label: 'Records',
-						data: charts.daily.data || [],
-						borderColor: cPrimary,
-						backgroundColor: cPrimary,
-						tension: 0.3,
-						fill: false,
-						pointRadius: 2,
-						pointHoverRadius: 4,
-					}]
-				},
+				data: { labels: dd.labels, datasets: datasets },
 				options: {
 					responsive: true,
 					maintainAspectRatio: false,
-					plugins: { legend: { display: false } },
+					plugins: { legend: { display: hasTwo, position: 'bottom', labels: { color: cNeutral, boxWidth: 12, padding: 12 } } },
 					scales: {
 						x: {
 							ticks: { color: cNeutral },
@@ -122,6 +137,30 @@
 							ticks: { color: cNeutral, precision: 0 },
 							grid: { color: cGrid },
 						},
+					},
+				}
+			});
+		}
+		const scrapCanvas = document.getElementById('chartScrapDaily');
+		if (scrapCanvas && charts.scrap_daily && Array.isArray(charts.scrap_daily.labels)) {
+			const cAmber = pickColor('text-amber-500');
+			new Chart(scrapCanvas, {
+				type: 'bar',
+				data: {
+					labels: charts.scrap_daily.labels,
+					datasets: [{
+						label: 'Scrap (ชิ้น)',
+						data: charts.scrap_daily.data || [],
+						backgroundColor: cAmber,
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: { legend: { display: false } },
+					scales: {
+						x: { ticks: { color: cNeutral }, grid: { display: false } },
+						y: { beginAtZero: true, ticks: { color: cNeutral, precision: 0 }, grid: { color: cGrid } },
 					},
 				}
 			});

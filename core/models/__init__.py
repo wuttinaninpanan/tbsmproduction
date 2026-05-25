@@ -12,6 +12,7 @@ from .defect_mode import DefectMode
 from .auditlog_entry import AuditLogEntry
 from .scrap_record import ScrapRecord
 from .defect_stat import DefectStat
+from .process_defect import ProductionRecord, ProcessDefect, ProcessDefectScrap
 from core.models.inspection.inspection_model import InspectionModels
 from core.models.inspection.inspection_item import InspectionItem
 from core.models.inspection.inspection_model_defect import InspectionModelsDefect
@@ -54,6 +55,9 @@ __all__ = [
 	"AuditLogEntry",
 	"ScrapRecord",
 	"DefectStat",
+	"ProductionRecord",
+	"ProcessDefect",
+	"ProcessDefectScrap",
     "InspectionModels",
     "InspectionItem",
     "InspectionModelsDefect",

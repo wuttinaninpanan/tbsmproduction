@@ -54,7 +54,7 @@
 			<div class="font-extrabold text-slate-800">1. แก้ไข / อัปเดตข้อมูล Item</div>
 		</div>
 
-		<form method="post" class="p-4 sm:p-5 space-y-4">
+		<form method="post" enctype="multipart/form-data" class="p-4 sm:p-5 space-y-4">
 			{% csrf_token %}
 			<input type="hidden" name="action" value="update_item" />
 
@@ -166,6 +166,21 @@
 				<input name="comment" type="text" value="{{ item.comment|default:'' }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">รูปภาพ (Reference)</label>
+				<div class="mt-1 flex items-center gap-3">
+					<img id="editImagePreview" src="{% if item.reference_image %}{{ item.reference_image.url }}{% endif %}" alt="preview"
+						class="{% if not item.reference_image %}opacity-40 {% endif %}w-16 h-16 rounded-lg object-cover border border-slate-300 bg-slate-100" />
+					<input name="reference_image" type="file" accept="image/*" id="editImageInput"
+						onchange="(function(i){var f=i.files&&i.files[0];var p=document.getElementById('editImagePreview');if(!p)return;if(f){p.src=URL.createObjectURL(f);p.classList.remove('opacity-40');}})(this)"
+						class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+				</div>
+				<label class="mt-2 inline-flex items-center gap-2 text-sm text-slate-700">
+					<input type="checkbox" name="clear_image" value="1" class="h-4 w-4" />
+					ลบรูปเดิม (ตั้งเป็นค่าว่าง)
+				</label>
+				<p class="text-xs text-slate-500 mt-1">เลือกไฟล์ใหม่เพื่อแทนที่รูปเดิม หรือเลือก "ลบรูปเดิม"</p>
+			</div>
 			<div class="flex justify-end gap-2">
 				<button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition">
 					<svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M2.695 14.762l-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"/></svg>
