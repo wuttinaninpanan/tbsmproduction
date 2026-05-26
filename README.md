@@ -20,14 +20,6 @@ POSTGRES_PASSWORD=app_password
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 DJANGO_SETTINGS_MODULE=config.settings.local
-
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=fluke268@gmail.com
-EMAIL_HOST_PASSWORD=xqpbirotiirtyzyt
-EMAIL_USE_TLS=True
-EMAIL_USE_SSL=False
-DEFAULT_FROM_EMAIL=fluke268@gmail.com
 ```
 
 <!-- 1) สร้าง Google App Password (ผมทำแทนไม่ได้)
