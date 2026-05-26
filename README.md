@@ -20,7 +20,21 @@ POSTGRES_PASSWORD=app_password
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 DJANGO_SETTINGS_MODULE=config.settings.local
+
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=fluke268@gmail.com
+EMAIL_HOST_PASSWORD=xqpbirotiirtyzyt
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+DEFAULT_FROM_EMAIL=fluke268@gmail.com
 ```
+
+<!-- 1) สร้าง Google App Password (ผมทำแทนไม่ได้)
+
+เปิด 2-Step Verification ที่บัญชี Google ก่อน → https://myaccount.google.com/security
+สร้าง App Password ที่ → https://myaccount.google.com/apppasswords
+จะได้รหัส 16 หลัก → วางลงบรรทัด EMAIL_HOST_PASSWORD= (พิมพ์ติดกัน ไม่ต้องเว้นวรรค) -->
 
 ไฟล์ที่ต้องมี
 ```
@@ -304,7 +318,7 @@ psql -U tbapp_user -d tbapp_db
 
 ### การDump data ปัจจุบัน
 ```
-poetry run python manage.py seed_dump
+poetry run python manage.py data_dump
 
 ```
 ### การโหลดData ที่Dumpใว้เข้าฐานข้อมูล
@@ -325,13 +339,13 @@ DISABLE_AUTO_SEED=1
 **2) โหลดแบบ merge/upsert (ไม่ลบของเดิม)**
 โหลดเข้าฐานที่มีข้อมูลอยู่แล้ว — แถวที่ primary key ซ้ำจะถูก "เขียนทับ" ด้วยข้อมูลจากไฟล์, แถว PK ใหม่จะถูกเพิ่ม, ส่วนแถวเดิมที่ไม่มีในไฟล์จะ **ไม่ถูกลบ**
 ```
-poetry run python manage.py loaddata core/management/seeds/master_seed.json
+poetry run python manage.py loaddata core/fixtures/master_seed.json
 ```
 
 **3) โหลดแบบ mirror เต็ม (ลบของเดิมทั้งหมดแล้วโหลดใหม่)**
 อันตราย — ลบทุกแถวใน seed tables แล้วโหลดจากไฟล์ ทำให้ข้อมูลตรงกับไฟล์เป๊ะ
 ```
-poetry run python manage.py seed_load --no-input
+poetry run python manage.py data_load --no-input
 ```
 
 ### Build แบบไม่กระทบDB

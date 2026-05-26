@@ -23,7 +23,8 @@ from core.models.inspection.inspection_defect import InspectionDefect
 from core.models.inspection.inspection_defect_image import InspectionDefectImage
 from core.models.department import Department
 from core.models.inspection.machine import Machine
-from core.models.inspection.machine_line import MachineLine
+from core.models.email_receiver import EmailReceiver
+from core.models.manual import Manual
 
 # Import other model modules so Django registers them (even if not re-exported).
 from . import (  # noqa: F401
@@ -68,5 +69,6 @@ __all__ = [
     "InspectionDefectImage",
     "Department",
     "Machine",
-    "MachineLine",
+    "EmailReceiver",
+    "Manual",
 ]

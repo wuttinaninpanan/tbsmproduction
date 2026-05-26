@@ -146,3 +146,25 @@ STATICFILES_DIRS = [
 # Media (uploaded files)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+
+# Email (SMTP)
+# Configured via env vars. When EMAIL_HOST is set, real SMTP is used; otherwise
+# emails are printed to the console (safe default for dev / when SMTP isn't ready).
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") == "True"
+EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "30"))
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@tbsmrd.local"
+)
+# ชื่อที่แสดงเป็นผู้ส่ง (no-reply) ของอีเมลรายงานอัตโนมัติ
+REPORT_FROM_NAME = os.getenv("REPORT_FROM_NAME", "TBSMRD รายงานอัตโนมัติ (no-reply)")
+
+if EMAIL_HOST:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

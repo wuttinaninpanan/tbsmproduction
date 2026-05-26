@@ -16,7 +16,7 @@ fixture is replayed exactly once, on the very first migrate of a blank DB.
 Opt out at any time with the env var ``DISABLE_AUTO_SEED=1`` (e.g. in CI).
 
 For an explicit, *destructive* re-sync (wipe seed tables and reload), use the
-``seed_load`` management command instead — that is the deliberate, manual path.
+``data_load`` management command instead — that is the deliberate, manual path.
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from django.core import management
 from django.db import DEFAULT_DB_ALIAS
 
 SEED_PATH = (
-    Path(settings.BASE_DIR) / "core" / "management" / "seeds" / "master_seed.json"
+    Path(settings.BASE_DIR) / "core" / "fixtures" / "master_seed.json"
 )
 
 

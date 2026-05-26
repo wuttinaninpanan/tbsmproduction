@@ -5,7 +5,7 @@
 #     .\scripts\deploy_seed.ps1
 #
 # Replaces the contents of the seed-managed tables with the snapshot in
-# core/management/seeds/master_seed.json. See deploy_seed.sh for details.
+# core/fixtures/master_seed.json. See deploy_seed.sh for details.
 
 $ErrorActionPreference = "Stop"
 
@@ -20,7 +20,7 @@ Write-Host "==> Running migrations"
 python manage.py migrate --no-input
 
 Write-Host "==> Replacing data from seed fixture"
-python manage.py seed_load --no-input
+python manage.py data_load --no-input
 
 Write-Host ""
 Write-Host "==> Seed deploy completed."

@@ -13,7 +13,7 @@ from django.shortcuts import redirect
 from core.models import User
 from core.models.department import Department
 from core.models.inspection.machine import Machine
-from core.models.inspection.machine_line import MachineLine
+from core.models.item_category import ItemCategory
 from core.models.line import Line
 
 
@@ -96,13 +96,15 @@ class MachineLineView(TemplateView):
             per_page = 100
 
         qs = Machine.objects.select_related(
-            "res_dept", "responsible1", "responsible2"
-        ).prefetch_related("lines")
+            "res_dept", "responsible1", "responsible2", "line", "category"
+        )
 
         if q:
             qs = qs.filter(
                 Q(machine_no__icontains=q)
                 | Q(machine_name__icontains=q)
+                | Q(machine_type__icontains=q)
+                | Q(category__name__icontains=q)
                 | Q(res_dept__name__icontains=q)
                 | Q(responsible1__first_name__icontains=q)
                 | Q(responsible1__username__icontains=q)
@@ -117,7 +119,6 @@ class MachineLineView(TemplateView):
 
         rows = []
         for obj in page_obj.object_list:
-            machine_lines = sorted(obj.lines.all(), key=lambda l: l.line_name)
             rows.append({
                 "id": str(obj.id),
                 "machine_no": obj.machine_no,
@@ -130,8 +131,11 @@ class MachineLineView(TemplateView):
                 "responsible2_id": str(obj.responsible2_id) if obj.responsible2_id else "",
                 "responsible2_name": _user_label(obj.responsible2) if obj.responsible2_id else "",
                 "is_approved": obj.is_approved,
-                "line_ids": [str(l.id) for l in machine_lines],
-                "line_names": [l.line_name for l in machine_lines],
+                "line_id": str(obj.line_id) if obj.line_id else "",
+                "line_name": obj.line.line_name if obj.line_id else "",
+                "machine_type": obj.machine_type or "",
+                "category_id": str(obj.category_id) if obj.category_id else "",
+                "category_name": obj.category.name if obj.category_id else "",
             })
 
         ctx["rows"] = rows
@@ -149,31 +153,15 @@ class MachineLineView(TemplateView):
         ctx["departments_list"] = list(
             Department.objects.order_by("name").values("id", "name")
         )
+        ctx["categories_list"] = list(
+            ItemCategory.objects.order_by("name").values("id", "name")
+        )
         ctx["users_list"] = [
             {"id": str(u.id), "label": _user_label(u)}
             for u in User.objects.order_by("first_name", "username")
         ]
 
         return ctx
-
-    def _sync_lines(self, machine: Machine, line_ids: list[str]) -> None:
-        """ตั้งค่า MachineLine ให้ตรงกับ line_ids ที่เลือก (M2M ผ่าน through)"""
-        valid_ids = {x for x in line_ids if _is_uuid(x)}
-        valid_ids &= set(
-            str(pk) for pk in Line.objects.filter(pk__in=valid_ids).values_list("id", flat=True)
-        )
-
-        current = set(
-            str(pk) for pk in machine.machine_lines.values_list("line_id", flat=True)
-        )
-
-        to_add = valid_ids - current
-        to_remove = current - valid_ids
-
-        if to_remove:
-            machine.machine_lines.filter(line_id__in=to_remove).delete()
-        for lid in to_add:
-            MachineLine.objects.create(machine=machine, line_id=lid)
 
     def _resolve_fk(self, raw: str, model):
         """แปลง id (string) -> instance หรือ None"""
@@ -193,7 +181,9 @@ class MachineLineView(TemplateView):
         responsible1 = self._resolve_fk(request.POST.get("responsible1"), User)
         responsible2 = self._resolve_fk(request.POST.get("responsible2"), User)
         is_approved = str(request.POST.get("is_approved")).lower() == "true"
-        line_ids = request.POST.getlist("line_ids")
+        line = self._resolve_fk(request.POST.get("line_id"), Line)
+        machine_type = (request.POST.get("machine_type") or "").strip()
+        category = self._resolve_fk(request.POST.get("category"), ItemCategory)
 
         # ================= CREATE =================
         if action == "create":
@@ -205,7 +195,7 @@ class MachineLineView(TemplateView):
                 return redirect(request.get_full_path())
             try:
                 with transaction.atomic():
-                    machine = Machine.objects.create(
+                    Machine.objects.create(
                         machine_no=machine_no,
                         machine_name=machine_name,
                         machine_detail=machine_detail,
@@ -213,8 +203,10 @@ class MachineLineView(TemplateView):
                         responsible1=responsible1,
                         responsible2=responsible2,
                         is_approved=is_approved,
+                        line=line,
+                        machine_type=machine_type,
+                        category=category,
                     )
-                    self._sync_lines(machine, line_ids)
 
                 messages.success(request, "เพิ่มเครื่องสำเร็จ")
 
@@ -243,9 +235,10 @@ class MachineLineView(TemplateView):
                     machine.responsible1 = responsible1
                     machine.responsible2 = responsible2
                     machine.is_approved = is_approved
+                    machine.line = line
+                    machine.machine_type = machine_type
+                    machine.category = category
                     machine.save()
-
-                    self._sync_lines(machine, line_ids)
 
                 messages.success(request, "บันทึกการแก้ไขสำเร็จ")
 

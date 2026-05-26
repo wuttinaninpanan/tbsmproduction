@@ -37,11 +37,20 @@ class Machine(BaseModel):
 
     is_approved = models.BooleanField(default=False)                   # ได้รับการอนุมัติแล้วหรือยัง
 
-    # M2M ระหว่าง Machine กับ Line ผ่านโมเดล MachineLine
-    lines = models.ManyToManyField(
+    # 1 Line มีได้หลายเครื่องจักร แต่ 1 เครื่องจักรอยู่ได้ 1 Line เท่านั้น
+    line = models.ForeignKey(
         Line,
-        through="MachineLine",
+        on_delete=models.SET_NULL,
         related_name="machines",
+        null=True,
+        blank=True,
+    )
+    machine_type = models.CharField(max_length=255, blank=True, null=True)    # ประเภทของเครื่องจักร
+    category = models.ForeignKey(
+        "ItemCategory",
+        on_delete=models.SET_NULL,
+        related_name="machines",
+        null=True,
         blank=True,
     )
 

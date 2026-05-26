@@ -13,6 +13,7 @@ from django.views.generic import TemplateView
 
 from core.auth.decorators import user_required
 from core.models.scrap_record import ScrapRecord
+from core.services.scrap_export import build_scrap_workbook
 
 
 def _page_items(num_pages: int, current: int) -> list[int | None]:
@@ -175,65 +176,74 @@ class InspectionScrapDashboardView(TemplateView):
         }
 
     # ------------------------------------------------------------------ export
+    @staticmethod
+    def _shift_display(user) -> str:
+        profile = getattr(user, "profile", None) if user is not None else None
+        if profile is None:
+            return "-"
+        return profile.get_shift_display()
+
     def _export_excel(self, request):
+        """Export the filtered ScrapRecord rows to the same 4-sheet workbook as
+        Manage Production (Production Record / Scrap / สรุปตาม Line / สรุปตาม
+        Defect mode). ScrapRecord is flat and has no production quantity, so the
+        Production Record sheet shows the produced part with จำนวนผลิต/อัตราของเสีย
+        as ``-`` while จำนวนของเสีย carries the scrapped quantity."""
+        qs = self._filtered_qs(request)
+
+        record_rows = []
+        scrap_rows = []
+        line_totals: dict[str, int] = {}
+        defect_totals: dict[str, int] = {}
+
+        for r in qs:
+            created = timezone.localtime(r.created_at) if r.created_at else None
+            created_str = created.strftime("%d/%m/%Y %H:%M") if created else "-"
+            user_str = r.created_by.get_short_name() if r.created_by else "-"
+            shift_str = self._shift_display(r.created_by)
+            line_name = getattr(r.production_line, "line_name", "-") or "-"
+            qty = r.quantity or 0
+
+            # Sheet 1 — produced part angle (no production qty / rate in legacy data)
+            record_rows.append(
+                [
+                    created_str,
+                    user_str,
+                    shift_str,
+                    line_name,
+                    getattr(r.part_number, "sd_code", "") or "-",
+                    getattr(r.part_number, "part_name", "") or "-",
+                    None,
+                    qty,
+                    None,
+                ]
+            )
+            # Sheet 2 — scrapped component angle
+            comp = r.component_part
+            scrap_rows.append(
+                [
+                    created_str,
+                    user_str,
+                    shift_str,
+                    line_name,
+                    getattr(comp, "sd_code", "") or "-",
+                    getattr(comp, "part_number", "") or "-",
+                    getattr(comp, "part_name", "") or "-",
+                    qty,
+                ]
+            )
+            line_totals[line_name] = line_totals.get(line_name, 0) + qty
+            dm_name = getattr(r.defect_mode, "name", "-") or "-"
+            defect_totals[dm_name] = defect_totals.get(dm_name, 0) + qty
+
         try:
-            from openpyxl import Workbook
-            from openpyxl.styles import Font, PatternFill
-        except Exception:
+            wb = build_scrap_workbook(record_rows, scrap_rows, line_totals, defect_totals)
+        except ImportError:
             return HttpResponse(
                 "XLSX export is not available (openpyxl is not installed).",
                 status=400,
                 content_type="text/plain; charset=utf-8",
             )
-
-        qs = self._filtered_qs(request)
-
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Scrap Records"
-        headers = [
-            "วันที่/เวลา",
-            "ผู้ใช้งาน",
-            "กะ",
-            "Production line",
-            "SD number",
-            "Defect mode",
-            "Comment",
-            "Part name",
-            "Quantity",
-        ]
-        ws.append(headers)
-        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        header_font = Font(color="FFFFFF", bold=True)
-        for cell in ws[1]:
-            cell.fill = header_fill
-            cell.font = header_font
-
-        for r in qs:
-            shift_display = "-"
-            if r.created_by and getattr(r.created_by, "profile", None):
-                shift_value = r.created_by.profile.shift
-                if shift_value == "shift_a":
-                    shift_display = "กะ A"
-                elif shift_value == "shift_b":
-                    shift_display = "กะ B"
-                else:
-                    shift_display = "กะ Day"
-            created_at_local = timezone.localtime(r.created_at) if r.created_at else None
-            ws.append([
-                created_at_local.strftime("%d/%m/%Y %H:%M") if created_at_local else "-",
-                r.created_by.get_short_name() if r.created_by else "-",
-                shift_display,
-                getattr(r.production_line, "code", "-"),
-                getattr(r.part_number, "sd_code", "-") or "-",
-                getattr(r.defect_mode, "name", "-"),
-                r.comment or "-",
-                getattr(r.component_part, "part_name", "-") or "-",
-                r.quantity or 0,
-            ])
-
-        for col, width in zip("ABCDEFGHI", [18, 15, 10, 18, 18, 22, 22, 22, 12]):
-            ws.column_dimensions[col].width = width
 
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

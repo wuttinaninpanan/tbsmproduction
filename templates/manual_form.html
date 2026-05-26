@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}{% if manual %}แก้ไขคู่มือ{% else %}เพิ่มคู่มือ{% endif %} — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6 max-w-5xl mx-auto">
+
+    <header class="flex items-center justify-between">
+        <h1 class="text-2xl font-extrabold text-slate-900">{% if manual %}แก้ไขคู่มือ{% else %}เพิ่มคู่มือ{% endif %}</h1>
+        <a href="{% url 'manual_list' %}" class="text-sm font-semibold underline text-slate-600">← กลับรายการ</a>
+    </header>
+
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700 mb-1">หัวข้อคู่มือ <span class="text-red-500">*</span></label>
+                <input name="title" required value="{{ manual.title|default:'' }}" placeholder="เช่น วิธีบันทึกข้อมูลของเสีย"
+                    class="w-full border px-3 py-2 rounded-md">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">สำหรับกลุ่ม</label>
+                <select name="usefor" class="w-full border px-3 py-2 rounded-md bg-white">
+                    {% for value, label in usefor_choices %}
+                    <option value="{{ value }}" {% if manual.usefor == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">คำอธิบายสั้นๆ</label>
+            <input name="description" value="{{ manual.description|default:'' }}" placeholder="สรุปสั้นๆ ว่าคู่มือนี้เกี่ยวกับอะไร"
+                class="w-full border px-3 py-2 rounded-md">
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">เนื้อหา (ตกแต่ง/แปะรูปได้)</label>
+            <textarea name="detail" id="detail">{{ manual.detail|default:'' }}</textarea>
+        </div>
+
+        <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" name="is_active" value="true" {% if manual.is_active or manual is None %}checked{% endif %} class="rounded border-slate-300">
+            เปิดใช้งาน (แสดงให้ผู้ใช้เห็น)
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+            <a href="{% url 'manual_list' %}" class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</a>
+            <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg font-semibold">บันทึก</button>
+        </div>
+    </form>
+</section>
+
+<!-- WYSIWYG: TinyMCE (self-hosted build จาก jsDelivr — ไม่ต้องใช้ API key) -->
+<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    tinymce.init({
+        selector: '#detail',
+        height: 600,
+        menubar: false,
+        promotion: false,
+        branding: false,
+        plugins: 'lists link image table code autoresize',
+        toolbar: 'undo redo | blocks | bold italic underline forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link image table | removeformat | code',
+        // แปะรูป (paste/วาง) -> ฝังเป็น base64 ในเนื้อหาเลย (ไม่ต้องอัปโหลดไฟล์)
+        paste_data_images: true,
+        automatic_uploads: false,
+        file_picker_types: 'image',
+        file_picker_callback: function (cb, value, meta) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function () {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function () { cb(reader.result, { title: file.name }); };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        },
+        content_style: "body{font-family:'Sarabun',sans-serif;font-size:14px}"
+    });
+</script>
+
+{% endblock %}

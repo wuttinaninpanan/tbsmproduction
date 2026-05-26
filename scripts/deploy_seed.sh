@@ -8,14 +8,14 @@
 # What it does:
 #     1. Activates the project venv (if present at .venv).
 #     2. Runs `manage.py migrate` so schema is current.
-#     3. Runs `manage.py seed_load --no-input` which:
+#     3. Runs `manage.py data_load --no-input` which:
 #        - Deletes every row from the seed-managed tables (children first).
-#        - Loads `core/management/seeds/master_seed.json` into a fresh state.
+#        - Loads `core/fixtures/master_seed.json` into a fresh state.
 #
 # Pre-requisites:
 #     - `.env.local` (or environment variables) must point at the correct
 #       database, exactly like local dev does.
-#     - `core/management/seeds/master_seed.json` must be committed/uploaded.
+#     - `core/fixtures/master_seed.json` must be committed/uploaded.
 #
 # Safety:
 #     - Wraps the destructive step in a single transaction; on failure
@@ -36,7 +36,7 @@ echo "==> Running migrations"
 python manage.py migrate --no-input
 
 echo "==> Replacing data from seed fixture"
-python manage.py seed_load --no-input
+python manage.py data_load --no-input
 
 echo
 echo "==> Seed deploy completed."

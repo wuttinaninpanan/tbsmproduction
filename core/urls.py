@@ -1,8 +1,10 @@
 from django.urls import path
-from core.views import HomeViews , LoginViews , LogoutView , ContactViews , AboutViews , ProfileViews , ManageUserViews , AuditLogViews , ManageLineViews,ManageLineEditViews,LineItemSearchView,DashboardViews,RecordViews,ManageScrapViews,MonthlyComponentPartReportViews,ScrapWeightReportViews,ManageSettingsViews,ManageSettingsDefectByCategoryView,ManageBusinessPartnerViews,ManageAddressPartnerViews,ManageContactViews,BomTemplateView,ProductsView,ProductDetailView,ItemListView
+from core.views import HomeViews , LoginViews , LogoutView , ContactViews , AboutViews , ProfileViews , ManageUserViews , AuditLogViews , ManageLineViews,ManageLineEditViews,LineItemSearchView,DashboardViews,RecordViews,ManageScrapViews,ManageProductionViews,MonthlyComponentPartReportViews,ScrapWeightReportViews,ManageSettingsViews,ManageSettingsDefectByCategoryView,ManageBusinessPartnerViews,ManageAddressPartnerViews,ManageContactViews,BomTemplateView,ProductsView,ProductDetailView,ItemListView
 from core.views import InspectionItemView, InspectionModelssView, InspectionModelsDefectView, InspectionResultView, InspectionErrorView, InspectionProductsView, InspectionDefectView, InspectionDefectImageView
 from core.views import MachineLineView, MachineInspectionView, MachineProductInspectionView
 from core.views import InspectionScrapDashboardView
+from core.views import EmailReceiverView
+from core.views import ManualListView, ManualDetailView, ManualFormView
 
 
 
@@ -20,6 +22,7 @@ urlpatterns = [
     path('manage-settings/defect-by-category/<uuid:category_id>/', ManageSettingsDefectByCategoryView.as_view(), name="manage_settings_defect_by_category"),
 	path('record/', RecordViews.as_view(), name="record"),
 	path('manage-scrap/', ManageScrapViews.as_view(), name="manage_scrap"),
+    path('manage-production/', ManageProductionViews.as_view(), name="manage_production"),
     path('report_scrap_monthly/', MonthlyComponentPartReportViews.as_view(), name="report_scrap_monthly"),
     path('report_scrap_weight/', ScrapWeightReportViews.as_view(), name="report_scrap_weight"),
     path('manage-line/', ManageLineViews.as_view(), name="manage_line"),
@@ -32,6 +35,12 @@ urlpatterns = [
     path('manage-business-partner/', ManageBusinessPartnerViews.as_view(), name="manage_businesspartner"),
     path('manage-address-partner/', ManageAddressPartnerViews.as_view(), name="manage_address_partner"),
     path('manage-contact/', ManageContactViews.as_view(), name="manage_contact"),
+    path('manage-email-receiver/', EmailReceiverView.as_view(), name="manage_email_receiver"),
+
+    path('manual/', ManualListView.as_view(), name="manual_list"),
+    path('manual/new/', ManualFormView.as_view(), name="manual_new"),
+    path('manual/<uuid:id>/edit/', ManualFormView.as_view(), name="manual_edit"),
+    path('manual/<uuid:id>/', ManualDetailView.as_view(), name="manual_detail"),
 
     path('inspection/inspection_item/', InspectionItemView.as_view(), name="Inspection_item"),
     path('inspection/inspection_modelss/', InspectionModelssView.as_view(), name="inspection_modelss"),

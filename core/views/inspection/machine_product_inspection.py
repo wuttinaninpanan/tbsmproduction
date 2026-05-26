@@ -63,7 +63,7 @@ class MachineProductInspectionView(TemplateView):
 
     def _get_machine(self):
         machine = (
-            Machine.objects.prefetch_related("lines")
+            Machine.objects.select_related("line")
             .filter(pk=self.kwargs.get("machine_id"))
             .first()
         )
@@ -73,7 +73,7 @@ class MachineProductInspectionView(TemplateView):
 
     def _get_product(self, machine):
         """ผลิตภัณฑ์ต้องผูกอยู่กับไลน์ของเครื่องนี้ผ่าน ItemLine."""
-        line_ids = list(machine.lines.values_list("id", flat=True))
+        line_ids = [machine.line_id] if machine.line_id else []
         product = (
             Item_list.objects.select_related("bom_header")
             .filter(pk=self.kwargs.get("item_id"), item_lines__line_id__in=line_ids)

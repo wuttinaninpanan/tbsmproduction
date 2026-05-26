@@ -17,10 +17,13 @@ from .manage_address_partner import ManageAddressPartnerViews
 from .manage_contact import ManageContactViews
 from .record import RecordViews
 from .manage_scrap import ManageScrapViews
+from .manage_production import ManageProductionViews
 from .manage_line import ManageLineViews, ManageLineEditViews, LineItemSearchView
 from .dashboard import DashboardViews
 from .report_scrap_monthly import MonthlyComponentPartReportViews
 from .report_scrap_weight import ScrapWeightReportViews
+from .email_receiver import EmailReceiverView
+from .manual import ManualListView, ManualDetailView, ManualFormView
 
 
 ## For auto inspection machine

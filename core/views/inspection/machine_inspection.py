@@ -21,7 +21,7 @@ class MachineInspectionView(TemplateView):
     def _get_machine(self):
         machine_id = self.kwargs.get("machine_id")
         machine = (
-            Machine.objects.prefetch_related("lines")
+            Machine.objects.select_related("line")
             .filter(pk=machine_id)
             .first()
         )
@@ -34,10 +34,12 @@ class MachineInspectionView(TemplateView):
         request = self.request
 
         machine = self._get_machine()
-        line_ids = list(machine.lines.values_list("id", flat=True))
-        line_names_allowed = {
-            ln for ln in machine.lines.values_list("line_name", flat=True) if ln
-        }
+        line_ids = [machine.line_id] if machine.line_id else []
+        line_names_allowed = (
+            {machine.line.line_name}
+            if machine.line_id and machine.line.line_name
+            else set()
+        )
 
         q = (request.GET.get("q") or "").strip()
 
