@@ -192,6 +192,7 @@ DEBUG = os.getenv("DEBUG", "True") == "True"
 ```
 ALLOWED_HOSTS = ["*"]
 ```
+
 TEMPLATES
 ```
 TEMPLATES = [
@@ -209,6 +210,7 @@ TEMPLATES = [
     },
 ]
 ```
+
 DATABASES
 ```
 DATABASES = {

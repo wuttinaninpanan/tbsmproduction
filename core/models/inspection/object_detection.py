@@ -21,19 +21,35 @@ class KanbanPartMapping(BaseModel):
     def __str__(self):
         return f"Kanban: {self.kanban_qr} - Part: {self.part_qr}"
 
-
 class DetectionObject(BaseModel):
     """ชิ้นส่วน/ตำแหน่งที่โมเดล object detection ต้องตรวจเจอ พร้อมจำนวนที่คาดหวัง."""
 
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    quantity = models.PositiveIntegerField(default=1)  # จำนวนที่คาดว่าจะเจอ
+    quantity = models.PositiveIntegerField(default=1)
+
     object_detection_model = models.CharField(max_length=255)
     model_path = models.CharField(max_length=500)
 
     def __str__(self):
         return self.name
 
+class ObjectMachineMapping(BaseModel):
+    """Mapping ระหว่างเครื่องจักรกับ Object ที่ต้องตรวจ."""
+
+    machine = models.ForeignKey(
+        "Machine",
+        on_delete=models.PROTECT,
+        related_name="object_machine_mappings",
+    )
+    object = models.ForeignKey(
+        "DetectionObject",
+        on_delete=models.PROTECT,
+        related_name="machine_mappings",
+    )
+
+    def __str__(self):
+        return f"{self.machine.name} - {self.object.name}"
 
 class ObjectItem(BaseModel):
     """รายการ Item ที่ควรประกอบอยู่ใน DetectionObject หนึ่งๆ."""
