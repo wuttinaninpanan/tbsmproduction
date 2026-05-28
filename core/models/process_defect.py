@@ -24,6 +24,11 @@ class ProductionRecord(BaseModel):
         related_name="production_records_as_part",
     )
     products_quantity = models.PositiveIntegerField(default=1)
+    # The window the operator says this lot was produced in. Recorded per
+    # (line, part) row on the new Page 1 of /record/; nullable so legacy
+    # rows (and rows entered without a clock) keep working.
+    start_time = models.DateTimeField(null=True, blank=True)
+    end_time = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

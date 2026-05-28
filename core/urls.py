@@ -1,5 +1,5 @@
 from django.urls import path
-from core.views import HomeViews , LoginViews , LogoutView , ContactViews , AboutViews , ProfileViews , ManageUserViews , AuditLogViews , ManageLineViews,ManageLineEditViews,LineItemSearchView,DashboardViews,RecordViews,ManageScrapViews,ManageProductionViews,MonthlyComponentPartReportViews,ScrapWeightReportViews,ManageSettingsViews,ManageSettingsDefectByCategoryView,ManageBusinessPartnerViews,ManageAddressPartnerViews,ManageContactViews,BomTemplateView,ProductsView,ProductDetailView,ItemListView
+from core.views import HomeViews , LoginViews , LogoutView , ContactViews , AboutViews , ProfileViews , ManageUserViews , AuditLogViews , ManageLineViews,ManageLineEditViews,LineItemSearchView,DashboardViews,RecordProductionView,RecordDefectsView,ManageScrapViews,ManageProductionViews,MonthlyComponentPartReportViews,ScrapWeightReportViews,ManageSettingsViews,ManageSettingsDefectByCategoryView,ManageBusinessPartnerViews,ManageAddressPartnerViews,ManageContactViews,BomTemplateView,ProductsView,ProductDetailView,ItemListView
 from core.views import InspectionItemView, InspectionModelssView, InspectionModelsDefectView, InspectionResultView, InspectionErrorView, InspectionProductsView, InspectionDefectView, InspectionDefectImageView
 from core.views import MachineLineView, MachineInspectionView, MachineProductInspectionView
 from core.views import InspectionScrapDashboardView
@@ -20,7 +20,8 @@ urlpatterns = [
     path('audit-log/', AuditLogViews.as_view(), name="audit-log"),
     path('manage-settings/', ManageSettingsViews.as_view(), name="manage_settings"),
     path('manage-settings/defect-by-category/<uuid:category_id>/', ManageSettingsDefectByCategoryView.as_view(), name="manage_settings_defect_by_category"),
-	path('record/', RecordViews.as_view(), name="record"),
+	path('record/', RecordProductionView.as_view(), name="record"),
+	path('record/defects/', RecordDefectsView.as_view(), name="record_defects"),
 	path('manage-scrap/', ManageScrapViews.as_view(), name="manage_scrap"),
     path('manage-production/', ManageProductionViews.as_view(), name="manage_production"),
     path('report_scrap_monthly/', MonthlyComponentPartReportViews.as_view(), name="report_scrap_monthly"),

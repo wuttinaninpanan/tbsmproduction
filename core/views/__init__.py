@@ -15,7 +15,7 @@ from .manage_settings_defect_by_category import ManageSettingsDefectByCategoryVi
 from .manage_businesspartner import ManageBusinessPartnerViews
 from .manage_address_partner import ManageAddressPartnerViews
 from .manage_contact import ManageContactViews
-from .record import RecordViews
+from .record import RecordViews, RecordProductionView, RecordDefectsView
 from .manage_scrap import ManageScrapViews
 from .manage_production import ManageProductionViews
 from .manage_line import ManageLineViews, ManageLineEditViews, LineItemSearchView
