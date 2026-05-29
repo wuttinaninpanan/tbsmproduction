@@ -18,10 +18,14 @@ class ProductionRecord(BaseModel):
         on_delete=models.PROTECT,
         related_name="production_records",
     )
+    # Nullable: a "single part" scrap (a not-yet-assembled component thrown
+    # away on the line) can't be tied to a produced product, so it has no item.
     item = models.ForeignKey(
         "Item_list",
         on_delete=models.PROTECT,
         related_name="production_records_as_part",
+        null=True,
+        blank=True,
     )
     products_quantity = models.PositiveIntegerField(default=1)
     # The window the operator says this lot was produced in. Recorded per
@@ -41,7 +45,8 @@ class ProductionRecord(BaseModel):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        return f"{self.line.line_name} · {self.item.sd_code} × {self.products_quantity}"
+        item_label = self.item.sd_code if self.item_id else "Single part"
+        return f"{self.line.line_name} · {item_label} × {self.products_quantity}"
 
     @property
     def total_defect_quantity(self) -> int:

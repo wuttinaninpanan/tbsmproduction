@@ -55,6 +55,9 @@
 
 		<div id="blocks" class="space-y-6"></div>
 
+		{# Single-part scrap blocks (one per line) render below the product blocks #}
+		<div id="single-part-blocks" class="space-y-6"></div>
+
 		<div class="flex items-center justify-center gap-4 pt-2">
 			<a href="/record/" class="inline-flex items-center justify-center px-6 py-2 rounded-lg font-semibold bg-slate-300 hover:bg-slate-400 text-slate-900 transition">← ย้อนกลับ</a>
 			<button type="submit" id="save"
@@ -190,6 +193,49 @@
 	</div>
 </template>
 
+{# ---- One single-part block per line (NG mode = Other, "Single part") ---- #}
+{# Same two-pane (.ds-grid) layout as a product defect section so the part #}
+{# rows are the same size: control on the left, part details on the right.   #}
+<template id="single-part-block-template">
+	<div class="single-part-block rounded-2xl bg-rose-50 border border-rose-200 p-4 sm:p-6 space-y-4">
+		<div class="min-w-0">
+			<h3 class="text-base font-bold text-rose-900">ทิ้งชิ้นส่วนเดี่ยว (Single part) — <span data-line-display></span></h3>
+			<p class="text-xs text-rose-700">ชิ้นส่วนที่ยังไม่ประกอบและระบุ Product ไม่ได้ — บันทึกเป็น NG mode: Other</p>
+		</div>
+
+		<div class="defect-section rounded-xl border border-rose-200 p-4">
+			<div class="ds-grid">
+				<div class="ds-left">
+					<div class="ds-head flex items-end">
+						<div class="text-sm font-extrabold text-slate-900">Defect mode</div>
+					</div>
+					<label class="inline-flex items-center gap-2 text-sm font-semibold text-rose-900 cursor-pointer select-none">
+						<input type="checkbox" data-single-toggle class="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
+						NG mode Other
+					</label>
+					<p class="text-xs text-slate-600 mt-1">ติ๊กเพื่อเลือกชิ้นส่วนที่ทิ้ง (comment: “Single part”)</p>
+				</div>
+
+				<div class="ds-right">
+					<div data-single-body class="hidden space-y-2">
+						<div class="ds-head scrap-grid items-end text-[10px] font-bold text-slate-700">
+							<label class="flex items-center justify-center gap-1 leading-tight text-center select-none cursor-pointer">
+								<input type="checkbox" data-select-all class="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
+								เลือกทั้งหมด
+							</label>
+							<div class="text-center">รูปภาพ</div>
+							<div>รายละเอียดพาร์ทที่ทิ้ง</div>
+							<div class="text-center">Qtty</div>
+						</div>
+						<div data-scraps class="space-y-2"></div>
+						<div data-scraps-empty class="hidden text-sm text-slate-500 italic py-3">ไม่มีชิ้นส่วนในไลน์นี้</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</template>
+
 {% load static %}
-<script src="{% static 'js/record_defects.js' %}?v=3" defer></script>
+<script src="{% static 'js/record_defects.js' %}?v=4" defer></script>
 {% endblock %}

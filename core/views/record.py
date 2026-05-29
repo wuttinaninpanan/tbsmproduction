@@ -337,11 +337,22 @@ class RecordDefectsView(TemplateView):
         parsed_blocks: list[dict] = []
         for gi in sorted(block_indices):
             line_code = block_field(gi, "production_line")
-            part_ref = block_field(gi, "part_number")
             line = resolve_line(line_code)
-            part = resolve_part(line, line_code, part_ref)
-            if line is None or part is None:
+            if line is None:
                 continue
+
+            # "Single part" block: a not-yet-assembled component scrapped on the
+            # line that can't be tied to any produced product. Recorded under a
+            # productless ProductionRecord (item=None) with NG mode = Other and
+            # comment "Single part"; its ProcessDefect.quantity is the sum of the
+            # scrapped part quantities.
+            is_single = bool(block_field(gi, "single_part"))
+            if is_single:
+                part = None
+            else:
+                part = resolve_part(line, line_code, block_field(gi, "part_number"))
+                if part is None:
+                    continue
 
             defect_id = ""
             comment = ""
@@ -359,21 +370,39 @@ class RecordDefectsView(TemplateView):
                 if enabled and qty >= 1 and comp is not None:
                     scraps.append((comp, qty))
 
-            if _is_uuid(defect_id):
-                defect = DefectMode.objects.filter(pk=defect_id).first()
-            elif defect_id == self.OTHER_SENTINEL:
-                # "อื่นๆ" → the catch-all DefectMode; the reason is in `comment`.
-                defect = self._other_defect(getattr(request, "user", None))
+            if is_single:
+                # NG mode is always the catch-all "Other"; the reason is fixed.
+                # Only an actually-used block (≥1 scrap) is recorded — an empty
+                # one stays inert so it isn't counted as a skipped attempt.
+                if scraps:
+                    defect = self._other_defect(getattr(request, "user", None))
+                    defect_id = self.OTHER_SENTINEL
+                    comment = "Single part"
+                    defect_qty = sum(qty for _comp, qty in scraps)
+                else:
+                    defect = None
+                    defect_id = ""
+                    comment = ""
+                    defect_qty = 0
             else:
-                defect = None
+                if _is_uuid(defect_id):
+                    defect = DefectMode.objects.filter(pk=defect_id).first()
+                elif defect_id == self.OTHER_SENTINEL:
+                    # "อื่นๆ" → the catch-all DefectMode; reason is in `comment`.
+                    defect = self._other_defect(getattr(request, "user", None))
+                else:
+                    defect = None
+                defect_qty = self._parse_int(block_field(gi, "defect_quantity"), 0)
+
             parsed_blocks.append(
                 {
                     "line": line,
                     "part": part,
+                    "is_single": is_single,
                     "defect": defect,
                     "defect_id_raw": defect_id,
                     "prod_qty": self._parse_int(block_field(gi, "production_quantity"), 0),
-                    "defect_qty": self._parse_int(block_field(gi, "defect_quantity"), 0),
+                    "defect_qty": defect_qty,
                     "start_time": self._parse_dt(block_field(gi, "start_time")),
                     "end_time": self._parse_dt(block_field(gi, "end_time")),
                     "comment": comment,
@@ -384,7 +413,10 @@ class RecordDefectsView(TemplateView):
         # ---- Group by (line, part) → ProductionRecord ----
         groups: dict[tuple[str, str], dict] = {}
         for b in parsed_blocks:
-            key = (str(b["line"].id), str(b["part"].id))
+            # Single-part blocks have no product → collapse per line under a
+            # sentinel so they don't merge with any real (line, part) record.
+            part_key = str(b["part"].id) if b["part"] is not None else "__single__"
+            key = (str(b["line"].id), part_key)
             g = groups.setdefault(
                 key,
                 {

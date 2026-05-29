@@ -149,6 +149,26 @@ class DashboardViews(TemplateView):
         defects_daily = _daily_map(pd_qs, "quantity")
         scrap_daily = _daily_map(scrap_qs, "quantity")  # pieces thrown (ProcessDefectScrap)
 
+        # ---- Top "Single part" scraps this month ----
+        # A single-part scrap is a not-yet-assembled component thrown away with
+        # no produced product → its ProductionRecord has item IS NULL (the unique
+        # marker set by /record/defects/). Broken down by the scrapped component.
+        single_scrap_qs = scrap_qs.filter(
+            created_at__year=year,
+            created_at__month=month,
+            process_defect__production_record__item__isnull=True,
+        )
+        single_part_rows = [
+            {"sd": r["sd"] or "-", "name": r["nm"] or "", "qty": int(r["s"] or 0)}
+            for r in single_scrap_qs.values(
+                sd=F("component_part__sd_code"),
+                nm=F("component_part__part_name"),
+            )
+            .annotate(s=Sum("quantity"))
+            .order_by("-s", "sd")[:10]
+        ]
+        ctx["single_part_month"] = sum(x["qty"] for x in single_part_rows)
+
         ctx["charts"] = {
             "daily": {
                 "labels": date_labels,
@@ -164,6 +184,11 @@ class DashboardViews(TemplateView):
             "top_defect": {
                 "labels": [x["name"] for x in top_defect_modes_month],
                 "data": [x["total_qty"] for x in top_defect_modes_month],
+            },
+            "single_part": {
+                "labels": [x["sd"] for x in single_part_rows],
+                "names": [x["name"] for x in single_part_rows],
+                "data": [x["qty"] for x in single_part_rows],
             },
         }
 

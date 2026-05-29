@@ -141,6 +141,44 @@
 				}
 			});
 		}
+		const singleCanvas = document.getElementById('chartSinglePart');
+		if (singleCanvas && charts.single_part && Array.isArray(charts.single_part.labels)) {
+			const cRose = pickColor('text-rose-500');
+			const names = charts.single_part.names || [];
+			new Chart(singleCanvas, {
+				type: 'bar',
+				data: {
+					labels: charts.single_part.labels,
+					datasets: [{
+						label: 'ทิ้ง (ชิ้น)',
+						data: charts.single_part.data || [],
+						backgroundColor: cRose,
+					}]
+				},
+				options: {
+					indexAxis: 'y', // horizontal — SD codes read better as row labels
+					responsive: true,
+					maintainAspectRatio: false,
+					plugins: {
+						legend: { display: false },
+						tooltip: {
+							callbacks: {
+								title: (items) => {
+									const nm = names[items[0].dataIndex];
+									return nm ? `${items[0].label} — ${nm}` : items[0].label;
+								},
+								label: (ctx) => ` ${ctx.parsed.x} ชิ้น`,
+							},
+						},
+					},
+					scales: {
+						x: { beginAtZero: true, ticks: { color: cNeutral, precision: 0 }, grid: { color: cGrid } },
+						y: { ticks: { color: cNeutral }, grid: { display: false } },
+					},
+				}
+			});
+		}
+
 		const scrapCanvas = document.getElementById('chartScrapDaily');
 		if (scrapCanvas && charts.scrap_daily && Array.isArray(charts.scrap_daily.labels)) {
 			const cAmber = pickColor('text-amber-500');

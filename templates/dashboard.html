@@ -138,6 +138,21 @@
 		</div>
 	</div>
 
+	<!-- Top single-part scraps (ProductionRecord.item IS NULL = "Single part") -->
+	<div class="rounded-2xl border border-slate-200 bg-white p-5">
+		<div class="flex items-center justify-between gap-3 flex-wrap">
+			<div class="font-extrabold text-slate-800">Top ชิ้นส่วนเดี่ยว (Single part) ที่ทิ้ง — เดือนนี้</div>
+			<div class="text-xs text-slate-500">รวม <span class="font-bold text-rose-600">{{ single_part_month|default:0 }}</span> ชิ้น</div>
+		</div>
+		<div class="mt-4">
+			{% if charts.single_part.labels %}
+				<div class="relative" style="height:300px;"><canvas id="chartSinglePart" aria-label="Top single-part scrap chart"></canvas></div>
+			{% else %}
+				<div class="text-sm text-slate-600">ยังไม่มีข้อมูลชิ้นส่วนเดี่ยวของเดือนนี้</div>
+			{% endif %}
+		</div>
+	</div>
+
 	<!-- Recent production records -->
 	<div class="rounded-2xl border border-slate-200 overflow-hidden">
 		<div class="bg-slate-100 px-4 py-3">
@@ -195,5 +210,5 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 {% load static %}
-<script src="{% static 'js/dashboard.js' %}?v=3" defer></script>
+<script src="{% static 'js/dashboard.js' %}?v=4" defer></script>
 {% endblock %}

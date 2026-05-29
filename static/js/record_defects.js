@@ -28,7 +28,9 @@
 		const lines = recordData.productionLines || [];
 
 		const blocksWrap = document.getElementById('blocks');
+		const singleBlocksWrap = document.getElementById('single-part-blocks');
 		const blockTpl = document.getElementById('block-template');
+		const singleBlockTpl = document.getElementById('single-part-block-template');
 		const sectionTpl = document.getElementById('defect-section-template');
 		const scrapTpl = document.getElementById('scrap-row-template');
 		const summaryWrap = document.getElementById('summary');
@@ -104,6 +106,39 @@
 				bom_qty: 1,
 			};
 			return [fg, ...components];
+		};
+
+		// Every distinct part + BOM component used on a line — the candidate list
+		// for a "single part" scrap (no FG, since there's no produced product).
+		const singlePartScraps = (lineId) => {
+			const line = getLine(lineId);
+			if (!line) return [];
+			const seen = new Set();
+			const out = [];
+			(line.parts || []).forEach((p) => {
+				if (!seen.has(p.id)) {
+					seen.add(p.id);
+					out.push({
+						id: p.id,
+						name: p.part_name || p.part_number || p.sd_number || '',
+						sd_code: p.sd_number || '',
+						part_number: p.part_number || '',
+						image_url: p.image_url || '',
+					});
+				}
+				(p.component_parts || []).forEach((c) => {
+					if (seen.has(c.id)) return;
+					seen.add(c.id);
+					out.push({
+						id: c.id,
+						name: c.name || c.part_number || c.sd_code || '',
+						sd_code: c.sd_code || '',
+						part_number: c.part_number || '',
+						image_url: c.image_url || '',
+					});
+				});
+			});
+			return out;
 		};
 
 		// ----------------------------------------------------------- defect select
@@ -359,6 +394,109 @@
 			return block;
 		}
 
+		// ----------------------------------------------------------- single part
+		// One block per line for not-yet-assembled parts scrapped on that line
+		// (no product → recorded server-side as NG mode "Other" / "Single part").
+		function buildSinglePartBlock(lineCode) {
+			const scraps = singlePartScraps(lineCode);
+			if (!scraps.length) return null;
+
+			const el = singleBlockTpl.content.firstElementChild.cloneNode(true);
+			el.querySelector('[data-line-display]').textContent = lineCode || '';
+			const toggle = el.querySelector('[data-single-toggle]');
+			const body = el.querySelector('[data-single-body]');
+			const selectAll = el.querySelector('[data-select-all]');
+			const scrapsWrap = el.querySelector('[data-scraps]');
+			const scrapsEmpty = el.querySelector('[data-scraps-empty]');
+
+			const gi = nextGi++;
+			// Block-level hidden fields read by RecordDefectsView.post.
+			el.appendChild(mkHidden(`blocks[${gi}][production_line]`, lineCode || ''));
+			el.appendChild(mkHidden(`blocks[${gi}][single_part]`, '1'));
+
+			const rowEnables = () => Array.from(scrapsWrap.querySelectorAll('[data-enable]'));
+			const syncSelectAll = () => {
+				const boxes = rowEnables();
+				if (!boxes.length) { selectAll.checked = false; selectAll.indeterminate = false; return; }
+				const n = boxes.filter((b) => b.checked).length;
+				selectAll.checked = n === boxes.length;
+				selectAll.indeterminate = n > 0 && n < boxes.length;
+			};
+
+			scraps.forEach((s, ri) => {
+				const row = scrapTpl.content.firstElementChild.cloneNode(true);
+				const enable = row.querySelector('[data-enable]');
+				enable.name = `blocks[${gi}][rows][${ri}][enabled]`;
+
+				const photo = row.querySelector('[data-photo]');
+				const photoImg = row.querySelector('[data-photo-img]');
+				if (s.image_url) {
+					photo.href = s.image_url;
+					photoImg.src = s.image_url;
+					photo.addEventListener('click', (e) => { e.preventDefault(); openImageModal(s.image_url); });
+				} else {
+					photoImg.removeAttribute('src');
+					photo.removeAttribute('href');
+				}
+
+				const nameInput = row.querySelector('[data-name]');
+				nameInput.value = [s.sd_code, s.name].filter(Boolean).join(' — ') || s.name || '';
+
+				const cpid = row.querySelector('[data-cpid]');
+				cpid.name = `blocks[${gi}][rows][${ri}][component_part_id]`;
+				cpid.value = s.id || '';
+				const defid = row.querySelector('[data-defid]');
+				defid.name = `blocks[${gi}][rows][${ri}][defect_id]`;
+				defid.value = '__other__';
+				const cpname = row.querySelector('[data-cpname]');
+				cpname.name = `blocks[${gi}][rows][${ri}][component_part_name]`;
+				cpname.value = s.name || '';
+
+				const qty = row.querySelector('[data-qty]');
+				qty.name = `blocks[${gi}][rows][${ri}][quantity]`;
+
+				// Checkbox ↔ qty stay in sync: ticking seeds qty 1, untick zeroes it;
+				// typing a qty ticks the box, clearing to 0 unticks it.
+				enable.addEventListener('change', () => {
+					if (enable.checked) { if (toInt(qty.value) < 1) qty.value = '1'; }
+					else qty.value = '0';
+					syncSelectAll();
+				});
+				qty.addEventListener('input', () => { enable.checked = toInt(qty.value) >= 1; syncSelectAll(); });
+
+				scrapsWrap.appendChild(row);
+			});
+
+			scrapsEmpty.classList.toggle('hidden', scraps.length > 0);
+
+			selectAll.addEventListener('change', () => {
+				const on = selectAll.checked;
+				rowEnables().forEach((en) => {
+					en.checked = on;
+					const qty = en.closest('.scrap-row')?.querySelector('[data-qty]');
+					if (qty) qty.value = on ? (toInt(qty.value) < 1 ? '1' : qty.value) : '0';
+				});
+				syncSelectAll();
+			});
+
+			// The "NG mode Other" checkbox reveals the part list. Collapsing it
+			// clears any entered rows so a hidden block never submits stale data.
+			toggle.addEventListener('change', () => {
+				body.classList.toggle('hidden', !toggle.checked);
+				if (!toggle.checked) {
+					rowEnables().forEach((en) => {
+						en.checked = false;
+						const qty = en.closest('.scrap-row')?.querySelector('[data-qty]');
+						if (qty) qty.value = '0';
+					});
+					syncSelectAll();
+				}
+			});
+
+			singleBlocksWrap.appendChild(el);
+			return el;
+		}
+
 		// ----------------------------------------------------------- summary
 		function renderSummary(entries) {
 			if (!summaryList || !summaryRowTpl) return;
@@ -402,6 +540,14 @@
 
 		renderSummary(entries);
 		entries.forEach((e) => buildBlock(e));
+
+		// One "single part" block per distinct line in the draft (order preserved).
+		const seenLines = new Set();
+		entries.forEach((e) => {
+			if (!e.lineCode || seenLines.has(e.lineCode)) return;
+			seenLines.add(e.lineCode);
+			buildSinglePartBlock(e.lineCode);
+		});
 
 		// Clear draft after a successful submit so coming back doesn't re-populate stale data.
 		recordForm.addEventListener('submit', () => {
