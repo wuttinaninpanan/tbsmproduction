@@ -113,6 +113,25 @@ class ScrapWeightReportViews(TemplateView):
                 key_part_name[(line_id, sd_code)] = part_name
                 key_total_qty[(line_id, sd_code)] = key_total_qty.get((line_id, sd_code), 0) + total_qty
 
+        # Distinct defect comments per (line, SD) — e.g. the reason typed for an
+        # "อื่นๆ" defect. Rolled up so the matrix stays one row per part.
+        key_comments: dict[tuple, list[str]] = {}
+        comment_rows = (
+            records_qs.exclude(process_defect__comment__isnull=True)
+            .exclude(process_defect__comment__exact="")
+            .values(line_key, sd_key, "process_defect__comment")
+            .distinct()
+        )
+        for c in comment_rows:
+            lid = c.get(line_key)
+            sd = (c.get(sd_key) or "").strip()
+            cm = (c.get("process_defect__comment") or "").strip()
+            if not lid or not sd or not cm:
+                continue
+            bucket = key_comments.setdefault((lid, sd), [])
+            if cm not in bucket:
+                bucket.append(cm)
+
         # Build rows from ItemLine master (shows all items even with 0)
         item_lines = ItemLine.objects.select_related("line", "item")
         if selected_line:
@@ -185,6 +204,7 @@ class ScrapWeightReportViews(TemplateView):
                     "weight_per_unit": w,
                     "values": values,
                     "total": row_total.quantize(Decimal("0.00")),
+                    "comment": " · ".join(key_comments.get((line_id, sd_code), [])),
                 }
             )
 

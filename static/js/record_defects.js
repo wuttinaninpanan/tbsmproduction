@@ -61,7 +61,32 @@
 			if (!part) return [];
 			let components;
 			if (did === '__other__') {
-				components = (part.component_parts || []).map((s) => ({ ...s, defect_id: '__other__' }));
+				// "อื่นๆ" = scrapping for a reason outside the process defects.
+				// Let the operator pick ANY part (or component) used on this
+				// line — not just the current part's BOM children — since the
+				// discarded workpiece may be unrelated to the produced part.
+				const line = getLine(lineId);
+				const seen = new Set([partId]); // FG (current part) is added below
+				components = [];
+				(line?.parts || []).forEach((p) => {
+					if (!seen.has(p.id)) {
+						seen.add(p.id);
+						components.push({
+							id: p.id,
+							name: p.part_name || p.part_number || p.sd_number || '',
+							sd_code: p.sd_number || '',
+							part_number: p.part_number || '',
+							image_url: p.image_url || '',
+							bom_qty: 1,
+							defect_id: '__other__',
+						});
+					}
+					(p.component_parts || []).forEach((c) => {
+						if (seen.has(c.id)) return;
+						seen.add(c.id);
+						components.push({ ...c, defect_id: '__other__' });
+					});
+				});
 			} else if (did) {
 				const d = defectById(lineId, partId, did);
 				components = (d ? (d.component_parts || []) : []).map((s) => ({ ...s, defect_id: did }));
@@ -383,6 +408,21 @@
 			try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
 			saveBtn.disabled = true;
 		});
+
+		// Leaving the record flow (any link that isn't Step 1 / Step 2) drops the
+		// draft, so unfinished data doesn't linger and reappear later.
+		document.addEventListener('click', (e) => {
+			const a = e.target.closest && e.target.closest('a[href]');
+			if (!a) return;
+			let url;
+			try { url = new URL(a.href, window.location.origin); } catch { return; }
+			if (url.origin !== window.location.origin) return; // external link
+			const path = url.pathname.replace(/\/+$/, '');
+			const inFlow = path === '/record' || path === '/record/defects';
+			if (!inFlow) {
+				try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+			}
+		}, true);
 	};
 
 	if (document.readyState === 'loading') {

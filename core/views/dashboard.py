@@ -168,11 +168,17 @@ class DashboardViews(TemplateView):
         }
 
         # ---- Recent production records (line · part · produced · defects · rate) ----
-        ctx["recent_records"] = list(
+        recent_records = list(
             pr_qs.select_related("line", "item", "created_by", "created_by__profile")
             .prefetch_related("defects")
             .order_by("-created_at")[:10]
         )
+        # Surface any defect comments (e.g. the reason typed for an "อื่นๆ" defect).
+        for r in recent_records:
+            r.defect_comments = [
+                (d.comment or "").strip() for d in r.defects.all() if (d.comment or "").strip()
+            ]
+        ctx["recent_records"] = recent_records
 
         ctx["now"] = now
         ctx["is_staff"] = is_staff

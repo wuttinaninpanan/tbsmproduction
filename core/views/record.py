@@ -233,6 +233,35 @@ class RecordDefectsView(TemplateView):
         except Exception:
             return default
 
+    # Frontend sentinel for the "อื่นๆ" defect option.
+    OTHER_SENTINEL = "__other__"
+    OTHER_NAME_EN = "Other"
+
+    def _other_defect(self, user=None):
+        """The catch-all "Other" DefectMode used when the operator scraps a
+        workpiece for a reason outside the listed process defects.
+
+        Seeded by migration 0013; recreated lazily here (keyed on name_en) in
+        case it was removed or the DB had no users when the migration ran. The
+        specific reason lives in ``ProcessDefect.comment``, not here.
+        """
+        other = DefectMode.objects.filter(name_en__iexact=self.OTHER_NAME_EN).first()
+        if other is not None:
+            return other
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        creator = user if (user is not None and getattr(user, "pk", None)) else None
+        creator = creator or User.objects.filter(is_superuser=True).order_by("pk").first() or User.objects.order_by("pk").first()
+        if creator is None:
+            return None
+        return DefectMode.objects.create(
+            name_th="อื่นๆ",
+            name_en=self.OTHER_NAME_EN,
+            name_jp="その他",
+            user=creator,
+        )
+
     def post(self, request, *args, **kwargs):
         """Persist Page 1 + Page 2 data into the new model trio.
 
@@ -330,7 +359,13 @@ class RecordDefectsView(TemplateView):
                 if enabled and qty >= 1 and comp is not None:
                     scraps.append((comp, qty))
 
-            defect = DefectMode.objects.filter(pk=defect_id).first() if _is_uuid(defect_id) else None
+            if _is_uuid(defect_id):
+                defect = DefectMode.objects.filter(pk=defect_id).first()
+            elif defect_id == self.OTHER_SENTINEL:
+                # "อื่นๆ" → the catch-all DefectMode; the reason is in `comment`.
+                defect = self._other_defect(getattr(request, "user", None))
+            else:
+                defect = None
             parsed_blocks.append(
                 {
                     "line": line,

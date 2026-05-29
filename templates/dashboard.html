@@ -157,6 +157,7 @@
 						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">ผลิต</th>
 						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">ของเสีย</th>
 						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Defect Rate</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">หมายเหตุ</th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-200">
@@ -173,11 +174,12 @@
 								<td class="px-4 py-3 whitespace-nowrap text-right text-slate-900">{{ r.products_quantity|default:0 }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-right text-slate-900">{{ r.total_defect_quantity|default:0 }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-right font-semibold {% if r.defect_rate > 2 %}text-rose-600{% else %}text-slate-900{% endif %}">{{ r.defect_rate }}%</td>
+								<td class="px-4 py-3 text-slate-700 max-w-xs truncate" title="{{ r.defect_comments|join:' · ' }}">{{ r.defect_comments|join:" · "|default:"-" }}</td>
 							</tr>
 						{% endfor %}
 					{% else %}
 						<tr>
-							<td class="px-4 py-6 text-slate-600" colspan="{% if is_staff %}8{% else %}6{% endif %}">ยังไม่มีรายการผลิต</td>
+							<td class="px-4 py-6 text-slate-600" colspan="{% if is_staff %}9{% else %}7{% endif %}">ยังไม่มีรายการผลิต</td>
 						</tr>
 					{% endif %}
 				</tbody>

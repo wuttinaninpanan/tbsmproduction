@@ -42,6 +42,14 @@
 
 	<form id="production-form" class="space-y-6" onsubmit="return false;">
 
+		{# Single date for the whole record — applied to every part's start/end time #}
+		<div class="rounded-2xl bg-blue-50 border border-blue-200 p-4 flex flex-wrap items-center gap-3">
+			<label for="record-date" class="text-sm font-extrabold text-slate-900">วันที่ผลิต</label>
+			<input id="record-date" type="date"
+				class="rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			<span class="text-xs text-slate-500">เลือกวันที่ครั้งเดียว — ใช้ร่วมกับทุกรุ่นที่บันทึก (กรอกแค่เวลาในแต่ละ Part)</span>
+		</div>
+
 		<div id="lines-wrap" class="space-y-6"></div>
 
 		<div class="flex items-center gap-2">
@@ -113,13 +121,13 @@
 		</div>
 		<input data-prodqty type="number" min="0" step="1" value="" placeholder="0" inputmode="numeric"
 			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-		<input data-start type="datetime-local"
+		<input data-start type="time"
 			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 col-time" />
-		<input data-end type="datetime-local"
+		<input data-end type="time"
 			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 col-time" />
 	</div>
 </template>
 
 {% load static %}
-<script src="{% static 'js/record_production.js' %}?v=1" defer></script>
+<script src="{% static 'js/record_production.js' %}?v=4" defer></script>
 {% endblock %}

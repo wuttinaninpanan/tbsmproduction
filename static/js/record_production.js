@@ -30,6 +30,7 @@
 		const lines = recordData.productionLines || [];
 
 		const linesWrap = document.getElementById('lines-wrap');
+		const dateInput = document.getElementById('record-date');
 		const addLineBtn = document.getElementById('add-line');
 		const clearBtn = document.getElementById('clear');
 		const nextBtn = document.getElementById('next');
@@ -39,6 +40,32 @@
 		// ----------------------------------------------------------- helpers
 		const getLine = (lineCode) => lines.find((l) => l.id === lineCode) || null;
 		const sections = []; // [{ el, lineInput, lineCode, partsWrap, partRows: [{ partId, ... }] }]
+
+		// Date is keyed once (top of form); each part row only keys the time.
+		// We combine them back into the ``YYYY-MM-DDTHH:MM`` shape Page 2 / the
+		// backend already expect, so nothing downstream needs to change.
+		const todayISO = () => {
+			const d = new Date();
+			const off = d.getTimezoneOffset();
+			return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+		};
+		const combineDateTime = (date, time) => (date && time ? `${date}T${time}` : '');
+		// Open the native time/date picker the moment the field is clicked or
+		// focused — so a single tap shows the number selector instead of making
+		// the user hunt for the little clock icon. (No-op on browsers without
+		// showPicker; guarded because it throws without a user gesture.)
+		const openPickerOnInteract = (el) => {
+			if (!el || typeof el.showPicker !== 'function') return;
+			const show = () => { try { el.showPicker(); } catch {} };
+			el.addEventListener('focus', show);
+			el.addEventListener('click', show);
+		};
+		// Pull the time half out of a full datetime (or pass a bare time through).
+		const timePart = (dt) => (dt && dt.includes('T') ? dt.split('T')[1] : (dt || ''));
+		const datePart = (dt) => (dt && dt.includes('T') ? dt.split('T')[0] : '');
+
+		if (dateInput && !dateInput.value) dateInput.value = todayISO();
+		openPickerOnInteract(dateInput);
 
 		// Custom autocomplete: type to filter, click/Enter to pick.
 		// We deliberately don't use <datalist> — the user asked for a richer
@@ -139,6 +166,8 @@
 					const prodQty = row.querySelector('[data-prodqty]');
 					const startEl = row.querySelector('[data-start]');
 					const endEl = row.querySelector('[data-end]');
+					openPickerOnInteract(startEl);
+					openPickerOnInteract(endEl);
 					partsList.appendChild(row);
 					sec.partRows.push({ part: p, prodQty, startEl, endEl });
 				});
@@ -153,6 +182,7 @@
 					const exact = value || (lines.find((l) => l.id.toLowerCase() === (lineInput.value || '').trim().toLowerCase())?.id || '');
 					sec.lineCode = exact;
 					renderParts();
+					saveDraft();
 				},
 			);
 
@@ -165,12 +195,14 @@
 					partsList.innerHTML = '';
 					sec.partRows = [];
 					updateNextEnabled();
+					saveDraft();
 					return;
 				}
 				const idx = sections.indexOf(sec);
 				if (idx >= 0) sections.splice(idx, 1);
 				el.remove();
 				updateNextEnabled();
+				saveDraft();
 			});
 
 			// Re-evaluate "Next" button whenever any qty changes.
@@ -188,8 +220,8 @@
 					const r = sec.partRows.find((row) => row.part.id === e.partId);
 					if (!r) return;
 					if (e.prodQty) r.prodQty.value = e.prodQty;
-					if (e.startTime) r.startEl.value = e.startTime;
-					if (e.endTime) r.endEl.value = e.endTime;
+					if (e.startTime) r.startEl.value = timePart(e.startTime);
+					if (e.endTime) r.endEl.value = timePart(e.endTime);
 				});
 			}
 			updateNextEnabled();
@@ -201,6 +233,7 @@
 
 		// Collect every part row that has prodQty ≥ 1 across all line sections.
 		function collectEntries() {
+			const date = (dateInput?.value || '').trim();
 			const out = [];
 			for (const sec of sections) {
 				if (!sec.lineCode) continue;
@@ -214,8 +247,8 @@
 						partNumber: r.part.part_number || '',
 						partName: r.part.part_name || '',
 						prodQty: qty,
-						startTime: (r.startEl.value || '').trim(),
-						endTime: (r.endEl.value || '').trim(),
+						startTime: combineDateTime(date, (r.startEl.value || '').trim()),
+						endTime: combineDateTime(date, (r.endEl.value || '').trim()),
 					});
 				}
 			}
@@ -226,15 +259,29 @@
 			nextBtn.disabled = collectEntries().length === 0;
 		}
 
-		nextBtn.addEventListener('click', () => {
+		// Persist the live state on every edit so a refresh reflects exactly
+		// what's on screen now (e.g. a deleted line stays deleted). When there's
+		// nothing to save, drop the draft entirely instead of leaving stale data.
+		function saveDraft() {
 			const entries = collectEntries();
-			if (!entries.length) return;
-			const draft = { version: DRAFT_VERSION, savedAt: new Date().toISOString(), entries };
 			try {
+				if (!entries.length) {
+					sessionStorage.removeItem(STORAGE_KEY);
+					return true;
+				}
+				const draft = { version: DRAFT_VERSION, savedAt: new Date().toISOString(), date: (dateInput?.value || '').trim(), entries };
 				sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+				return true;
 			} catch (e) {
-				alert('ไม่สามารถบันทึก draft ลง sessionStorage ได้');
 				console.error(e);
+				return false;
+			}
+		}
+
+		nextBtn.addEventListener('click', () => {
+			if (collectEntries().length === 0) return;
+			if (!saveDraft()) {
+				alert('ไม่สามารถบันทึก draft ลง sessionStorage ได้');
 				return;
 			}
 			window.location.assign('/record/defects/');
@@ -242,12 +289,21 @@
 
 		clearBtn.addEventListener('click', () => {
 			try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+			if (dateInput) dateInput.value = todayISO();
 			linesWrap.innerHTML = '';
 			sections.length = 0;
 			buildLineSection();
 		});
 
-		addLineBtn.addEventListener('click', () => buildLineSection());
+		addLineBtn.addEventListener('click', () => { buildLineSection(); saveDraft(); });
+
+		// Auto-save on any field edit (qty / time / date). Structural changes
+		// (add/remove line, line pick) call saveDraft() directly.
+		const productionForm = document.getElementById('production-form');
+		if (productionForm) {
+			productionForm.addEventListener('input', saveDraft);
+			productionForm.addEventListener('change', saveDraft);
+		}
 
 		// ----------------------------------------------------------- bootstrap
 		// Restore draft on load — group entries by lineCode and re-create one
@@ -258,6 +314,9 @@
 			if (raw) {
 				const draft = JSON.parse(raw);
 				if (draft && draft.version === DRAFT_VERSION && Array.isArray(draft.entries) && draft.entries.length) {
+					// Recover the single date from the draft (top-level, else the first entry).
+					const savedDate = draft.date || datePart(draft.entries.find((e) => e.startTime || e.endTime)?.startTime || draft.entries[0].endTime || '');
+					if (dateInput && savedDate) dateInput.value = savedDate;
 					const byLine = new Map();
 					draft.entries.forEach((e) => {
 						if (!byLine.has(e.lineCode)) byLine.set(e.lineCode, []);
@@ -271,6 +330,21 @@
 			}
 		} catch {}
 		if (!restored) buildLineSection();
+
+		// Leaving the record flow (any link that isn't Step 1 / Step 2) drops the
+		// draft, so unfinished data doesn't linger and reappear later.
+		document.addEventListener('click', (e) => {
+			const a = e.target.closest && e.target.closest('a[href]');
+			if (!a) return;
+			let url;
+			try { url = new URL(a.href, window.location.origin); } catch { return; }
+			if (url.origin !== window.location.origin) return; // external link
+			const path = url.pathname.replace(/\/+$/, '');
+			const inFlow = path === '/record' || path === '/record/defects';
+			if (!inFlow) {
+				try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+			}
+		}, true);
 	};
 
 	if (document.readyState === 'loading') {

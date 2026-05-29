@@ -105,6 +105,26 @@ class MonthlyComponentPartReportViews(TemplateView):
                 key_day_totals[(line_id, sd_code, day)] = total
                 key_part_name[(line_id, sd_code)] = part_name
 
+        # Distinct defect comments per (line, SD) — e.g. the reason typed for an
+        # "อื่นๆ" defect. Most rows have none; rolled up so the matrix stays one
+        # row per part.
+        key_comments: dict[tuple[UUID, str], list[str]] = {}
+        comment_rows = (
+            records_qs.exclude(process_defect__comment__isnull=True)
+            .exclude(process_defect__comment__exact="")
+            .values(line_key, sd_key, "process_defect__comment")
+            .distinct()
+        )
+        for c in comment_rows:
+            lid = c.get(line_key)
+            sd = (c.get(sd_key) or "").strip()
+            cm = (c.get("process_defect__comment") or "").strip()
+            if not lid or not sd or not cm:
+                continue
+            bucket = key_comments.setdefault((lid, sd), [])
+            if cm not in bucket:
+                bucket.append(cm)
+
         # Prefer building rows from master mapping (ItemLine) so the table shows rows even when totals are 0.
         item_lines = ItemLine.objects.select_related("line", "item")
         if selected_line:
@@ -167,6 +187,7 @@ class MonthlyComponentPartReportViews(TemplateView):
                     "part_name": (str(part_name) or "-").strip() or "-",
                     "values": values,
                     "total": row_total,
+                    "comment": " · ".join(key_comments.get((line_id, sd_code), [])),
                 }
             )
 
