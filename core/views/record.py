@@ -377,7 +377,8 @@ class RecordDefectsView(TemplateView):
                 if scraps:
                     defect = self._other_defect(getattr(request, "user", None))
                     defect_id = self.OTHER_SENTINEL
-                    comment = "Single part"
+                    # Operator-entered reason wins; fall back to the fixed label.
+                    comment = comment or "Single part"
                     defect_qty = sum(qty for _comp, qty in scraps)
                 else:
                     defect = None
@@ -450,12 +451,19 @@ class RecordDefectsView(TemplateView):
                     # Nothing useful to record at all.
                     continue
 
+                lot_number = ProductionRecord.build_lot_number(
+                    g["line"].line_name,
+                    getattr(g["part"], "sd_code", None),
+                    g["start_time"],
+                    g["end_time"],
+                )
                 pr = ProductionRecord.objects.create(
                     line=g["line"],
                     item=g["part"],
                     products_quantity=g["prod_qty"],
                     start_time=g["start_time"],
                     end_time=g["end_time"],
+                    lot_number=lot_number,
                     created_by=user,
                 )
                 production_created += 1

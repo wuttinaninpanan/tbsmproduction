@@ -33,6 +33,13 @@ class ProductionRecord(BaseModel):
     # rows (and rows entered without a clock) keep working.
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
+    # Human-readable lot identifier, auto-built at /record/ save time so reports
+    # can group every defect back to the lot it came from. Shape:
+    #   L{LineName}{SD code}{YYMMDD}{startHHMM}{endHHMM}  ("-" stripped from
+    #   line name & SD code), e.g. LDTA1DTI0926053008101000 for
+    #   (DTA-1, DTI-09, 2026-05-30, 08:10–10:00). Nullable: "single part"
+    #   scraps have no product/time, and legacy rows predate this field.
+    lot_number = models.CharField(max_length=64, null=True, blank=True, db_index=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -47,6 +54,25 @@ class ProductionRecord(BaseModel):
     def __str__(self) -> str:
         item_label = self.item.sd_code if self.item_id else "Single part"
         return f"{self.line.line_name} · {item_label} × {self.products_quantity}"
+
+    @staticmethod
+    def build_lot_number(line_name, sd_code, start, end) -> str | None:
+        """Compose the lot number from a (line, part, window).
+
+        ``L{LineName}{SD code}{YYMMDD}{startHHMM}{endHHMM}`` with every ``-``
+        stripped from the line name and SD code. Returns ``None`` when any
+        piece is missing (e.g. a single-part scrap has no SD code/time), so the
+        caller can store NULL rather than a malformed lot.
+        """
+        from django.utils import timezone
+
+        if not line_name or not sd_code or start is None or end is None:
+            return None
+        ln = str(line_name).replace("-", "").strip()
+        sd = str(sd_code).replace("-", "").strip()
+        s = timezone.localtime(start)
+        e = timezone.localtime(end)
+        return f"L{ln}{sd}{s:%y%m%d}{s:%H%M}{e:%H%M}"
 
     @property
     def total_defect_quantity(self) -> int:

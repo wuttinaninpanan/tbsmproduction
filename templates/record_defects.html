@@ -148,7 +148,7 @@
 						<p class="text-xs text-slate-600 mt-1" data-defect-hint>เลือก Defect mode</p>
 					</div>
 					<div class="w-28 shrink-0">
-						<input data-defqty type="number" min="0" step="1" value="0" inputmode="numeric"
+						<input data-defqty type="number" min="0" step="1" value="0" inputmode="none" data-keypad="int" data-keypad-label="กรอกจำนวนของเสีย"
 							class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 					</div>
 				</div>
@@ -188,7 +188,7 @@
 			<input type="hidden" data-defid />
 			<input type="hidden" data-cpname />
 		</div>
-		<input data-qty type="number" min="0" step="1" value="0" inputmode="numeric"
+		<input data-qty type="number" min="0" step="1" value="0" inputmode="none" data-keypad="int" data-keypad-label="กรอกจำนวนที่ทิ้ง"
 			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
 	</div>
 </template>
@@ -213,7 +213,9 @@
 						<input type="checkbox" data-single-toggle class="h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
 						NG mode Other
 					</label>
-					<p class="text-xs text-slate-600 mt-1">ติ๊กเพื่อเลือกชิ้นส่วนที่ทิ้ง (comment: “Single part”)</p>
+					<p class="text-xs text-slate-600 mt-1">ติ๊กเพื่อเลือกชิ้นส่วนที่ทิ้ง แล้วระบุเหตุผลด้านล่าง</p>
+					<input data-single-comment type="text" placeholder="ระบุเหตุผล (ถ้าเว้นว่างจะบันทึกเป็น “Single part”)"
+						class="hidden mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500" />
 				</div>
 
 				<div class="ds-right">
@@ -237,5 +239,6 @@
 </template>
 
 {% load static %}
-<script src="{% static 'js/record_defects.js' %}?v=4" defer></script>
+<script src="{% static 'js/numeric_keypad.js' %}?v=1" defer></script>
+<script src="{% static 'js/record_defects.js' %}?v=5" defer></script>
 {% endblock %}

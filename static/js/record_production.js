@@ -49,7 +49,25 @@
 			const off = d.getTimezoneOffset();
 			return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
 		};
-		const combineDateTime = (date, time) => (date && time ? `${date}T${time}` : '');
+		// Free-typed time → canonical 24h "HH:MM" (or '' if not a valid time).
+		// Accepts "0810", "810", "8:10", "08.10", "08 10" etc. — minutes are
+		// required (1–2 bare digits = whole hour, e.g. "8" → "08:00").
+		const normalizeTime = (raw) => {
+			const s = String(raw ?? '').trim();
+			if (!s) return '';
+			const m = s.match(/^(\d{1,2})\s*[:.\s]\s*(\d{1,2})$/) // H:MM / H.MM / H MM
+				|| (/^\d{3,4}$/.test(s) ? [null, s.slice(0, s.length - 2), s.slice(-2)] : null)
+				|| (/^\d{1,2}$/.test(s) ? [null, s, '0'] : null);
+			if (!m) return '';
+			const h = parseInt(m[1], 10);
+			const mi = parseInt(m[2], 10);
+			if (!Number.isFinite(h) || !Number.isFinite(mi) || h > 23 || mi > 59) return '';
+			return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+		};
+		const combineDateTime = (date, time) => {
+			const t = normalizeTime(time);
+			return (date && t ? `${date}T${t}` : '');
+		};
 		// Open the native time/date picker the moment the field is clicked or
 		// focused — so a single tap shows the number selector instead of making
 		// the user hunt for the little clock icon. (No-op on browsers without
@@ -63,9 +81,32 @@
 		// Pull the time half out of a full datetime (or pass a bare time through).
 		const timePart = (dt) => (dt && dt.includes('T') ? dt.split('T')[1] : (dt || ''));
 		const datePart = (dt) => (dt && dt.includes('T') ? dt.split('T')[0] : '');
+		// Shift a "YYYY-MM-DD" string by n days (local, no timezone drift).
+		const addDays = (iso, n) => {
+			if (!iso) return iso;
+			const [y, m, d] = iso.split('-').map(Number);
+			const dt = new Date(y, m - 1, d);
+			dt.setDate(dt.getDate() + n);
+			return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+		};
 
 		if (dateInput && !dateInput.value) dateInput.value = todayISO();
 		openPickerOnInteract(dateInput);
+
+		// The top "วันที่ผลิต" seeds every part row's start/end date. Picking a
+		// new date copies it down to all rows (operators then bump the END date
+		// to the next day for a night shift that crosses midnight).
+		const syncRowDates = () => {
+			const d = (dateInput?.value || '').trim();
+			if (!d) return;
+			sections.forEach((sec) => sec.partRows.forEach((r) => {
+				if (r.startDateEl) r.startDateEl.value = d;
+				if (r.endDateEl) r.endDateEl.value = d;
+				r.applyDateRules?.(); // bump start/end to next day when time < 08:00
+				r.refreshError?.();   // re-check end<start after the date shuffle
+			}));
+		};
+		dateInput?.addEventListener('change', syncRowDates);
 
 		// Custom autocomplete: type to filter, click/Enter to pick.
 		// We deliberately don't use <datalist> — the user asked for a richer
@@ -166,10 +207,57 @@
 					const prodQty = row.querySelector('[data-prodqty]');
 					const startEl = row.querySelector('[data-start]');
 					const endEl = row.querySelector('[data-end]');
-					openPickerOnInteract(startEl);
-					openPickerOnInteract(endEl);
+					const startDateEl = row.querySelector('[data-start-date]');
+					const endDateEl = row.querySelector('[data-end-date]');
+					const errEl = row.querySelector('[data-time-error]');
+					// Seed both row dates from the top "วันที่ผลิต".
+					const topDate = (dateInput?.value || '').trim();
+					if (topDate) { startDateEl.value = topDate; endDateEl.value = topDate; }
+					openPickerOnInteract(startDateEl);
+					openPickerOnInteract(endDateEl);
+					// Reformat free-typed time to canonical "HH:MM" on blur, and
+					// clear the invalid-time highlight once it parses.
+					const fmtTime = (el) => {
+						const t = normalizeTime(el.value);
+						if (t) {
+							el.value = t;
+							el.classList.remove('ring-2', 'ring-red-500');
+						}
+					};
+					// Night-shift auto-date: a time before 08:00 belongs to the day
+					// after the production date (the lot crossed midnight). Both the
+					// start and end date are derived from the top "วันที่ผลิต": +1 day
+					// when their time is < 08:00, otherwise the production date itself.
+					const applyDateRules = () => {
+						const base = (dateInput?.value || '').trim();
+						if (!base) return;
+						const toMin = (t) => { const [h, mi] = t.split(':').map(Number); return h * 60 + mi; };
+						const st = normalizeTime(startEl.value);
+						const et = normalizeTime(endEl.value);
+						if (st) startDateEl.value = toMin(st) < 8 * 60 ? addDays(base, 1) : base;
+						if (et) endDateEl.value = toMin(et) < 8 * 60 ? addDays(base, 1) : base;
+					};
+					// After the auto-date rule, an end that still lands before the
+					// start can't be a real (cross-midnight) window — it's a typo, so
+					// flag it (red border + message) and let validateTimes() block.
+					const refreshError = () => {
+						const st = normalizeTime(startEl.value);
+						const et = normalizeTime(endEl.value);
+						const sd = (startDateEl.value || '').trim();
+						const ed = (endDateEl.value || '').trim();
+						const bad = !!(st && et && sd && ed) && `${ed}T${et}` < `${sd}T${st}`;
+						if (errEl) errEl.classList.toggle('hidden', !bad);
+						// Swap the slate border for red so the color actually wins.
+						endEl.classList.toggle('border-red-500', bad);
+						endEl.classList.toggle('border-slate-300', !bad);
+						return bad;
+					};
+					startEl.addEventListener('blur', () => { fmtTime(startEl); applyDateRules(); refreshError(); });
+					endEl.addEventListener('blur', () => { fmtTime(endEl); applyDateRules(); refreshError(); });
+					startDateEl.addEventListener('change', refreshError);
+					endDateEl.addEventListener('change', refreshError);
 					partsList.appendChild(row);
-					sec.partRows.push({ part: p, prodQty, startEl, endEl });
+					sec.partRows.push({ part: p, prodQty, startEl, endEl, startDateEl, endDateEl, applyDateRules, refreshError });
 				});
 				updateNextEnabled();
 			};
@@ -220,8 +308,14 @@
 					const r = sec.partRows.find((row) => row.part.id === e.partId);
 					if (!r) return;
 					if (e.prodQty) r.prodQty.value = e.prodQty;
-					if (e.startTime) r.startEl.value = timePart(e.startTime);
-					if (e.endTime) r.endEl.value = timePart(e.endTime);
+					if (e.startTime) {
+						r.startEl.value = timePart(e.startTime);
+						const d = datePart(e.startTime); if (d) r.startDateEl.value = d;
+					}
+					if (e.endTime) {
+						r.endEl.value = timePart(e.endTime);
+						const d = datePart(e.endTime); if (d) r.endDateEl.value = d;
+					}
 				});
 			}
 			updateNextEnabled();
@@ -233,13 +327,17 @@
 
 		// Collect every part row that has prodQty ≥ 1 across all line sections.
 		function collectEntries() {
-			const date = (dateInput?.value || '').trim();
+			const topDate = (dateInput?.value || '').trim();
 			const out = [];
 			for (const sec of sections) {
 				if (!sec.lineCode) continue;
 				for (const r of sec.partRows) {
 					const qty = toInt(r.prodQty.value);
 					if (qty < 1) continue;
+					// Each row carries its own start/end date (defaults to the top
+					// date) so a night shift can end on the next day.
+					const sd = (r.startDateEl?.value || topDate || '').trim();
+					const ed = (r.endDateEl?.value || topDate || '').trim();
 					out.push({
 						lineCode: sec.lineCode,
 						partId: r.part.id,
@@ -247,8 +345,8 @@
 						partNumber: r.part.part_number || '',
 						partName: r.part.part_name || '',
 						prodQty: qty,
-						startTime: combineDateTime(date, (r.startEl.value || '').trim()),
-						endTime: combineDateTime(date, (r.endEl.value || '').trim()),
+						startTime: combineDateTime(sd, (r.startEl.value || '').trim()),
+						endTime: combineDateTime(ed, (r.endEl.value || '').trim()),
 					});
 				}
 			}
@@ -278,8 +376,42 @@
 			}
 		}
 
+		// Every part with a produced qty MUST have both a start and end time —
+		// the lot number is built from them server-side, so an empty clock would
+		// yield a lot-less record. Highlight the offending fields and block.
+		function validateTimes() {
+			let firstBad = null;
+			for (const sec of sections) {
+				if (!sec.lineCode) continue;
+				for (const r of sec.partRows) {
+					const hasQty = toInt(r.prodQty.value) >= 1;
+					// Each row needs a valid date + time for both start and end
+					// (missing → red ring, kept separate from the end<start border).
+					const checks = [
+						[r.startDateEl, hasQty && !(r.startDateEl.value || '').trim()],
+						[r.startEl, hasQty && !normalizeTime(r.startEl.value)],
+						[r.endDateEl, hasQty && !(r.endDateEl.value || '').trim()],
+						[r.endEl, hasQty && !normalizeTime(r.endEl.value)],
+					];
+					checks.forEach(([el, bad]) => {
+						el.classList.toggle('ring-2', bad);
+						el.classList.toggle('ring-red-500', bad);
+						if (bad && !firstBad) firstBad = el;
+					});
+					// End-before-start (same-day) → red border + message; blocks too.
+					if (hasQty && r.refreshError?.() && !firstBad) firstBad = r.endEl;
+				}
+			}
+			if (firstBad) { firstBad.focus(); return false; }
+			return true;
+		}
+
 		nextBtn.addEventListener('click', () => {
 			if (collectEntries().length === 0) return;
+			if (!validateTimes()) {
+				alert('ตรวจสอบเวลา: ต้องกรอกวันที่+เวลาเริ่ม/จบ ให้ครบ และเวลาจบต้องมาหลังเวลาเริ่ม ก่อนไปขั้นตอนถัดไป');
+				return;
+			}
 			if (!saveDraft()) {
 				alert('ไม่สามารถบันทึก draft ลง sessionStorage ได้');
 				return;
@@ -330,6 +462,9 @@
 			}
 		} catch {}
 		if (!restored) buildLineSection();
+
+		// The on-screen numeric keypad for the time / qty fields lives in the
+		// shared numeric_keypad.js module (driven by the inputs' data-keypad attr).
 
 		// Leaving the record flow (any link that isn't Step 1 / Step 2) drops the
 		// draft, so unfinished data doesn't linger and reappear later.

@@ -100,8 +100,8 @@
 				<div class="text-center">รูป</div>
 				<div>รายละเอียด Part</div>
 				<div class="text-center">จำนวนผลิต</div>
-				<div class="col-time">เวลาเริ่ม</div>
-				<div class="col-time">เวลาจบ</div>
+				<div class="col-time">วัน-เวลาเริ่ม</div>
+				<div class="col-time">วัน-เวลาจบ</div>
 			</div>
 			<div data-parts class="space-y-2"></div>
 			<div data-parts-empty class="hidden text-sm text-slate-500 italic py-3">ไลน์นี้ยังไม่มี Part — กรุณาตั้งค่าใน Manage Line</div>
@@ -119,15 +119,27 @@
 			<div class="text-sm font-semibold text-slate-900 truncate" data-part-name></div>
 			<div class="text-xs text-slate-500 truncate" data-part-meta></div>
 		</div>
-		<input data-prodqty type="number" min="0" step="1" value="" placeholder="0" inputmode="numeric"
+		<input data-prodqty type="number" min="0" step="1" value="" placeholder="0" inputmode="none" data-keypad="int" data-keypad-label="กรอกจำนวนผลิต"
 			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-		<input data-start type="time"
-			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 col-time" />
-		<input data-end type="time"
-			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 col-time" />
+		<div class="col-time flex flex-col gap-1">
+			<input data-start-date type="date" lang="en-GB"
+				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+			<input data-start type="text" inputmode="none" maxlength="5" placeholder="08:10 (24 ชม.)" autocomplete="off" data-keypad="time" data-keypad-label="กรอกเวลาเริ่ม"
+				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+		</div>
+		<div class="col-time flex flex-col gap-1">
+			<input data-end-date type="date" lang="en-GB"
+				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+			<input data-end type="text" inputmode="none" maxlength="5" placeholder="10:00 (24 ชม.)" autocomplete="off" data-keypad="time" data-keypad-label="กรอกเวลาจบ"
+				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+		</div>
+		<div data-time-error class="hidden text-xs font-semibold text-red-600 pt-1" style="grid-column:1 / -1">
+			⚠ เวลาจบน้อยกว่าเวลาเริ่มในวันเดียวกัน — กรุณาแก้เวลา หรือปรับ “วันที่จบ” เป็นวันถัดไป
+		</div>
 	</div>
 </template>
 
 {% load static %}
-<script src="{% static 'js/record_production.js' %}?v=4" defer></script>
+<script src="{% static 'js/numeric_keypad.js' %}?v=1" defer></script>
+<script src="{% static 'js/record_production.js' %}?v=14" defer></script>
 {% endblock %}

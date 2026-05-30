@@ -408,11 +408,16 @@
 			const selectAll = el.querySelector('[data-select-all]');
 			const scrapsWrap = el.querySelector('[data-scraps]');
 			const scrapsEmpty = el.querySelector('[data-scraps-empty]');
+			const commentInput = el.querySelector('[data-single-comment]');
 
 			const gi = nextGi++;
 			// Block-level hidden fields read by RecordDefectsView.post.
 			el.appendChild(mkHidden(`blocks[${gi}][production_line]`, lineCode || ''));
 			el.appendChild(mkHidden(`blocks[${gi}][single_part]`, '1'));
+			// Operator-entered reason → ProcessDefect.comment (server falls back
+			// to "Single part" when left blank). Attached to row 0 so the existing
+			// per-row comment parser picks it up.
+			if (commentInput) commentInput.name = `blocks[${gi}][rows][0][comment]`;
 
 			const rowEnables = () => Array.from(scrapsWrap.querySelectorAll('[data-enable]'));
 			const syncSelectAll = () => {
@@ -483,12 +488,14 @@
 			// clears any entered rows so a hidden block never submits stale data.
 			toggle.addEventListener('change', () => {
 				body.classList.toggle('hidden', !toggle.checked);
+				if (commentInput) commentInput.classList.toggle('hidden', !toggle.checked);
 				if (!toggle.checked) {
 					rowEnables().forEach((en) => {
 						en.checked = false;
 						const qty = en.closest('.scrap-row')?.querySelector('[data-qty]');
 						if (qty) qty.value = '0';
 					});
+					if (commentInput) commentInput.value = '';
 					syncSelectAll();
 				}
 			});
