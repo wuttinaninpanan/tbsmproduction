@@ -75,8 +75,19 @@ SEED_MODELS = [
     # Inspection machine
     "core.Machine",
 
+    # Object detection (config / master data — PROTECT FKs to
+    # Item_list / Machine / InspectionModels / DefectMode, all loaded above)
+    "core.DetectionObject",
+    "core.KanbanItemMapping",
+    "core.ItemObject",
+    "core.MachineObject",
+    "core.ObjectDetectionModel",
+    "core.DefectDetectionInModels",
+
     # Scrap (operational, but include for end-to-end seed)
     "core.ScrapRecord",
+    "core.InspectionDefect",        # CASCADE off ScrapRecord
+    "core.InspectionDefectImage",   # CASCADE off InspectionDefect
 
     # Production recording backbone (parents before children)
     "core.ProductionRecord",

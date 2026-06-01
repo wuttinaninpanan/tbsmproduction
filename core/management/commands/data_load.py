@@ -42,6 +42,19 @@ DELETE_ORDER = [
     "core.ProcessDefect",
     "core.ProductionRecord",
 
+    # Object detection config (children -> parents; PROTECT FKs to
+    # Item_list / Machine / InspectionModels / DefectMode, deleted later)
+    "core.DefectDetectionInModels",
+    "core.ObjectDetectionModel",
+    "core.MachineObject",
+    "core.ItemObject",
+    "core.KanbanItemMapping",
+    "core.DetectionObject",
+
+    # Inspection defect photos (CASCADE chain off ScrapRecord)
+    "core.InspectionDefectImage",
+    "core.InspectionDefect",
+
     # Scrap & inspection
     "core.ScrapRecord",
     "core.Machine",
