@@ -83,6 +83,7 @@ DELETE_ORDER = [
     "core.Role",
 
     # Lookups
+    "core.Shift",
     "core.DefectMode",
     "core.Department",
     "core.Line",

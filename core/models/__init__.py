@@ -30,6 +30,7 @@ from core.models.inspection.object_detection import (
 	DefectDetectionInModels,
 )
 from core.models.department import Department
+from core.models.shift import Shift
 from core.models.inspection.machine import Machine
 from core.models.email_receiver import EmailReceiver
 from core.models.manual import Manual
@@ -76,6 +77,7 @@ __all__ = [
     "InspectionDefect",
     "InspectionDefectImage",
     "Department",
+    "Shift",
     "Machine",
     "EmailReceiver",
     "Manual",

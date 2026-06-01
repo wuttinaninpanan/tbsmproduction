@@ -115,6 +115,7 @@
 						<tr>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่ผลิต</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
@@ -131,6 +132,7 @@
 							<tr class="hover:bg-slate-50">
 								<td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" /></td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.production_date|date:"d M Y"|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.created_by_name|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.shift|default:"-" }}</td>
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap text-center">{{ r.line_name|default:"-" }}</td>
@@ -148,7 +150,7 @@
 								</td>
 							</tr>
 						{% empty %}
-							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="11">ไม่มีรายการของเสีย</td></tr>
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="12">ไม่มีรายการของเสีย</td></tr>
 						{% endfor %}
 					</tbody>
 				</table>
@@ -160,6 +162,7 @@
 						<tr>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่ผลิต</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
@@ -176,6 +179,7 @@
 							<tr class="hover:bg-slate-50">
 								<td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" /></td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.production_date|date:"d M Y"|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.created_by_name|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.shift|default:"-" }}</td>
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap text-center">{{ r.line_name|default:"-" }}</td>
@@ -193,7 +197,7 @@
 								</td>
 							</tr>
 						{% empty %}
-							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="11">ไม่มีรายการชิ้นส่วนที่ทิ้ง</td></tr>
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="12">ไม่มีรายการชิ้นส่วนที่ทิ้ง</td></tr>
 						{% endfor %}
 					</tbody>
 				</table>
@@ -206,7 +210,9 @@
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
 							<th class="px-2 py-3"></th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่ผลิต</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
@@ -228,7 +234,9 @@
 									{% endif %}
 								</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.production_date|date:"d M Y"|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.created_by_name|default:"-" }}</td>
+								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.shift|default:"-" }}</td>
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap text-center">{{ r.line_name|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.sd_code|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.part_name|default:"-" }}</td>
@@ -247,7 +255,7 @@
 							</tr>
 							<tr id="detail-{{ r.id }}" class="hidden bg-slate-50">
 								<td></td>
-								<td colspan="10" class="px-6 py-4">
+								<td colspan="12" class="px-6 py-4">
 									{% if r.defects %}
 										<div class="space-y-3">
 											{% for d in r.defects %}
@@ -292,7 +300,7 @@
 								</td>
 							</tr>
 						{% empty %}
-							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="11">ยังไม่มีข้อมูลการผลิต (บันทึกจากหน้า บันทึก Scrap)</td></tr>
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="13">ยังไม่มีข้อมูลการผลิต (บันทึกจากหน้า บันทึก Scrap)</td></tr>
 						{% endfor %}
 					</tbody>
 				</table>

@@ -92,7 +92,7 @@ class ManageProductionViews(TemplateView):
         created-at date range. Shared by the list view and the Excel export so
         both honor the same filter."""
         qs = (
-            ProductionRecord.objects.select_related("line", "item", "created_by", "created_by__profile")
+            ProductionRecord.objects.select_related("line", "item", "shift", "created_by", "created_by__profile")
             .prefetch_related(
                 Prefetch(
                     "defects",
@@ -126,6 +126,7 @@ class ManageProductionViews(TemplateView):
         qs = ProcessDefect.objects.select_related(
             f"{pr}line",
             f"{pr}item",
+            f"{pr}shift",
             f"{pr}created_by",
             f"{pr}created_by__profile",
             "defect_mode",
@@ -151,6 +152,7 @@ class ManageProductionViews(TemplateView):
         qs = ProcessDefectScrap.objects.select_related(
             f"{pr}line",
             f"{pr}item",
+            f"{pr}shift",
             f"{pr}created_by",
             f"{pr}created_by__profile",
             "process_defect__defect_mode",
@@ -250,8 +252,9 @@ class ManageProductionViews(TemplateView):
                 {
                     "id": str(pr.id),
                     "created_at": pr.created_at,
+                    "production_date": pr.production_date,
                     "created_by_name": pr.created_by.get_short_name() if pr.created_by_id else "",
-                    "shift": self._shift_display(pr.created_by if pr.created_by_id else None),
+                    "shift": self._shift_display(pr.created_by if pr.created_by_id else None, pr),
                     "line_name": pr.line.line_name if pr.line_id else "-",
                     "sd_code": (getattr(pr.item, "sd_code", "") or "").strip() if pr.item_id else "",
                     "part_number": (getattr(pr.item, "part_number", "") or "").strip() if pr.item_id else "",
@@ -274,8 +277,9 @@ class ManageProductionViews(TemplateView):
                 {
                     "id": str(d.id),
                     "created_at": pr.created_at,
+                    "production_date": pr.production_date,
                     "created_by_name": user.get_short_name() if user else "",
-                    "shift": self._shift_display(user),
+                    "shift": self._shift_display(user, pr),
                     "line_name": pr.line.line_name if pr.line_id else "-",
                     "sd_code": (getattr(pr.item, "sd_code", "") or "").strip() if pr.item_id else "",
                     "part_name": (getattr(pr.item, "part_name", "") or "").strip() if pr.item_id else "",
@@ -298,8 +302,9 @@ class ManageProductionViews(TemplateView):
                 {
                     "id": str(s.id),
                     "created_at": pr.created_at,
+                    "production_date": pr.production_date,
                     "created_by_name": user.get_short_name() if user else "",
-                    "shift": self._shift_display(user),
+                    "shift": self._shift_display(user, pr),
                     "line_name": pr.line.line_name if pr.line_id else "-",
                     "comp_sd_code": (getattr(comp, "sd_code", "") or "").strip(),
                     "comp_part_number": (getattr(comp, "part_number", "") or "").strip(),
@@ -379,8 +384,16 @@ class ManageProductionViews(TemplateView):
         return redirect(request.get_full_path())
 
     @staticmethod
-    def _shift_display(user) -> str:
-        """กะของผู้บันทึก — '-' if the user has no linked profile."""
+    def _shift_display(user, record=None) -> str:
+        """กะของรายการ.
+
+        Prefer the shift explicitly chosen on /record/ (``ProductionRecord.shift``)
+        — that's the authoritative value going forward. Fall back to the
+        recorder's profile shift for legacy rows saved before the field existed,
+        then '-' when neither is available.
+        """
+        if record is not None and getattr(record, "shift_id", None):
+            return record.shift.name
         profile = getattr(user, "profile", None) if user is not None else None
         if profile is None:
             return "-"
@@ -405,14 +418,16 @@ class ManageProductionViews(TemplateView):
         for pr in records:
             created = timezone.localtime(pr.created_at) if pr.created_at else None
             created_str = created.strftime("%d/%m/%Y %H:%M") if created else "-"
+            prod_date_str = pr.production_date.strftime("%d/%m/%Y") if pr.production_date else "-"
             user = pr.created_by if pr.created_by_id else None
             user_str = user.get_short_name() if user else "-"
-            shift_str = self._shift_display(user)
+            shift_str = self._shift_display(user, pr)
             line_name = pr.line.line_name if pr.line_id else "-"
 
             record_rows.append(
                 [
                     created_str,
+                    prod_date_str,
                     user_str,
                     shift_str,
                     line_name,
@@ -433,6 +448,7 @@ class ManageProductionViews(TemplateView):
                     scrap_rows.append(
                         [
                             created_str,
+                            prod_date_str,
                             user_str,
                             shift_str,
                             line_name,

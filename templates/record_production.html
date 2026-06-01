@@ -42,12 +42,28 @@
 
 	<form id="production-form" class="space-y-6" onsubmit="return false;">
 
-		{# Single date for the whole record — applied to every part's start/end time #}
-		<div class="rounded-2xl bg-blue-50 border border-blue-200 p-4 flex flex-wrap items-center gap-3">
-			<label for="record-date" class="text-sm font-extrabold text-slate-900">วันที่ผลิต</label>
-			<input id="record-date" type="date"
-				class="rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-			<span class="text-xs text-slate-500">เลือกวันที่ครั้งเดียว — ใช้ร่วมกับทุกรุ่นที่บันทึก (กรอกแค่เวลาในแต่ละ Part)</span>
+		{# Single date + shift for the whole record — applied to every part #}
+		<div class="rounded-2xl bg-blue-50 border border-blue-200 p-4 flex flex-wrap items-center gap-x-6 gap-y-3" id="shift-wrap" data-default-shift="{{ default_shift_id }}">
+			<div class="flex flex-wrap items-center gap-3">
+				<label for="record-date" class="text-sm font-extrabold text-slate-900">วันที่ผลิต</label>
+				<input id="record-date" type="date"
+					class="rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="flex flex-wrap items-center gap-3">
+				<span class="text-sm font-extrabold text-slate-900">กะการทำงาน</span>
+				<div class="flex flex-wrap items-center gap-2" data-shift-options>
+					{% for s in shifts %}
+					<label class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 cursor-pointer select-none hover:bg-indigo-100 has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-100 has-[:checked]:ring-2 has-[:checked]:ring-indigo-400 transition">
+						<input type="checkbox" data-shift value="{{ s.id }}"
+							class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+						<span class="text-sm font-semibold text-slate-900">{{ s.name }}</span>
+					</label>
+					{% empty %}
+					<span class="text-xs text-slate-500 italic">ยังไม่มีข้อมูลกะ</span>
+					{% endfor %}
+				</div>
+			</div>
+			<span class="text-xs text-slate-500 w-full mt-2">เลือกวันที่และกะครั้งเดียว — ใช้ร่วมกับทุกรุ่นที่บันทึก (กรอกแค่เวลาในแต่ละ Part)</span>
 		</div>
 
 		<div id="lines-wrap" class="space-y-6"></div>
@@ -141,5 +157,5 @@
 
 {% load static %}
 <script src="{% static 'js/numeric_keypad.js' %}?v=1" defer></script>
-<script src="{% static 'js/record_production.js' %}?v=14" defer></script>
+<script src="{% static 'js/record_production.js' %}?v=17" defer></script>
 {% endblock %}

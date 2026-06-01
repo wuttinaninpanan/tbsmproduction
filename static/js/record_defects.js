@@ -527,12 +527,16 @@
 
 		// ----------------------------------------------------------- bootstrap
 		let entries = [];
+		let draftShift = '';
+		let draftDate = '';
 		try {
 			const raw = sessionStorage.getItem(STORAGE_KEY);
 			if (raw) {
 				const draft = JSON.parse(raw);
 				if (draft && draft.version === DRAFT_VERSION && Array.isArray(draft.entries)) {
 					entries = draft.entries;
+					draftShift = draft.shift || '';
+					draftDate = draft.date || '';
 				}
 			}
 		} catch {}
@@ -546,6 +550,11 @@
 		}
 
 		renderSummary(entries);
+		// Shift + working day (production_date) apply to the whole submission
+		// (both chosen on Page 1) — single form-level hidden fields;
+		// RecordDefectsView.post applies them to every ProductionRecord it creates.
+		if (draftShift && recordForm) recordForm.appendChild(mkHidden('shift', draftShift));
+		if (draftDate && recordForm) recordForm.appendChild(mkHidden('production_date', draftDate));
 		entries.forEach((e) => buildBlock(e));
 
 		// One "single part" block per distinct line in the draft (order preserved).

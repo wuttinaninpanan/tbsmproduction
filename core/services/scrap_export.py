@@ -15,6 +15,7 @@ from __future__ import annotations
 
 RECORD_HEADERS = [
     "วันที่",
+    "วันที่ผลิต",
     "ผู้ใช้งาน",
     "กะ",
     "Production line",
@@ -26,6 +27,7 @@ RECORD_HEADERS = [
 ]
 SCRAP_HEADERS = [
     "วันที่",
+    "วันที่ผลิต",
     "ผู้ใช้งาน",
     "กะ",
     "Production line",
@@ -47,11 +49,13 @@ def build_scrap_workbook(record_rows, scrap_rows, line_totals, defect_totals):
     """Build the 4-sheet workbook. Raises ImportError if openpyxl is missing.
 
     Args:
-        record_rows: iterable of 9-tuples matching ``RECORD_HEADERS``. The last
+        record_rows: iterable of 10-tuples matching ``RECORD_HEADERS``. The last
             value (อัตราของเสีย) should be a fraction (e.g. 0.04) to render as a
             percentage, or ``None`` to print ``-``. ``จำนวนผลิต`` may be ``None``
             (prints ``-``) when the source has no production-quantity concept.
-        scrap_rows: iterable of 8-tuples matching ``SCRAP_HEADERS``.
+            ``วันที่ผลิต`` (2nd value) may be ``"-"`` for sources without a
+            production date (e.g. legacy inspection scrap).
+        scrap_rows: iterable of 9-tuples matching ``SCRAP_HEADERS``.
         line_totals: mapping ``{production_line: defect_qty}``.
         defect_totals: mapping ``{defect_mode: defect_qty}``.
     """
@@ -80,11 +84,12 @@ def build_scrap_workbook(record_rows, scrap_rows, line_totals, defect_totals):
     ws1.append(RECORD_HEADERS)
     style_header(ws1)
     row_idx = 1
-    for date_str, user, shift, line, sd, part_name, products_qty, total_defect, rate in record_rows:
+    for date_str, prod_date_str, user, shift, line, sd, part_name, products_qty, total_defect, rate in record_rows:
         row_idx += 1
         ws1.append(
             [
                 date_str,
+                prod_date_str,
                 user,
                 shift,
                 line,
@@ -96,8 +101,8 @@ def build_scrap_workbook(record_rows, scrap_rows, line_totals, defect_totals):
             ]
         )
         if rate is not None:
-            ws1.cell(row=row_idx, column=9).number_format = "0.0%"
-    set_widths(ws1, [18, 15, 10, 18, 16, 26, 11, 13, 12])
+            ws1.cell(row=row_idx, column=10).number_format = "0.0%"
+    set_widths(ws1, [18, 14, 15, 10, 18, 16, 26, 11, 13, 12])
 
     # ----- Sheet 2: Scrap -----
     ws2 = wb.create_sheet(title="Scrap")
@@ -105,7 +110,7 @@ def build_scrap_workbook(record_rows, scrap_rows, line_totals, defect_totals):
     style_header(ws2)
     for row in scrap_rows:
         ws2.append(list(row))
-    set_widths(ws2, [18, 15, 10, 18, 24, 24, 26, 12])
+    set_widths(ws2, [18, 14, 15, 10, 18, 24, 24, 26, 12])
 
     # ----- Sheet 3: Summary + bar chart (defect qty per Production line) -----
     ws3 = wb.create_sheet(title="สรุปตาม Line")

@@ -46,6 +46,7 @@ SEED_MODELS = [
     "core.Line",
     "core.DefectMode",
     "core.Department",
+    "core.Shift",
 
     # Business partner family
     "core.Role",

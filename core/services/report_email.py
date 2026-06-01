@@ -32,8 +32,11 @@ logger = logging.getLogger(__name__)
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
-def _shift_display(user) -> str:
-    """กะของผู้บันทึก — '-' เมื่อไม่มี profile ผูกอยู่."""
+def _shift_display(user, record=None) -> str:
+    """กะของรายการ — prefer the explicit ``ProductionRecord.shift`` chosen on
+    /record/, fall back to the recorder's profile shift for legacy rows, then '-'."""
+    if record is not None and getattr(record, "shift_id", None):
+        return record.shift.name
     profile = getattr(user, "profile", None) if user is not None else None
     if profile is None:
         return "-"
@@ -95,7 +98,7 @@ def _production_export_data(date_from, date_to):
     """ประกอบข้อมูล 4-sheet (record / scrap / สรุป Line / สรุป Defect) จาก ProductionRecord."""
     qs = (
         ProductionRecord.objects
-        .select_related("line", "item", "created_by", "created_by__profile")
+        .select_related("line", "item", "shift", "created_by", "created_by__profile")
         .prefetch_related(
             Prefetch(
                 "defects",
@@ -119,14 +122,16 @@ def _production_export_data(date_from, date_to):
     for pr in qs:
         created = timezone.localtime(pr.created_at) if pr.created_at else None
         created_str = created.strftime("%d/%m/%Y %H:%M") if created else "-"
+        prod_date_str = pr.production_date.strftime("%d/%m/%Y") if pr.production_date else "-"
         user = pr.created_by if pr.created_by_id else None
         user_str = user.get_short_name() if user else "-"
-        shift_str = _shift_display(user)
+        shift_str = _shift_display(user, pr)
         line_name = pr.line.line_name if pr.line_id else "-"
 
         record_rows.append(
             [
                 created_str,
+                prod_date_str,
                 user_str,
                 shift_str,
                 line_name,
@@ -147,6 +152,7 @@ def _production_export_data(date_from, date_to):
                 scrap_rows.append(
                     [
                         created_str,
+                        prod_date_str,
                         user_str,
                         shift_str,
                         line_name,

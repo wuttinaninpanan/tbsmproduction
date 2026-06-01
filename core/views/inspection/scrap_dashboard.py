@@ -204,10 +204,12 @@ class InspectionScrapDashboardView(TemplateView):
             line_name = getattr(r.production_line, "line_name", "-") or "-"
             qty = r.quantity or 0
 
-            # Sheet 1 — produced part angle (no production qty / rate in legacy data)
+            # Sheet 1 — produced part angle (no production qty / rate in legacy data).
+            # Legacy inspection scrap has no production_date → "-".
             record_rows.append(
                 [
                     created_str,
+                    "-",
                     user_str,
                     shift_str,
                     line_name,
@@ -223,6 +225,7 @@ class InspectionScrapDashboardView(TemplateView):
             scrap_rows.append(
                 [
                     created_str,
+                    "-",
                     user_str,
                     shift_str,
                     line_name,

@@ -28,18 +28,37 @@ class ProductionRecord(BaseModel):
         blank=True,
     )
     products_quantity = models.PositiveIntegerField(default=1)
-    # The window the operator says this lot was produced in. Recorded per
-    # (line, part) row on the new Page 1 of /record/; nullable so legacy
-    # rows (and rows entered without a clock) keep working.
+    # The working day (วันทำการ) this lot belongs to — chosen once at the top of
+    # /record/. Stays FIXED even when the shift crosses midnight, so reports can
+    # group output by the business day it was produced for. Unlike start_time /
+    # end_time below, it carries no clock. Nullable for legacy rows.
+    production_date = models.DateField(null=True, blank=True)
+    # The REAL wall-clock window the lot was produced in — full date + time, so
+    # a night shift that crosses midnight keeps its true timestamps (and you can
+    # tell a day shift from a night shift). Recorded per (line, part) row on Page
+    # 1 of /record/; nullable so legacy rows (and rows without a clock) work.
     start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
     # Human-readable lot identifier, auto-built at /record/ save time so reports
     # can group every defect back to the lot it came from. Shape:
-    #   L{LineName}{SD code}{YYMMDD}{startHHMM}{endHHMM}  ("-" stripped from
-    #   line name & SD code), e.g. LDTA1DTI0926053008101000 for
-    #   (DTA-1, DTI-09, 2026-05-30, 08:10–10:00). Nullable: "single part"
-    #   scraps have no product/time, and legacy rows predate this field.
-    lot_number = models.CharField(max_length=64, null=True, blank=True, db_index=True)
+    #   L{LineName}{SD code}{prodYYMMDD}{startYYMMDDHHMM}{endYYMMDDHHMM}
+    #   ("-" stripped from line name & SD code). The middle YYMMDD is the
+    #   production_date (working day); start/end carry their real datetimes,
+    #   e.g. LDTA1DTI09260530260530081026053010000 for (DTA-1, DTI-09,
+    #   prod 2026-05-30, 08:10–10:00). Nullable: "single part" scraps have no
+    #   product/time, and legacy rows predate this field.
+    lot_number = models.CharField(max_length=80, null=True, blank=True, db_index=True)
+    # The work shift this lot was produced in, chosen by the operator on Page 1
+    # of /record/. Nullable: legacy rows predate the field, and a shift may not
+    # always be picked. PROTECT so a shift in use can't be deleted out from
+    # under its records.
+    shift = models.ForeignKey(
+        "Shift",
+        on_delete=models.PROTECT,
+        related_name="production_records",
+        null=True,
+        blank=True,
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -56,23 +75,26 @@ class ProductionRecord(BaseModel):
         return f"{self.line.line_name} · {item_label} × {self.products_quantity}"
 
     @staticmethod
-    def build_lot_number(line_name, sd_code, start, end) -> str | None:
-        """Compose the lot number from a (line, part, window).
+    def build_lot_number(line_name, sd_code, production_date, start, end) -> str | None:
+        """Compose the lot number from a (line, part, working day, window).
 
-        ``L{LineName}{SD code}{YYMMDD}{startHHMM}{endHHMM}`` with every ``-``
-        stripped from the line name and SD code. Returns ``None`` when any
-        piece is missing (e.g. a single-part scrap has no SD code/time), so the
-        caller can store NULL rather than a malformed lot.
+        ``L{LineName}{SD code}{prodYYMMDD}{startYYMMDDHHMM}{endYYMMDDHHMM}`` with
+        every ``-`` stripped from the line name and SD code. The middle YYMMDD is
+        the working day (``production_date``); the start/end carry their real
+        wall-clock datetimes, so a night shift crossing midnight is preserved.
+        Returns ``None`` when any piece is missing (e.g. a single-part scrap has
+        no SD code/time), so the caller can store NULL rather than a malformed
+        lot.
         """
         from django.utils import timezone
 
-        if not line_name or not sd_code or start is None or end is None:
+        if not line_name or not sd_code or production_date is None or start is None or end is None:
             return None
         ln = str(line_name).replace("-", "").strip()
         sd = str(sd_code).replace("-", "").strip()
         s = timezone.localtime(start)
         e = timezone.localtime(end)
-        return f"L{ln}{sd}{s:%y%m%d}{s:%H%M}{e:%H%M}"
+        return f"L{ln}{sd}{production_date:%y%m%d}{s:%y%m%d%H%M}{e:%y%m%d%H%M}"
 
     @property
     def total_defect_quantity(self) -> int:

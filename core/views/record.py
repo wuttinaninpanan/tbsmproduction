@@ -24,7 +24,7 @@ from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.shortcuts import redirect
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
@@ -37,6 +37,7 @@ from core.models.item_line import ItemLine
 from core.models.item_list import Item_list
 from core.models.line import Line
 from core.models.process_defect import ProcessDefect, ProcessDefectScrap, ProductionRecord
+from core.models.shift import Shift
 from core.services.auditlog import log_event
 
 
@@ -193,9 +194,27 @@ class RecordProductionView(TemplateView):
 
     template_name = "record_production.html"
 
+    # Map the employee's standing UserProfile.shift to the matching Shift row's
+    # display_number, so the right checkbox is pre-ticked (gp A→1, B→2, Day→3).
+    _PROFILE_SHIFT_TO_DISPLAY = {"shift_a": 1, "shift_b": 2, "shift_day": 3}
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["record_data"] = _build_record_payload()
+        # Shift options for the checkbox selector at the top of the page.
+        shifts = list(Shift.objects.all().order_by("display_number", "name"))
+        ctx["shifts"] = shifts
+        # Default-tick the shift that matches the logged-in user's profile shift,
+        # to save the operator a click. Draft (sessionStorage) still wins on the
+        # client; this is only the fresh-load default.
+        default_shift_id = ""
+        profile = getattr(self.request.user, "profile", None)
+        if profile is not None:
+            dn = self._PROFILE_SHIFT_TO_DISPLAY.get(getattr(profile, "shift", None))
+            match = next((s for s in shifts if s.display_number == dn), None) if dn else None
+            if match is not None:
+                default_shift_id = str(match.id)
+        ctx["default_shift_id"] = default_shift_id
         return ctx
 
 
@@ -279,6 +298,17 @@ class RecordDefectsView(TemplateView):
         ``ProductionRecord`` (products_quantity = the largest qty entered;
         start/end = the earliest start and latest end across blocks).
         """
+        # One shift applies to the whole submission (chosen once on Page 1).
+        shift = None
+        shift_id = (request.POST.get("shift") or "").strip()
+        if _is_uuid(shift_id):
+            shift = Shift.objects.filter(pk=shift_id).first()
+
+        # The working day (วันทำการ) chosen once at the top of Page 1 — fixed for
+        # the whole submission, never derived from the (possibly cross-midnight)
+        # start/end times below.
+        production_date = parse_date((request.POST.get("production_date") or "").strip())
+
         # Every block index present in the submission.
         block_indices: set[int] = set()
         for key in request.POST.keys():
@@ -454,6 +484,7 @@ class RecordDefectsView(TemplateView):
                 lot_number = ProductionRecord.build_lot_number(
                     g["line"].line_name,
                     getattr(g["part"], "sd_code", None),
+                    production_date,
                     g["start_time"],
                     g["end_time"],
                 )
@@ -461,9 +492,11 @@ class RecordDefectsView(TemplateView):
                     line=g["line"],
                     item=g["part"],
                     products_quantity=g["prod_qty"],
+                    production_date=production_date,
                     start_time=g["start_time"],
                     end_time=g["end_time"],
                     lot_number=lot_number,
+                    shift=shift,
                     created_by=user,
                 )
                 production_created += 1

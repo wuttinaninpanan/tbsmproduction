@@ -31,6 +31,7 @@
 
 		const linesWrap = document.getElementById('lines-wrap');
 		const dateInput = document.getElementById('record-date');
+		const shiftWrap = document.getElementById('shift-wrap');
 		const addLineBtn = document.getElementById('add-line');
 		const clearBtn = document.getElementById('clear');
 		const nextBtn = document.getElementById('next');
@@ -107,6 +108,32 @@
 			}));
 		};
 		dateInput?.addEventListener('change', syncRowDates);
+
+		// ----------------------------------------------------------- shift
+		// One shift applies to the whole record. Rendered as checkboxes (per the
+		// UI request) but enforced single-select here: ticking one unticks the
+		// others. The form-level 'change' listener re-saves the draft afterwards.
+		const shiftBoxes = () => (shiftWrap ? Array.from(shiftWrap.querySelectorAll('[data-shift]')) : []);
+		// Server-provided default = the logged-in user's profile shift (may be '').
+		const defaultShift = shiftWrap?.dataset.defaultShift || '';
+		const getSelectedShift = () => (shiftBoxes().find((b) => b.checked)?.value || '');
+		const setSelectedShift = (id) => { shiftBoxes().forEach((b) => { b.checked = !!id && b.value === id; }); };
+		// A shift is REQUIRED before Step 2. Highlight the box red when missing;
+		// clears the moment one is ticked.
+		const validateShift = () => {
+			const ok = !!getSelectedShift();
+			if (shiftWrap) {
+				shiftWrap.classList.toggle('ring-2', !ok);
+				shiftWrap.classList.toggle('ring-red-500', !ok);
+			}
+			return ok;
+		};
+		shiftBoxes().forEach((box) => {
+			box.addEventListener('change', () => {
+				if (box.checked) shiftBoxes().forEach((b) => { if (b !== box) b.checked = false; });
+				validateShift();
+			});
+		});
 
 		// Custom autocomplete: type to filter, click/Enter to pick.
 		// We deliberately don't use <datalist> — the user asked for a richer
@@ -367,7 +394,7 @@
 					sessionStorage.removeItem(STORAGE_KEY);
 					return true;
 				}
-				const draft = { version: DRAFT_VERSION, savedAt: new Date().toISOString(), date: (dateInput?.value || '').trim(), entries };
+				const draft = { version: DRAFT_VERSION, savedAt: new Date().toISOString(), date: (dateInput?.value || '').trim(), shift: getSelectedShift(), entries };
 				sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
 				return true;
 			} catch (e) {
@@ -408,6 +435,11 @@
 
 		nextBtn.addEventListener('click', () => {
 			if (collectEntries().length === 0) return;
+			if (!validateShift()) {
+				alert('กรุณาเลือกกะการทำงานก่อนไปขั้นตอนถัดไป');
+				shiftWrap?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+				return;
+			}
 			if (!validateTimes()) {
 				alert('ตรวจสอบเวลา: ต้องกรอกวันที่+เวลาเริ่ม/จบ ให้ครบ และเวลาจบต้องมาหลังเวลาเริ่ม ก่อนไปขั้นตอนถัดไป');
 				return;
@@ -422,6 +454,7 @@
 		clearBtn.addEventListener('click', () => {
 			try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
 			if (dateInput) dateInput.value = todayISO();
+			setSelectedShift(defaultShift);
 			linesWrap.innerHTML = '';
 			sections.length = 0;
 			buildLineSection();
@@ -449,6 +482,7 @@
 					// Recover the single date from the draft (top-level, else the first entry).
 					const savedDate = draft.date || datePart(draft.entries.find((e) => e.startTime || e.endTime)?.startTime || draft.entries[0].endTime || '');
 					if (dateInput && savedDate) dateInput.value = savedDate;
+					if (draft.shift) setSelectedShift(draft.shift);
 					const byLine = new Map();
 					draft.entries.forEach((e) => {
 						if (!byLine.has(e.lineCode)) byLine.set(e.lineCode, []);
@@ -462,6 +496,9 @@
 			}
 		} catch {}
 		if (!restored) buildLineSection();
+		// Pre-tick the operator's profile shift when nothing came from a draft —
+		// saves a click; they can still change or untick it.
+		if (!getSelectedShift() && defaultShift) setSelectedShift(defaultShift);
 
 		// The on-screen numeric keypad for the time / qty fields lives in the
 		// shared numeric_keypad.js module (driven by the inputs' data-keypad attr).
