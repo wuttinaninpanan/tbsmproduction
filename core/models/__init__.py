@@ -22,10 +22,12 @@ from core.models.inspection.inspection_products import InspectionProducts
 from core.models.inspection.inspection_defect import InspectionDefect
 from core.models.inspection.inspection_defect_image import InspectionDefectImage
 from core.models.inspection.object_detection import (
-	KanbanPartMapping,
+	KanbanItemMapping,
 	DetectionObject,
-	ObjectItem,
-	DefectDetection,
+	ItemObject,
+	MachineObject,
+	ObjectDetectionModel,
+	DefectDetectionInModels,
 )
 from core.models.department import Department
 from core.models.inspection.machine import Machine
@@ -77,8 +79,10 @@ __all__ = [
     "Machine",
     "EmailReceiver",
     "Manual",
-    "KanbanPartMapping",
+    "KanbanItemMapping",
     "DetectionObject",
-    "ObjectItem",
-    "DefectDetection",
+    "ItemObject",
+    "MachineObject",
+    "ObjectDetectionModel",
+    "DefectDetectionInModels",
 ]
