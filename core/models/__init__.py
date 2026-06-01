@@ -34,6 +34,7 @@ from core.models.shift import Shift
 from core.models.inspection.machine import Machine
 from core.models.email_receiver import EmailReceiver
 from core.models.manual import Manual
+from core.models.contact_request import ContactMessage, PartRequest
 
 # Import other model modules so Django registers them (even if not re-exported).
 from . import (  # noqa: F401
@@ -81,6 +82,8 @@ __all__ = [
     "Machine",
     "EmailReceiver",
     "Manual",
+    "ContactMessage",
+    "PartRequest",
     "KanbanItemMapping",
     "DetectionObject",
     "ItemObject",

@@ -1,7 +1,7 @@
 from .home import HomeViews
 from .login import LoginViews
 from .logout import LogoutView
-from .contact import ContactViews
+from .contact import ContactViews, ContactSearchView
 from .about import AboutViews
 from .profile import ProfileViews
 from .manage_user import ManageUserViews
@@ -15,6 +15,7 @@ from .manage_settings_defect_by_category import ManageSettingsDefectByCategoryVi
 from .manage_businesspartner import ManageBusinessPartnerViews
 from .manage_address_partner import ManageAddressPartnerViews
 from .manage_contact import ManageContactViews
+from .manage_requests import ManageRequestsViews
 from .record import RecordViews, RecordProductionView, RecordDefectsView
 from .manage_scrap import ManageScrapViews
 from .manage_production import ManageProductionViews

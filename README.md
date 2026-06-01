@@ -342,7 +342,7 @@ poetry run python manage.py loaddata core/fixtures/master_seed.json
 poetry run python manage.py data_load --no-input
 ```
 
-### Build แบบไม่กระทบDB
+### Build แบบไม่กระทบDB_load 
 ```
 docker compose up -d --no-deps --force-recreate web
 ```
