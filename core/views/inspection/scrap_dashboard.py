@@ -11,7 +11,7 @@ from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
-from core.auth.decorators import user_required
+from core.auth.decorators import staff_required
 from core.models.scrap_record import ScrapRecord
 from core.services.scrap_export import build_scrap_workbook
 
@@ -46,7 +46,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
-@method_decorator(user_required, name="dispatch")
+@method_decorator(staff_required, name="dispatch")
 class InspectionScrapDashboardView(TemplateView):
     """Read-only dashboard of scrap recorded by the Inspection M/C machines.
 

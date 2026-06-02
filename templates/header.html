@@ -77,7 +77,7 @@
         <a href="/about/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">เกี่ยวกับ</a>
         <a href="/contact/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">ติดต่อ</a>
         {% if user.is_authenticated %}
-            {% if user.is_superuser %}
+            {% if user.is_staff or user.is_superuser %}
             <a href="/manage-user/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">จัดการผู้ใช้งาน</a>
             {% endif %}
             <a href="/profile/" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 transition-colors">โปรไฟล์</a>

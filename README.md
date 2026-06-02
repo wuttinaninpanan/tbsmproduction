@@ -360,6 +360,9 @@ poetry run python manage.py sync_employee_data --replace
 poetry run python manage.py data_dump
 ```
 
+Existing local passwords are preserved during sync. Add `--sync-passwords`
+only when local password hashes must be refreshed from the source snapshot.
+
 To refresh the employee snapshot, copy `tbapp_application/core/fixtures/fixture.json`
 to `core/fixtures/employee_seed.json` before running the sync command. The
 importer ignores unrelated cloud models.

@@ -40,7 +40,13 @@
 				results.classList.remove('hidden');
 				return;
 			}
-			results.innerHTML = items.map(it => `
+			results.innerHTML = items.map(it => type === 'line' ? `
+				<button type="button" data-id="${escapeHtml(it.id)}"
+					data-label="${escapeHtml(it.line_name)}"
+					class="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-b-0">
+					<div class="text-sm font-semibold text-gray-900">${escapeHtml(it.line_name || '-')}</div>
+				</button>
+			` : `
 				<button type="button" data-id="${escapeHtml(it.id)}"
 					data-sd="${escapeHtml(it.sd_code)}"
 					data-pn="${escapeHtml(it.part_number)}"
@@ -55,8 +61,12 @@
 			results.querySelectorAll('button[data-id]').forEach(btn => {
 				btn.addEventListener('click', () => {
 					idField.value = btn.dataset.id || '';
-					const parts = [btn.dataset.sd, btn.dataset.pn, btn.dataset.name].filter(Boolean);
-					input.value = parts.join(' — ');
+					if (type === 'line') {
+						input.value = btn.dataset.label || '';
+					} else {
+						const parts = [btn.dataset.sd, btn.dataset.pn, btn.dataset.name].filter(Boolean);
+						input.value = parts.join(' — ');
+					}
 					setHint('เลือกแล้ว', true);
 					closeResults();
 				});

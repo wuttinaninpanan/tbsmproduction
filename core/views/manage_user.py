@@ -14,7 +14,7 @@ from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
-from core.auth.decorators import permission_required
+from core.auth.decorators import staff_required
 from core.models import UserProfile
 
 from core.services.auditlog import log_event
@@ -185,10 +185,7 @@ def _parse_xlsx(uploaded_file):
 		yield row
 
 
-@method_decorator(
-	permission_required("core.view_user", message="คุณไม่มีสิทธิ์เข้าถึงหน้าจัดการผู้ใช้งาน"),
-	name="dispatch",
-)
+@method_decorator(staff_required, name="dispatch")
 class ManageUserViews(TemplateView):
 	template_name = "manage_user.html"
 

@@ -34,12 +34,9 @@ class ContactViews(TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
-        # Items / BoMs are searched on-demand via the autocomplete endpoint
-        # (there can be thousands), so we only ship the small lookups here.
+        # Items, BoMs and lines are searched on-demand via the autocomplete
+        # endpoint, so we only ship the small stage lookup here.
         if self.request.user.is_authenticated:
-            ctx["lines"] = list(
-                Line.objects.order_by("line_name").values("id", "line_name")
-            )
             ctx["stages"] = list(
                 ItemStage.objects.order_by("display_name").values("id", "display_name")
             )
@@ -191,7 +188,8 @@ class ContactSearchView(View):
     """AJAX autocomplete สำหรับฟอร์มคำขอในหน้า /contact/ — เปิดให้ผู้ใช้ที่
     ล็อกอินทุกคน (ต่างจาก LineItemSearchView ที่เป็น staff-only).
 
-    ``?type=item`` (ค่าเริ่มต้น) ค้น Item_list, ``?type=bom`` ค้น BillOfMaterial.
+    ``?type=item`` (ค่าเริ่มต้น) ค้น Item_list, ``?type=bom`` ค้น BillOfMaterial,
+    ``?type=line`` ค้น Line.
     """
 
     def get(self, request, *args, **kwargs):
@@ -199,6 +197,17 @@ class ContactSearchView(View):
         search_type = (request.GET.get("type") or "item").strip().lower()
         if not q:
             return JsonResponse({"results": []})
+
+        if search_type == "line":
+            qs = Line.objects.filter(line_name__icontains=q).order_by("line_name")[:20]
+            results = [
+                {
+                    "id": str(line.id),
+                    "line_name": line.line_name or "",
+                }
+                for line in qs
+            ]
+            return JsonResponse({"results": results})
 
         if search_type == "bom":
             qs = (

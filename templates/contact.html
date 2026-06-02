@@ -125,12 +125,13 @@
                         <p data-ac-hint class="mt-1 text-xs text-gray-500">พิมพ์เพื่อค้นหา</p>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
-                        <div>
+                        <div class="relative" data-autocomplete data-type="line">
                             <label class="block text-sm font-medium text-gray-700 mb-1">ไลน์ผลิต <span class="text-red-500">*</span></label>
-                            <select name="line_id" required class="{{ input_cls }}">
-                                <option value="">— เลือกไลน์ —</option>
-                                {% for l in lines %}<option value="{{ l.id }}">{{ l.line_name }}</option>{% endfor %}
-                            </select>
+                            <input type="hidden" name="line_id" data-ac-id value="" />
+                            <input type="text" data-ac-input autocomplete="off" required
+                                placeholder="ค้นหาไลน์ผลิต" class="{{ input_cls }}" />
+                            <div data-ac-results class="hidden absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"></div>
+                            <p data-ac-hint class="mt-1 text-xs text-gray-500">พิมพ์เพื่อค้นหา</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Stage <span class="text-red-500">*</span></label>

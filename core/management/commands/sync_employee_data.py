@@ -73,6 +73,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Deactivate local users missing from the source instead of deleting them.",
         )
+        parser.add_argument(
+            "--sync-passwords",
+            action="store_true",
+            help="Replace existing local password hashes with values from the source fixture.",
+        )
 
     def handle(self, *args, **options):
         path = Path(options["input"])
@@ -97,7 +102,11 @@ class Command(BaseCommand):
                     grouped.get(source_label, []), source_label, target_label, relations, maps
                 )
 
-            counts["core.User"] = self._sync_users(grouped.get("core.user", []), maps)
+            counts["core.User"] = self._sync_users(
+                grouped.get("core.user", []),
+                maps,
+                sync_passwords=options["sync_passwords"],
+            )
 
             for source_label, target_label, relations in EMPLOYEE_PLAN:
                 counts[target_label] = self._sync_model(
@@ -114,7 +123,7 @@ class Command(BaseCommand):
         for label, count in counts.items():
             self.stdout.write(f"  {label:30s} {count:>6d}")
 
-    def _sync_users(self, records, maps):
+    def _sync_users(self, records, maps, *, sync_passwords=False):
         User = get_user_model()
         role_map = maps.get("core.role", {})
         user_map = maps.setdefault("core.user", {})
@@ -131,7 +140,15 @@ class Command(BaseCommand):
                 if key in field_names and key not in ignored
             }
             defaults["employee_role_id"] = role_map.get(str(source.get("role"))) if source.get("role") else None
-            user, _ = User.objects.update_or_create(username=username, defaults=defaults)
+            user = User.objects.filter(username=username).first()
+            if user is None:
+                user = User.objects.create(username=username, **defaults)
+            else:
+                if not sync_passwords:
+                    defaults.pop("password", None)
+                for key, value in defaults.items():
+                    setattr(user, key, value)
+                user.save()
             user_map[source_pk] = user.pk
             user_map[username] = user.pk
         return len(records)
