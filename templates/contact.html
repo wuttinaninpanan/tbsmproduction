@@ -45,7 +45,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
                         <input type="email" name="email" class="{{ input_cls }}"
-                            {% if user.is_authenticated %}value="{{ user.email }}"{% endif %} />
+                            {% if user.is_authenticated %}value="{{ user.email|default_if_none:'' }}"{% endif %} />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">ข้อความ <span class="text-red-500">*</span></label>
