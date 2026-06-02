@@ -33,6 +33,13 @@ DEFAULT_INPUT = Path("core/fixtures/master_seed.json")
 # Each entry must be valid `apps.get_model(...)` syntax: `app_label.ModelName`
 # (case-sensitive, exact class name).
 DELETE_ORDER = [
+    # Employee master dependents
+    "core.Contract",
+    "core.OrganizationEmployee",
+    "core.Employee",
+    "core.Organization",
+    "core.Section",
+
     # App config & content (standalone — only a created_by FK to User)
     "core.EmailReceiver",
     "core.Manual",
@@ -101,6 +108,14 @@ DELETE_ORDER = [
     "core.UserProfile",
     "core.User",
     "auth.Group",
+
+    # Employee master lookups
+    "core.CostCenter",
+    "core.JobLevel",
+    "core.EmployType",
+    "core.Position",
+    "core.Division",
+    "core.EmployeeRole",
 ]
 
 

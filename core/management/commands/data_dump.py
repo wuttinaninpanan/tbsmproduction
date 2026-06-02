@@ -28,6 +28,15 @@ DEFAULT_OUTPUT = Path("core/fixtures/master_seed.json")
 # Django's `loaddata` does NOT enforce ordering between unrelated models,
 # but the natural order here makes diffs in the JSON readable.
 SEED_MODELS = [
+    # Employee master lookups needed by users and departments
+    "core.EmployeeRole",
+    "core.Division",
+    "core.Position",
+    "core.EmployType",
+    "core.JobLevel",
+    "core.CostCenter",
+    "core.Department",
+
     # Auth & profile
     "auth.Group",
     "core.User",
@@ -45,8 +54,14 @@ SEED_MODELS = [
     "core.LineProcess",
     "core.Line",
     "core.DefectMode",
-    "core.Department",
     "core.Shift",
+
+    # Employee master
+    "core.Section",
+    "core.Organization",
+    "core.Employee",
+    "core.OrganizationEmployee",
+    "core.Contract",
 
     # Business partner family
     "core.Role",

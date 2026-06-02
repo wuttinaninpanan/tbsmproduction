@@ -346,3 +346,20 @@ poetry run python manage.py data_load --no-input
 ```
 docker compose up -d --no-deps --force-recreate web
 ```
+
+### Sync employee data from tbapp_application
+
+`core/fixtures/employee_seed.json` is a snapshot of users and employee master
+data from `tbapp_application`. The sync command updates users by `username`, so
+existing ERP foreign keys remain valid. It replaces only employee records when
+`--replace` is used; local-only ERP users are retained.
+
+```shell
+poetry run python manage.py migrate
+poetry run python manage.py sync_employee_data --replace
+poetry run python manage.py data_dump
+```
+
+To refresh the employee snapshot, copy `tbapp_application/core/fixtures/fixture.json`
+to `core/fixtures/employee_seed.json` before running the sync command. The
+importer ignores unrelated cloud models.

@@ -30,8 +30,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     company_name = models.CharField(max_length=255, blank=True, null=True)
-
     has_password = models.BooleanField(default=True)
+    telephone_number = models.CharField(max_length=150, blank=True)
+    must_change_password = models.BooleanField(default=True)
+    totp_secret = models.CharField(max_length=64, blank=True, null=True)
+    totp_enabled = models.BooleanField(default=False)
+    totp_backup_codes = models.JSONField(default=list, blank=True)
+    employee_role = models.ForeignKey(
+        "core.EmployeeRole",
+        on_delete=models.PROTECT,
+        related_name="users",
+        null=True,
+        blank=True,
+    )
 
     objects = UserManager()
 

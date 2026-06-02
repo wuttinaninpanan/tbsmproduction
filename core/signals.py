@@ -53,10 +53,15 @@ def load_seed_on_fresh_db(sender, using=DEFAULT_DB_ALIAS, verbosity=1, **kwargs)
 
     # "Fresh" == no users. If anyone exists we assume the DB is already
     # populated and leave it completely untouched.
-    from core.models import User
+    from core.models import Shift, User
 
     if User.objects.using(using).exists():
         return
+
+    # Migration 0019 creates shifts with generated UUIDs. The snapshot carries
+    # the canonical rows with their original UUIDs, so remove only these
+    # bootstrap rows before replaying a snapshot into a fresh database.
+    Shift.objects.using(using).all().delete()
 
     if verbosity:
         print(f"[auto-seed] Empty database detected — loading {SEED_PATH.name} ...")

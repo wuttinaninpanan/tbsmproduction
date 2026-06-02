@@ -50,6 +50,9 @@ class UserProfile(BaseModel):
         choices=Gender.choices,
         default=Gender.NOT_SPECIFIED
     )
+    timezone = models.CharField(max_length=50, blank=True, null=True)
+    country_code = models.CharField(max_length=50, blank=True, null=True)
+    occupation = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         db_table = "user_profile"

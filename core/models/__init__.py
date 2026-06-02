@@ -8,6 +8,19 @@ imported anymore so they are fully removed from the application runtime.
 
 from .user import User
 from .user_profile import UserProfile
+from .employee_info import (
+	Contract,
+	CostCenter,
+	Division,
+	Employee,
+	EmployeeRole,
+	EmployType,
+	JobLevel,
+	Organization,
+	OrganizationEmployee,
+	Position,
+	Section,
+)
 from .defect_mode import DefectMode
 from .auditlog_entry import AuditLogEntry
 from .scrap_record import ScrapRecord
@@ -63,6 +76,17 @@ __all__ = [
 	"User",
 	"DefectMode",
 	"UserProfile",
+	"EmployeeRole",
+	"Division",
+	"Section",
+	"Position",
+	"Organization",
+	"EmployType",
+	"JobLevel",
+	"CostCenter",
+	"Employee",
+	"OrganizationEmployee",
+	"Contract",
 	"AuditLogEntry",
 	"ScrapRecord",
 	"DefectStat",
