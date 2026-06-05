@@ -89,6 +89,7 @@ class InspectionModelssView(TemplateView):
 				"description_en": obj.description_en or "",
 				"description_th": obj.description_th or "",
 				"model_path": obj.model_path or "",
+				"model_type": obj.model_type or "OBJECT",
 				"count_detect": obj.count_detect,
 			})
 
@@ -102,6 +103,21 @@ class InspectionModelssView(TemplateView):
 		ctx["total_count"] = paginator.count
 		return ctx
 
+	def _save_model_file(self, request) -> str | None:
+		"""รับ file upload จาก request แล้ว save ลง media/inspection_models/ คืน path string หรือ None"""
+		import os
+		from django.conf import settings
+		f = request.FILES.get("model_file")
+		if not f:
+			return None
+		save_dir = os.path.join(settings.MEDIA_ROOT, "inspection_models")
+		os.makedirs(save_dir, exist_ok=True)
+		dest = os.path.join(save_dir, f.name)
+		with open(dest, "wb+") as fh:
+			for chunk in f.chunks():
+				fh.write(chunk)
+		return os.path.join(settings.MEDIA_ROOT, "inspection_models", f.name)
+
 	def post(self, request, *args, **kwargs):
 		action = (request.POST.get("action") or "").strip().lower()
 		obj_id = (request.POST.get("id") or "").strip()
@@ -109,11 +125,17 @@ class InspectionModelssView(TemplateView):
 		description_en = (request.POST.get("description_en") or "").strip()
 		description_th = (request.POST.get("description_th") or "").strip()
 		model_path = (request.POST.get("model_path") or "").strip()
+		model_type = (request.POST.get("model_type") or "OBJECT").strip()
 		count_detect_raw = (request.POST.get("count_detect") or "0").strip()
 		try:
 			count_detect = int(count_detect_raw)
 		except Exception:
 			count_detect = 0
+
+		# ถ้ามีไฟล์อัปโหลดให้ใช้ path ที่ save แทน model_path ที่กรอก
+		uploaded_path = self._save_model_file(request)
+		if uploaded_path:
+			model_path = uploaded_path
 
 		if action == "bulk_delete":
 			bulk_ids = request.POST.getlist("bulk_id")
@@ -152,6 +174,7 @@ class InspectionModelssView(TemplateView):
 						description_en=description_en or None,
 						description_th=description_th or None,
 						model_path=model_path or None,
+						model_type=model_type,
 						count_detect=count_detect,
 					)
 				messages.success(request, "เพิ่ม Inspection Model สำเร็จ")
@@ -171,9 +194,11 @@ class InspectionModelssView(TemplateView):
 					obj.class_name = class_name
 					obj.description_en = description_en or None
 					obj.description_th = description_th or None
-					obj.model_path = model_path or None
+					obj.model_type = model_type
+					if model_path:
+						obj.model_path = model_path
 					obj.count_detect = count_detect
-					obj.save(update_fields=["class_name", "description_en", "description_th", "model_path", "count_detect", "updated_at"])
+					obj.save(update_fields=["class_name", "description_en", "description_th", "model_path", "model_type", "count_detect", "updated_at"])
 				messages.success(request, "บันทึกการแก้ไขสำเร็จ")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")

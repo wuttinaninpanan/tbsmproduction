@@ -42,6 +42,14 @@ from core.models.inspection.object_detection import (
 	ObjectDetectionModel,
 	DefectDetectionInModels,
 )
+from core.models.inspection.inspection_log import (
+	InspectionOKLog,
+	InspectionOKLogDetail,
+	InspectionOKLogDetailPhoto,
+	InspectionNGLog,
+	InspectionNGLogDetail,
+	InspectionNGLogDetailPhoto,
+)
 from core.models.department import Department
 from core.models.shift import Shift
 from core.models.inspection.machine import Machine
@@ -114,4 +122,10 @@ __all__ = [
     "MachineObject",
     "ObjectDetectionModel",
     "DefectDetectionInModels",
+    "InspectionOKLog",
+    "InspectionOKLogDetail",
+    "InspectionOKLogDetailPhoto",
+    "InspectionNGLog",
+    "InspectionNGLogDetail",
+    "InspectionNGLogDetailPhoto",
 ]

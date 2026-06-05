@@ -7,31 +7,117 @@
 {% block content %}
 <section class="space-y-6">
 
-    <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Inspection Machine</h1>
-            <p class="text-sm text-slate-600 mt-1">จัดการข้อมูลเครื่องตรวจสอบ (Machine) และไลน์ผลิตที่ผูกกับเครื่อง</p>
+    <header class="mb-2">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Inspection Machine</h1>
+        <p class="text-sm text-slate-500 mt-1">จัดการข้อมูลเครื่องตรวจสอบ และการตั้งค่า Pipeline การตรวจสอบ</p>
+
+        <!-- Tab Navigation -->
+        <div class="mt-4 border-b border-slate-200 overflow-x-auto">
+            <nav class="flex min-w-max gap-0 -mb-px">
+
+                <a href="?tab=machine"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'machine' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Inspection Machine
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'machine' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.machine }}</span>
+                </a>
+
+                <a href="?tab=detection_object"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'detection_object' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Detection Object
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'detection_object' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.detection_object }}</span>
+                </a>
+
+                <a href="?tab=item_object"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'item_object' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Item Object
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'item_object' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.item_object }}</span>
+                </a>
+
+                <a href="?tab=machine_object"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'machine_object' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Machine Object
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'machine_object' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.machine_object }}</span>
+                </a>
+
+                <a href="?tab=object_detection_model"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'object_detection_model' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Object Detection Model
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'object_detection_model' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.object_detect_model }}</span>
+                </a>
+
+                <a href="?tab=defect_detection_models"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'defect_detection_models' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Defect Detection Models
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'defect_detection_models' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.defect_detect_model }}</span>
+                </a>
+
+                <a href="?tab=defect_mode"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'defect_mode' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Defect Mode
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'defect_mode' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.defect_mode }}</span>
+                </a>
+
+                <a href="?tab=kanban_mapping"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'kanban_mapping' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Kanban Mapping
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'kanban_mapping' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.kanban_mapping }}</span>
+                </a>
+
+                <a href="?tab=ok_log"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'ok_log' %}border-emerald-600 text-emerald-700{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    ✓ OK Log
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'ok_log' %}bg-emerald-100 text-emerald-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.ok_log }}</span>
+                </a>
+
+                <a href="?tab=ng_log"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'ng_log' %}border-red-600 text-red-700{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    ✗ NG Log
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'ng_log' %}bg-red-100 text-red-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.ng_log }}</span>
+                </a>
+
+            </nav>
         </div>
     </header>
 
     {% if messages %}
     <div class="space-y-2">
         {% for message in messages %}
-        <div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">
-            {{ message }}
-        </div>
+        <div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
         {% endfor %}
     </div>
     {% endif %}
 
     <!-- SEARCH -->
     <form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+        <input type="hidden" name="tab" value="{{ tab }}" />
         <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
             <div class="md:col-span-5">
                 <label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-                <input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา รหัสเครื่อง / ชื่อเครื่อง / แผนก / ผู้รับผิดชอบ"
+                <input name="q" value="{{ q|default:'' }}"
+                    placeholder="พิมพ์เพื่อค้นหาใน Section นี้"
                     class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1 focus:ring-2 focus:ring-indigo-500" />
             </div>
+            {% if tab == 'ok_log' or tab == 'ng_log' %}
+            <div class="md:col-span-3">
+                <label class="block text-sm font-semibold text-slate-700">เครื่อง</label>
+                <select name="machine_id" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1 focus:ring-2 focus:ring-indigo-500">
+                    <option value="">— ทุกเครื่อง —</option>
+                    {% for m in machines_list %}
+                    <option value="{{ m.id }}" {% if log_machine_id == m.id|stringformat:"s" %}selected{% endif %}>{{ m.machine_no }} — {{ m.machine_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">วันที่เริ่ม</label>
+                <input type="date" name="date_from" value="{{ date_from|default:'' }}"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1 focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700">วันที่สิ้นสุด</label>
+                <input type="date" name="date_to" value="{{ date_to|default:'' }}"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-1 focus:ring-2 focus:ring-indigo-500">
+            </div>
+            {% endif %}
             <input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
             <div class="md:col-span-2 flex items-end">
                 <button type="submit"
@@ -42,24 +128,49 @@
         </div>
         <div class="mt-3 flex justify-between">
             <div class="text-xs text-slate-600">ทั้งหมด {{ total_count }} รายการ</div>
-            <a href="?" class="text-sm font-semibold underline">ล้างตัวกรอง</a>
+            <a href="?tab={{ tab }}" class="text-sm font-semibold underline">ล้างตัวกรอง</a>
         </div>
     </form>
 
-    <!-- TABLE -->
+    <!-- TABLE SECTION -->
     <div class="rounded-2xl border border-slate-200 overflow-hidden">
 
-        <div class="bg-slate-100 px-4 py-3 flex justify-between items-center">
-            <div class="font-extrabold text-slate-800">รายการเครื่อง</div>
-
+        <!-- Toolbar -->
+        <div class="{% if tab == 'ok_log' %}bg-emerald-50{% elif tab == 'ng_log' %}bg-red-50{% else %}bg-slate-100{% endif %} px-4 py-3 flex justify-between items-center">
+            <div class="font-extrabold {% if tab == 'ok_log' %}text-emerald-800{% elif tab == 'ng_log' %}text-red-800{% else %}text-slate-800{% endif %}">
+                {% if tab == 'machine' %}รายการเครื่อง
+                {% elif tab == 'detection_object' %}Detection Objects
+                {% elif tab == 'item_object' %}Item Objects
+                {% elif tab == 'machine_object' %}Machine Objects
+                {% elif tab == 'object_detection_model' %}Object Detection Models
+                {% elif tab == 'defect_detection_models' %}Defect Detection In Models
+                {% elif tab == 'defect_mode' %}Defect Modes
+                {% elif tab == 'ok_log' %}✓ OK Log
+                {% elif tab == 'ng_log' %}✗ NG Log
+                {% else %}Kanban Mappings
+                {% endif %}
+            </div>
+            {% if tab != 'ok_log' and tab != 'ng_log' %}
             <button id="openAddModal"
                 class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700">
-                + เพิ่มเครื่อง
+                + {% if tab == 'machine' %}เพิ่มเครื่อง
+                {% elif tab == 'detection_object' %}เพิ่ม Object
+                {% elif tab == 'item_object' %}เพิ่ม Item Object
+                {% elif tab == 'machine_object' %}เพิ่ม Machine Object
+                {% elif tab == 'object_detection_model' %}เพิ่ม Model
+                {% elif tab == 'defect_detection_models' %}เพิ่มรายการ
+                {% elif tab == 'defect_mode' %}เพิ่ม Defect Mode
+                {% else %}เพิ่ม Mapping
+                {% endif %}
             </button>
+            {% endif %}
         </div>
 
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
+
+                <!-- ==================== machine ==================== -->
+                {% if tab == 'machine' %}
                 <thead class="bg-white text-slate-800">
                     <tr>
                         <th class="px-4 py-3 text-left font-extrabold">รหัสเครื่อง</th>
@@ -73,7 +184,6 @@
                         <th class="px-4 py-3 text-center font-extrabold">จัดการ</th>
                     </tr>
                 </thead>
-
                 <tbody class="divide-y divide-slate-200">
                     {% for r in rows %}
                     <tr class="hover:bg-indigo-50/60 cursor-pointer" data-row-href="/inspection/machine/{{ r.id }}/" title="คลิกเพื่อจัดการ Inspection ของเครื่องนี้">
@@ -105,8 +215,7 @@
                         </td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex justify-center gap-2">
-                                <button
-                                    class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
                                     data-open-edit
                                     data-id="{{ r.id }}"
                                     data-no="{{ r.machine_no }}"
@@ -121,9 +230,7 @@
                                     data-category="{{ r.category_id }}">
                                     แก้ไข
                                 </button>
-
-                                <button
-                                    class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
                                     data-open-delete data-id="{{ r.id }}" data-label="{{ r.machine_no }} - {{ r.machine_name }}">
                                     ลบ
                                 </button>
@@ -131,27 +238,472 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr>
-                        <td colspan="9" class="text-center py-8 text-slate-500">
-                            ยังไม่มีข้อมูลเครื่อง
-                        </td>
-                    </tr>
+                    <tr><td colspan="9" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูลเครื่อง</td></tr>
                     {% endfor %}
                 </tbody>
+
+                <!-- ==================== detection_object ==================== -->
+                {% elif tab == 'detection_object' %}
+                <thead class="bg-white text-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Name</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Description</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.description|default:"-" }}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}" data-name="{{ r.name }}" data-description="{{ r.description }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.name }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== item_object ==================== -->
+                {% elif tab == 'item_object' %}
+                <thead class="bg-white text-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Item</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Quantity</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.object_name }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.item_label }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.quantity }}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}"
+                                    data-object-id="{{ r.object_id }}" data-object-name="{{ r.object_name }}"
+                                    data-item-id="{{ r.item_id }}" data-item-label="{{ r.item_label }}"
+                                    data-quantity="{{ r.quantity }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.object_name }} / {{ r.item_label }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== machine_object ==================== -->
+                {% elif tab == 'machine_object' %}
+                <thead class="bg-white text-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Machine</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">Camera No.</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.machine_label }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.object_name }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-700">Cam {{ r.camera_number }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}"
+                                    data-machine-id="{{ r.machine_id }}"
+                                    data-object-id="{{ r.object_id }}"
+                                    data-camera-number="{{ r.camera_number }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.machine_label }} / {{ r.object_name }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== object_detection_model ==================== -->
+                {% elif tab == 'object_detection_model' %}
+                <thead class="bg-white text-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Inspection Model</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.object_name }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.model_class }}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}"
+                                    data-object-id="{{ r.object_id }}"
+                                    data-model-id="{{ r.model_id }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.object_name }} / {{ r.model_class }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== defect_detection_models ==================== -->
+                {% elif tab == 'defect_detection_models' %}
+                <thead class="bg-white text-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Defect Mode</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Inspection Model</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.object_name }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.defect_mode_label }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.model_class }}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}"
+                                    data-object-id="{{ r.object_id }}"
+                                    data-defect-mode-id="{{ r.defect_mode_id }}"
+                                    data-model-id="{{ r.model_id }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.object_name }} / {{ r.defect_mode_label }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== defect_mode ==================== -->
+                {% elif tab == 'defect_mode' %}
+                <thead class="bg-white text-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">TH</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">EN</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">JP</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Defect Type</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Class Name</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Inspection Model</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name_th }}</td>
+                        <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_en }}</td>
+                        <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_jp|default:"-" }}</td>
+                        <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.defect_type_display }}</td>
+                        <td class="px-4 py-3 text-slate-700 font-mono">{{ r.class_name|default:"-" }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.model_class }}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}"
+                                    data-name-th="{{ r.name_th }}"
+                                    data-name-en="{{ r.name_en }}"
+                                    data-name-jp="{{ r.name_jp }}"
+                                    data-defect-type="{{ r.defect_type }}"
+                                    data-class-name="{{ r.class_name }}"
+                                    data-model-id="{{ r.model_id }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.name_th }} / {{ r.name_en }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== kanban_mapping ==================== -->
+                {% elif tab == 'kanban_mapping' %}
+                <thead class="bg-white text-slate-800">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Kanban QR</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Item QR</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">ชิ้นงาน (Item)</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    {% for r in rows %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">{{ r.kanban_qr }}</td>
+                        <td class="px-4 py-3 font-mono text-slate-700 whitespace-nowrap">{{ r.item_qr }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.item_label }}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}"
+                                    data-kanban-qr="{{ r.kanban_qr }}"
+                                    data-item-qr="{{ r.item_qr }}"
+                                    data-item-id="{{ r.item_id }}"
+                                    data-item-label="{{ r.item_label }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.kanban_qr }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล Kanban Mapping</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== ok_log ==================== -->
+                {% elif tab == 'ok_log' %}
+                <thead class="bg-emerald-50 text-emerald-800">
+                    <tr>
+                        <th class="px-3 py-3 text-left font-bold w-8"></th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">วันที่-เวลา</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">เครื่อง</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">ชิ้นงาน</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">Kanban QR</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">Item QR</th>
+                        <th class="px-4 py-3 text-center font-bold whitespace-nowrap">รูป</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for r in rows %}
+                    <tr class="hover:bg-emerald-50 cursor-pointer" onclick="toggleLogDetail('okd-{{ r.id }}', 'okicon-{{ r.id }}')">
+                        <td class="px-3 py-3 text-center text-slate-400 select-none">
+                            <span id="okicon-{{ r.id }}" class="inline-block transition-transform duration-200 text-xs">▶</span>
+                        </td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-700 whitespace-nowrap">{{ r.inspected_at }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="font-semibold text-slate-900">{{ r.machine_no }}</span>
+                            <span class="text-slate-500 text-xs ml-1">{{ r.machine_name }}</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="font-semibold text-slate-900">{{ r.sd_code }}</span>
+                            <span class="text-slate-500 text-xs ml-1">{{ r.part_name }}</span>
+                        </td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ r.kanban_qr }}</td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ r.item_qr }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if r.photo_path %}<a href="{{ r.photo_path }}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:underline text-xs">ดูรูป</a>
+                            {% else %}<span class="text-slate-300 text-xs">—</span>{% endif %}
+                        </td>
+                    </tr>
+                    <tr id="okd-{{ r.id }}" class="hidden bg-emerald-50">
+                        <td colspan="7" class="px-6 py-3">
+                            <div class="rounded-xl border border-emerald-200 overflow-hidden">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-emerald-100 text-emerald-800">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-bold">Object</th>
+                                            <th class="px-3 py-2 text-center font-bold">Camera</th>
+                                            <th class="px-3 py-2 text-center font-bold">พบ</th>
+                                            <th class="px-3 py-2 text-center font-bold">จำนวน / คาดหวัง</th>
+                                            <th class="px-3 py-2 text-center font-bold">Confidence</th>
+                                            <th class="px-3 py-2 text-center font-bold">รูป</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 bg-white">
+                                        {% for d in r.details %}
+                                        <tr>
+                                            <td class="px-3 py-2 font-semibold text-slate-800">{{ d.object_name }}</td>
+                                            <td class="px-3 py-2 text-center"><span class="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full font-bold">Cam {{ d.camera_number }}</span></td>
+                                            <td class="px-3 py-2 text-center">{% if d.object_found %}<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">✓</span>{% else %}<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">✗</span>{% endif %}</td>
+                                            <td class="px-3 py-2 text-center font-mono"><span class="{% if d.object_count == d.expected_count %}text-emerald-700{% else %}text-red-600 font-bold{% endif %}">{{ d.object_count }}</span><span class="text-slate-400"> / {{ d.expected_count }}</span></td>
+                                            <td class="px-3 py-2 text-center font-mono text-slate-600">{{ d.confidence }}</td>
+                                            <td class="px-3 py-2 text-center">
+                                                {% if d.photo_count %}
+                                                <button type="button"
+                                                    onclick="event.stopPropagation(); openPhotoModal(this)"
+                                                    data-title="{{ d.object_name }} — Cam {{ d.camera_number }}"
+                                                    data-photos='{{ d.photos_json }}'
+                                                    class="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700 hover:bg-indigo-200 whitespace-nowrap cursor-pointer">
+                                                    ดูรูป {{ d.photo_count }} ภาพ
+                                                </button>
+                                                {% else %}<span class="text-slate-300">—</span>{% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr><td colspan="6" class="px-3 py-4 text-center text-slate-400">ไม่มี detail</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">ยังไม่มีข้อมูล OK Log</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== ng_log ==================== -->
+                {% elif tab == 'ng_log' %}
+                <thead class="bg-red-50 text-red-800">
+                    <tr>
+                        <th class="px-3 py-3 text-left font-bold w-8"></th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">วันที่-เวลา</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">เครื่อง</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">ชิ้นงาน</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">Kanban QR</th>
+                        <th class="px-4 py-3 text-left font-bold whitespace-nowrap">Item QR</th>
+                        <th class="px-4 py-3 text-center font-bold whitespace-nowrap">รูป</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for r in rows %}
+                    <tr class="hover:bg-red-50 cursor-pointer" onclick="toggleLogDetail('ngd-{{ r.id }}', 'ngicon-{{ r.id }}')">
+                        <td class="px-3 py-3 text-center text-slate-400 select-none">
+                            <span id="ngicon-{{ r.id }}" class="inline-block transition-transform duration-200 text-xs">▶</span>
+                        </td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-700 whitespace-nowrap">{{ r.inspected_at }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="font-semibold text-slate-900">{{ r.machine_no }}</span>
+                            <span class="text-slate-500 text-xs ml-1">{{ r.machine_name }}</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <span class="font-semibold text-slate-900">{{ r.sd_code }}</span>
+                            <span class="text-slate-500 text-xs ml-1">{{ r.part_name }}</span>
+                        </td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ r.kanban_qr }}</td>
+                        <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ r.item_qr }}</td>
+                        <td class="px-4 py-3 text-center">
+                            {% if r.photo_path %}<a href="{{ r.photo_path }}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:underline text-xs">ดูรูป</a>
+                            {% else %}<span class="text-slate-300 text-xs">—</span>{% endif %}
+                        </td>
+                    </tr>
+                    <tr id="ngd-{{ r.id }}" class="hidden bg-red-50">
+                        <td colspan="7" class="px-6 py-3">
+                            <div class="rounded-xl border border-red-200 overflow-hidden">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-red-100 text-red-800">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-bold">Object</th>
+                                            <th class="px-3 py-2 text-center font-bold">Camera</th>
+                                            <th class="px-3 py-2 text-center font-bold">พบ</th>
+                                            <th class="px-3 py-2 text-center font-bold">จำนวน / คาดหวัง</th>
+                                            <th class="px-3 py-2 text-left font-bold">Defect Mode</th>
+                                            <th class="px-3 py-2 text-center font-bold">Confidence</th>
+                                            <th class="px-3 py-2 text-center font-bold">รูป</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 bg-white">
+                                        {% for d in r.details %}
+                                        <tr>
+                                            <td class="px-3 py-2 font-semibold text-slate-800">{{ d.object_name }}</td>
+                                            <td class="px-3 py-2 text-center"><span class="bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full font-bold">Cam {{ d.camera_number }}</span></td>
+                                            <td class="px-3 py-2 text-center">{% if d.object_found %}<span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold">✓</span>{% else %}<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">✗</span>{% endif %}</td>
+                                            <td class="px-3 py-2 text-center font-mono"><span class="{% if d.object_count == d.expected_count %}text-emerald-700{% else %}text-red-600 font-bold{% endif %}">{{ d.object_count }}</span><span class="text-slate-400"> / {{ d.expected_count }}</span></td>
+                                            <td class="px-3 py-2 text-slate-700">{{ d.defect_mode }}</td>
+                                            <td class="px-3 py-2 text-center font-mono text-slate-600">{{ d.confidence }}</td>
+                                            <td class="px-3 py-2 text-center">
+                                                {% if d.photo_count %}
+                                                <button type="button"
+                                                    onclick="event.stopPropagation(); openPhotoModal(this)"
+                                                    data-title="{{ d.object_name }} — Cam {{ d.camera_number }}"
+                                                    data-photos='{{ d.photos_json }}'
+                                                    class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 whitespace-nowrap cursor-pointer">
+                                                    ดูรูป {{ d.photo_count }} ภาพ
+                                                </button>
+                                                {% else %}<span class="text-slate-300">—</span>{% endif %}
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr><td colspan="7" class="px-3 py-4 text-center text-slate-400">ไม่มี detail</td></tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="px-4 py-12 text-center text-slate-400">ยังไม่มีข้อมูล NG Log</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% endif %}
+
             </table>
         </div>
+
+        <!-- PAGINATION -->
+        {% if paginator.num_pages > 1 %}
+        <div class="border-t border-slate-200 bg-white px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="text-sm text-slate-600">หน้า {{ page_obj.number }} / {{ paginator.num_pages }}</div>
+            <div class="flex flex-wrap gap-1">
+                {% if page_obj.has_previous %}
+                <a href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}&per_page={{ per_page }}&q={{ q }}"
+                    class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200">‹</a>
+                {% endif %}
+                {% for p in page_items %}
+                    {% if p is None %}
+                    <span class="px-2 py-1.5 text-slate-400">…</span>
+                    {% elif p == page_obj.number %}
+                    <span class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white">{{ p }}</span>
+                    {% else %}
+                    <a href="?tab={{ tab }}&page={{ p }}&per_page={{ per_page }}&q={{ q }}"
+                        class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200">{{ p }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <a href="?tab={{ tab }}&page={{ page_obj.next_page_number }}&per_page={{ per_page }}&q={{ q }}"
+                    class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200">›</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 </section>
 
-<!-- ADD MODAL -->
+{# ============================================================ MODALS ============================================================ #}
+
+{# -------------------- Photo Gallery Modal (ok_log / ng_log) -------------------- #}
+{% if tab == 'ok_log' or tab == 'ng_log' %}
+<div id="photoModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4"
+     onclick="if(event.target===this) closePhotoModal()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+            <h3 id="photoModalTitle" class="font-bold text-lg text-slate-800 truncate pr-4"></h3>
+            <button onclick="closePhotoModal()"
+                class="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xl font-bold leading-none">&times;</button>
+        </div>
+        <div id="photoModalGrid" class="flex flex-wrap gap-4 p-6 overflow-y-auto justify-center"></div>
+        <div id="photoModalEmpty" class="hidden px-6 py-12 text-center text-slate-400 text-sm">ไม่มีรูปภาพ</div>
+    </div>
+</div>
+{% endif %}
+
+{# -------------------- machine: Add -------------------- #}
+{% if tab == 'machine' %}
 <div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
     <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
         {% csrf_token %}
+        <input type="hidden" name="tab" value="machine">
         <input type="hidden" name="action" value="create">
-
         <h2 class="text-lg font-extrabold mb-4">เพิ่มเครื่อง</h2>
-
         <div class="space-y-3">
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">รหัสเครื่อง <span class="text-red-500">*</span></label>
@@ -169,9 +721,7 @@
                 <label class="block text-sm font-semibold text-slate-700 mb-1">แผนกผู้รับผิดชอบ</label>
                 <select name="res_dept" class="w-full border px-3 py-2 rounded-md bg-white">
                     <option value="">— ไม่ระบุ —</option>
-                    {% for d in departments_list %}
-                    <option value="{{ d.id }}">{{ d.name }}</option>
-                    {% endfor %}
+                    {% for d in departments_list %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
                 </select>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -179,18 +729,14 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-1">ผู้รับผิดชอบ 1</label>
                     <select name="responsible1" class="w-full border px-3 py-2 rounded-md bg-white">
                         <option value="">— ไม่ระบุ —</option>
-                        {% for u in users_list %}
-                        <option value="{{ u.id }}">{{ u.label }}</option>
-                        {% endfor %}
+                        {% for u in users_list %}<option value="{{ u.id }}">{{ u.label }}</option>{% endfor %}
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">ผู้รับผิดชอบ 2</label>
                     <select name="responsible2" class="w-full border px-3 py-2 rounded-md bg-white">
                         <option value="">— ไม่ระบุ —</option>
-                        {% for u in users_list %}
-                        <option value="{{ u.id }}">{{ u.label }}</option>
-                        {% endfor %}
+                        {% for u in users_list %}<option value="{{ u.id }}">{{ u.label }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
@@ -198,9 +744,7 @@
                 <label class="block text-sm font-semibold text-slate-700 mb-1">ไลน์ผลิตที่ผูกกับเครื่อง</label>
                 <select name="line_id" class="w-full border px-3 py-2 rounded-md bg-white">
                     <option value="">— ไม่ระบุ —</option>
-                    {% for line in lines_list %}
-                    <option value="{{ line.id }}">{{ line.line_name }}</option>
-                    {% endfor %}
+                    {% for line in lines_list %}<option value="{{ line.id }}">{{ line.line_name }}</option>{% endfor %}
                 </select>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -212,18 +756,14 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-1">หมวดหมู่</label>
                     <select name="category" class="w-full border px-3 py-2 rounded-md bg-white">
                         <option value="">— ไม่ระบุ —</option>
-                        {% for c in categories_list %}
-                        <option value="{{ c.id }}">{{ c.name }}</option>
-                        {% endfor %}
+                        {% for c in categories_list %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
             <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <input type="checkbox" name="is_approved" value="true" class="rounded border-slate-300">
-                อนุมัติแล้ว
+                <input type="checkbox" name="is_approved" value="true" class="rounded border-slate-300"> อนุมัติแล้ว
             </label>
         </div>
-
         <div class="mt-5 flex justify-end gap-2">
             <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
             <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
@@ -231,16 +771,15 @@
     </form>
 </div>
 
-<!-- EDIT MODAL -->
+{# machine: Edit #}
 <div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
     <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
         {% csrf_token %}
+        <input type="hidden" name="tab" value="machine">
         <input type="hidden" name="action" value="update">
         <input type="hidden" name="id" id="editId">
-
         <h2 class="text-lg font-extrabold mb-4">แก้ไขเครื่อง</h2>
-
         <div class="space-y-3">
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">รหัสเครื่อง <span class="text-red-500">*</span></label>
@@ -258,9 +797,7 @@
                 <label class="block text-sm font-semibold text-slate-700 mb-1">แผนกผู้รับผิดชอบ</label>
                 <select name="res_dept" id="editDept" class="w-full border px-3 py-2 rounded-md bg-white">
                     <option value="">— ไม่ระบุ —</option>
-                    {% for d in departments_list %}
-                    <option value="{{ d.id }}">{{ d.name }}</option>
-                    {% endfor %}
+                    {% for d in departments_list %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}
                 </select>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -268,18 +805,14 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-1">ผู้รับผิดชอบ 1</label>
                     <select name="responsible1" id="editRes1" class="w-full border px-3 py-2 rounded-md bg-white">
                         <option value="">— ไม่ระบุ —</option>
-                        {% for u in users_list %}
-                        <option value="{{ u.id }}">{{ u.label }}</option>
-                        {% endfor %}
+                        {% for u in users_list %}<option value="{{ u.id }}">{{ u.label }}</option>{% endfor %}
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-slate-700 mb-1">ผู้รับผิดชอบ 2</label>
                     <select name="responsible2" id="editRes2" class="w-full border px-3 py-2 rounded-md bg-white">
                         <option value="">— ไม่ระบุ —</option>
-                        {% for u in users_list %}
-                        <option value="{{ u.id }}">{{ u.label }}</option>
-                        {% endfor %}
+                        {% for u in users_list %}<option value="{{ u.id }}">{{ u.label }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
@@ -287,9 +820,7 @@
                 <label class="block text-sm font-semibold text-slate-700 mb-1">ไลน์ผลิตที่ผูกกับเครื่อง</label>
                 <select name="line_id" id="editLine" class="w-full border px-3 py-2 rounded-md bg-white">
                     <option value="">— ไม่ระบุ —</option>
-                    {% for line in lines_list %}
-                    <option value="{{ line.id }}">{{ line.line_name }}</option>
-                    {% endfor %}
+                    {% for line in lines_list %}<option value="{{ line.id }}">{{ line.line_name }}</option>{% endfor %}
                 </select>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -301,18 +832,14 @@
                     <label class="block text-sm font-semibold text-slate-700 mb-1">หมวดหมู่</label>
                     <select name="category" id="editCategory" class="w-full border px-3 py-2 rounded-md bg-white">
                         <option value="">— ไม่ระบุ —</option>
-                        {% for c in categories_list %}
-                        <option value="{{ c.id }}">{{ c.name }}</option>
-                        {% endfor %}
+                        {% for c in categories_list %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
             <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <input type="checkbox" name="is_approved" id="editApproved" value="true" class="rounded border-slate-300">
-                อนุมัติแล้ว
+                <input type="checkbox" name="is_approved" id="editApproved" value="true" class="rounded border-slate-300"> อนุมัติแล้ว
             </label>
         </div>
-
         <div class="mt-5 flex justify-end gap-2">
             <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
             <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
@@ -320,17 +847,16 @@
     </form>
 </div>
 
-<!-- DELETE MODAL -->
+{# machine: Delete #}
 <div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
     <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
     <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         {% csrf_token %}
+        <input type="hidden" name="tab" value="machine">
         <input type="hidden" name="action" value="delete">
         <input type="hidden" name="id" id="deleteId">
-
         <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
         <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
-
         <div class="mt-5 flex justify-end gap-2">
             <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
             <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
@@ -338,61 +864,946 @@
     </form>
 </div>
 
+{# -------------------- detection_object modals -------------------- #}
+{% elif tab == 'detection_object' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="detection_object">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Detection Object</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Name <span class="text-red-500">*</span></label>
+                <input name="name" required placeholder="ชื่อ Object" class="w-full border px-3 py-2 rounded-md">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+                <textarea name="description" rows="2" placeholder="คำอธิบาย" class="w-full border px-3 py-2 rounded-md"></textarea>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="detection_object">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="doEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Detection Object</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Name <span class="text-red-500">*</span></label>
+                <input name="name" id="doEditName" required class="w-full border px-3 py-2 rounded-md">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+                <textarea name="description" id="doEditDescription" rows="2" class="w-full border px-3 py-2 rounded-md"></textarea>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="detection_object">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
+{# -------------------- item_object modals -------------------- #}
+{% elif tab == 'item_object' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="item_object">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Item Object</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ชิ้นงาน (Item) <span class="text-red-500">*</span></label>
+                <input type="hidden" name="item_id" id="ioAddItemId" />
+                <div class="relative">
+                    <input type="text" id="ioAddItemSearch" placeholder="พิมพ์เพื่อค้นหา SD Code / Part Name..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ioAddItemDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Quantity</label>
+                <input name="quantity" type="number" min="1" value="1" class="w-full border px-3 py-2 rounded-md">
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="item_object">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="ioEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Item Object</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" id="ioEditObjectId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ชิ้นงาน (Item) <span class="text-red-500">*</span></label>
+                <input type="hidden" name="item_id" id="ioEditItemId" />
+                <div class="relative">
+                    <input type="text" id="ioEditItemSearch" placeholder="พิมพ์เพื่อค้นหา SD Code / Part Name..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ioEditItemDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Quantity</label>
+                <input name="quantity" id="ioEditQuantity" type="number" min="1" value="1" class="w-full border px-3 py-2 rounded-md">
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="item_object">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
+{# -------------------- machine_object modals -------------------- #}
+{% elif tab == 'machine_object' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="machine_object">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Machine Object</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Machine <span class="text-red-500">*</span></label>
+                <select name="machine_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Machine —</option>
+                    {% for m in machines_list %}<option value="{{ m.id }}">{{ m.machine_no }} — {{ m.machine_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Camera Number <span class="text-red-500">*</span></label>
+                <input type="number" name="camera_number" value="1" min="1" required
+                    class="w-full border px-3 py-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="machine_object">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="moEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Machine Object</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Machine <span class="text-red-500">*</span></label>
+                <select name="machine_id" id="moEditMachineId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Machine —</option>
+                    {% for m in machines_list %}<option value="{{ m.id }}">{{ m.machine_no }} — {{ m.machine_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" id="moEditObjectId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Camera Number <span class="text-red-500">*</span></label>
+                <input type="number" name="camera_number" id="moEditCameraNumber" value="1" min="1" required
+                    class="w-full border px-3 py-2 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="machine_object">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
+{# -------------------- object_detection_model modals -------------------- #}
+{% elif tab == 'object_detection_model' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="object_detection_model">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Object Detection Model</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model <span class="text-red-500">*</span></label>
+                <select name="model_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Model —</option>
+                    {% for m in models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="object_detection_model">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="odmEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Object Detection Model</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" id="odmEditObjectId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model <span class="text-red-500">*</span></label>
+                <select name="model_id" id="odmEditModelId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Model —</option>
+                    {% for m in models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="object_detection_model">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
+{# -------------------- defect_detection_models modals -------------------- #}
+{% elif tab == 'defect_detection_models' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="defect_detection_models">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Defect Detection In Models</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Defect Mode <span class="text-red-500">*</span></label>
+                <select name="defect_mode_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Defect Mode —</option>
+                    {% for dm in defect_modes_list %}<option value="{{ dm.id }}">{{ dm.name_th }} / {{ dm.name_en }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model <span class="text-red-500">*</span></label>
+                <select name="model_id" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Model —</option>
+                    {% for m in models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="defect_detection_models">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="ddmEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Defect Detection In Models</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
+                <select name="object_id" id="ddmEditObjectId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Object —</option>
+                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Defect Mode <span class="text-red-500">*</span></label>
+                <select name="defect_mode_id" id="ddmEditDefectModeId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Defect Mode —</option>
+                    {% for dm in defect_modes_list %}<option value="{{ dm.id }}">{{ dm.name_th }} / {{ dm.name_en }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model <span class="text-red-500">*</span></label>
+                <select name="model_id" id="ddmEditModelId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Model —</option>
+                    {% for m in models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="defect_detection_models">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
+{# -------------------- defect_mode modals -------------------- #}
+{% elif tab == 'defect_mode' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="defect_mode">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Defect Mode</h2>
+        <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ (TH) <span class="text-red-500">*</span></label>
+                    <input name="name_th" required placeholder="ชื่อภาษาไทย" class="w-full border px-3 py-2 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ (EN) <span class="text-red-500">*</span></label>
+                    <input name="name_en" required placeholder="Name in English" class="w-full border px-3 py-2 rounded-md">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ (JP)</label>
+                <input name="name_jp" placeholder="日本語名" class="w-full border px-3 py-2 rounded-md">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Defect Type</label>
+                <select name="defect_type" class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— ไม่ระบุ —</option>
+                    {% for val, label in defect_type_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Class Name</label>
+                <input name="class_name" placeholder="class_name สำหรับโมเดล AI" class="w-full border px-3 py-2 rounded-md font-mono">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model</label>
+                <select name="model_id" class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— ไม่ระบุ —</option>
+                    {% for m in insp_models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="defect_mode">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="dmEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Defect Mode</h2>
+        <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ (TH) <span class="text-red-500">*</span></label>
+                    <input name="name_th" id="dmEditNameTh" required class="w-full border px-3 py-2 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ (EN) <span class="text-red-500">*</span></label>
+                    <input name="name_en" id="dmEditNameEn" required class="w-full border px-3 py-2 rounded-md">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ (JP)</label>
+                <input name="name_jp" id="dmEditNameJp" class="w-full border px-3 py-2 rounded-md">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Defect Type</label>
+                <select name="defect_type" id="dmEditDefectType" class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— ไม่ระบุ —</option>
+                    {% for val, label in defect_type_choices %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Class Name</label>
+                <input name="class_name" id="dmEditClassName" class="w-full border px-3 py-2 rounded-md font-mono">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model</label>
+                <select name="model_id" id="dmEditModelId" class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— ไม่ระบุ —</option>
+                    {% for m in insp_models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="defect_mode">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
+{# -------------------- kanban_mapping modals -------------------- #}
+{% elif tab == 'kanban_mapping' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="kanban_mapping">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Kanban Mapping</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Kanban QR <span class="text-red-500">*</span></label>
+                <input name="kanban_qr" required placeholder="รหัส QR ของ Kanban" class="w-full border px-3 py-2 rounded-md font-mono" />
+                <p class="text-xs text-slate-500 mt-1">ต้องไม่ซ้ำกับรายการอื่น (unique)</p>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Item QR <span class="text-red-500">*</span></label>
+                <input name="item_qr" required placeholder="รหัส QR ของชิ้นงาน" class="w-full border px-3 py-2 rounded-md font-mono" />
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ชิ้นงาน (Item) <span class="text-red-500">*</span></label>
+                <input type="hidden" name="item_id" id="kmAddItemId" />
+                <div class="relative">
+                    <input type="text" id="kmAddItemSearch" placeholder="พิมพ์เพื่อค้นหา SD Code / Part Name..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="kmAddItemDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">พิมพ์ชื่อหรือรหัสชิ้นงานเพื่อค้นหา</p>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="kanban_mapping">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="kmEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Kanban Mapping</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Kanban QR <span class="text-red-500">*</span></label>
+                <input name="kanban_qr" id="kmEditKanbanQr" required class="w-full border px-3 py-2 rounded-md font-mono" />
+                <p class="text-xs text-slate-500 mt-1">ต้องไม่ซ้ำกับรายการอื่น (unique)</p>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Item QR <span class="text-red-500">*</span></label>
+                <input name="item_qr" id="kmEditItemQr" required class="w-full border px-3 py-2 rounded-md font-mono" />
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ชิ้นงาน (Item) <span class="text-red-500">*</span></label>
+                <input type="hidden" name="item_id" id="kmEditItemId" />
+                <div class="relative">
+                    <input type="text" id="kmEditItemSearch" placeholder="พิมพ์เพื่อค้นหา SD Code / Part Name..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="kmEditItemDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="kanban_mapping">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p class="text-sm mt-2 text-slate-600">ต้องการลบ Kanban QR: <span id="deleteLabel" class="font-mono font-semibold text-slate-900"></span> ใช่หรือไม่?</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold">ลบ</button>
+        </div>
+    </form>
+</div>
+{% endif %}
+
+{# ============================================================ JAVASCRIPT ============================================================ #}
 <script>
-    function openModal(id) {
+// ---- Modal helpers ----
+function openModal(id) {
+    const el = document.getElementById(id)
+    el.classList.remove('hidden')
+    el.classList.add('flex')
+}
+function closeAllModals() {
+    ['addModal', 'editModal', 'deleteModal'].forEach(id => {
         const el = document.getElementById(id)
-        el.classList.remove('hidden')
-        el.classList.add('flex')
+        if (el) { el.classList.add('hidden'); el.classList.remove('flex') }
+    })
+}
+document.querySelectorAll('[data-close]').forEach(el => { el.onclick = closeAllModals })
+document.getElementById('openAddModal').onclick = () => openModal('addModal')
+
+{% if tab == 'machine' %}
+// ---- machine: edit / delete ----
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('editId').value = btn.dataset.id
+        document.getElementById('editNo').value = btn.dataset.no
+        document.getElementById('editName').value = btn.dataset.name
+        document.getElementById('editDetail').value = btn.dataset.detail
+        document.getElementById('editDept').value = btn.dataset.dept || ''
+        document.getElementById('editRes1').value = btn.dataset.res1 || ''
+        document.getElementById('editRes2').value = btn.dataset.res2 || ''
+        document.getElementById('editApproved').checked = (btn.dataset.approved === 'true')
+        document.getElementById('editLine').value = btn.dataset.line || ''
+        document.getElementById('editMachineType').value = btn.dataset.machineType || ''
+        document.getElementById('editCategory').value = btn.dataset.category || ''
+        openModal('editModal')
     }
-    function closeModal(el) {
-        el.classList.add('hidden')
-        el.classList.remove('flex')
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = btn.dataset.label
+        openModal('deleteModal')
     }
-
-    document.querySelectorAll('[data-close]').forEach(el => {
-        el.onclick = () => {
-            closeModal(document.getElementById('addModal'))
-            closeModal(document.getElementById('editModal'))
-            closeModal(document.getElementById('deleteModal'))
-        }
+})
+// Row click -> go to machine inspection page
+document.querySelectorAll('tr[data-row-href]').forEach(tr => {
+    tr.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return
+        window.location.href = tr.dataset.rowHref
     })
+})
 
-    document.getElementById('openAddModal').onclick = () => openModal('addModal')
+{% elif tab == 'detection_object' %}
+// ---- detection_object: edit / delete ----
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('doEditId').value = btn.dataset.id
+        document.getElementById('doEditName').value = btn.dataset.name
+        document.getElementById('doEditDescription').value = btn.dataset.description || ''
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
 
-    document.querySelectorAll('[data-open-edit]').forEach(btn => {
-        btn.onclick = () => {
-            document.getElementById('editId').value = btn.dataset.id
-            document.getElementById('editNo').value = btn.dataset.no
-            document.getElementById('editName').value = btn.dataset.name
-            document.getElementById('editDetail').value = btn.dataset.detail
-            document.getElementById('editDept').value = btn.dataset.dept || ''
-            document.getElementById('editRes1').value = btn.dataset.res1 || ''
-            document.getElementById('editRes2').value = btn.dataset.res2 || ''
-            document.getElementById('editApproved').checked = (btn.dataset.approved === 'true')
-            document.getElementById('editLine').value = btn.dataset.line || ''
-            document.getElementById('editMachineType').value = btn.dataset.machineType || ''
-            document.getElementById('editCategory').value = btn.dataset.category || ''
+{% elif tab == 'item_object' %}
+// ---- item_object: searchable item select + edit / delete ----
+const IO_ITEM_OPTIONS = [
+    {% for it in items_list %}
+    { id: "{{ it.id|escapejs }}", label: "{{ it.sd_code|default:it.sku|escapejs }} — {{ it.part_name|escapejs }}" },
+    {% endfor %}
+]
 
-            openModal('editModal')
+function initSearchSelect({ searchId, hiddenId, dropdownId, options }) {
+    const searchEl = document.getElementById(searchId)
+    const hiddenEl = document.getElementById(hiddenId)
+    const dropEl   = document.getElementById(dropdownId)
+
+    function renderList(query) {
+        const q = (query || '').toLowerCase()
+        const filtered = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options
+        dropEl.innerHTML = ''
+        if (!filtered.length) {
+            dropEl.innerHTML = '<div class="px-3 py-2 text-sm text-slate-400">ไม่พบรายการ</div>'
+            return
         }
-    })
-
-    document.querySelectorAll('[data-open-delete]').forEach(btn => {
-        btn.onclick = () => {
-            document.getElementById('deleteId').value = btn.dataset.id
-            document.getElementById('deleteLabel').innerText = btn.dataset.label
-            openModal('deleteModal')
-        }
-    })
-
-    // Row click -> go to that machine's inspection management page.
-    // Ignore clicks on action buttons (edit/delete) so they still work.
-    document.querySelectorAll('tr[data-row-href]').forEach(tr => {
-        tr.addEventListener('click', (e) => {
-            if (e.target.closest('button')) return
-            window.location.href = tr.dataset.rowHref
+        filtered.slice(0, 100).forEach(o => {
+            const div = document.createElement('div')
+            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50'
+            div.textContent = o.label
+            div.onmousedown = (e) => {
+                e.preventDefault()
+                hiddenEl.value = o.id
+                searchEl.value = o.label
+                dropEl.classList.add('hidden')
+            }
+            dropEl.appendChild(div)
         })
+    }
+
+    searchEl.addEventListener('focus', () => { renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('input', () => { hiddenEl.value = ''; renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('blur', () => {
+        setTimeout(() => { if (!hiddenEl.value) searchEl.value = ''; dropEl.classList.add('hidden') }, 150)
     })
+
+    return {
+        setValue(id, label) { hiddenEl.value = id || ''; searchEl.value = label || '' },
+        clear() { hiddenEl.value = ''; searchEl.value = '' }
+    }
+}
+
+const ioAddItemSelect  = initSearchSelect({ searchId: 'ioAddItemSearch',  hiddenId: 'ioAddItemId',  dropdownId: 'ioAddItemDropdown',  options: IO_ITEM_OPTIONS })
+const ioEditItemSelect = initSearchSelect({ searchId: 'ioEditItemSearch', hiddenId: 'ioEditItemId', dropdownId: 'ioEditItemDropdown', options: IO_ITEM_OPTIONS })
+
+document.getElementById('openAddModal').onclick = () => { ioAddItemSelect.clear(); openModal('addModal') }
+
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('ioEditId').value = btn.dataset.id
+        document.getElementById('ioEditObjectId').value = btn.dataset.objectId || ''
+        document.getElementById('ioEditQuantity').value = btn.dataset.quantity || 1
+        const found = IO_ITEM_OPTIONS.find(o => o.id === btn.dataset.itemId)
+        ioEditItemSelect.setValue(btn.dataset.itemId, found ? found.label : btn.dataset.itemLabel)
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+
+{% elif tab == 'machine_object' %}
+// ---- machine_object: edit / delete ----
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('moEditId').value = btn.dataset.id
+        document.getElementById('moEditMachineId').value = btn.dataset.machineId || ''
+        document.getElementById('moEditObjectId').value = btn.dataset.objectId || ''
+        document.getElementById('moEditCameraNumber').value = btn.dataset.cameraNumber || '1'
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+
+{% elif tab == 'object_detection_model' %}
+// ---- object_detection_model: edit / delete ----
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('odmEditId').value = btn.dataset.id
+        document.getElementById('odmEditObjectId').value = btn.dataset.objectId || ''
+        document.getElementById('odmEditModelId').value = btn.dataset.modelId || ''
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+
+{% elif tab == 'defect_detection_models' %}
+// ---- defect_detection_models: edit / delete ----
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('ddmEditId').value = btn.dataset.id
+        document.getElementById('ddmEditObjectId').value = btn.dataset.objectId || ''
+        document.getElementById('ddmEditDefectModeId').value = btn.dataset.defectModeId || ''
+        document.getElementById('ddmEditModelId').value = btn.dataset.modelId || ''
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+
+{% elif tab == 'defect_mode' %}
+// ---- defect_mode: edit / delete ----
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('dmEditId').value = btn.dataset.id
+        document.getElementById('dmEditNameTh').value = btn.dataset.nameTh || ''
+        document.getElementById('dmEditNameEn').value = btn.dataset.nameEn || ''
+        document.getElementById('dmEditNameJp').value = btn.dataset.nameJp || ''
+        document.getElementById('dmEditDefectType').value = btn.dataset.defectType || ''
+        document.getElementById('dmEditClassName').value = btn.dataset.className || ''
+        document.getElementById('dmEditModelId').value = btn.dataset.modelId || ''
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+
+{% elif tab == 'kanban_mapping' %}
+// ---- kanban_mapping: searchable item select + edit / delete ----
+const KM_ITEM_OPTIONS = [
+    {% for it in items_list %}
+    { id: "{{ it.id|escapejs }}", label: "{{ it.sd_code|default:it.sku|escapejs }} — {{ it.part_name|escapejs }}" },
+    {% endfor %}
+]
+
+function initKMSearchSelect({ searchId, hiddenId, dropdownId, options }) {
+    const searchEl = document.getElementById(searchId)
+    const hiddenEl = document.getElementById(hiddenId)
+    const dropEl   = document.getElementById(dropdownId)
+
+    function renderList(query) {
+        const q = (query || '').toLowerCase()
+        const filtered = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options
+        dropEl.innerHTML = ''
+        if (!filtered.length) {
+            dropEl.innerHTML = '<div class="px-3 py-2 text-sm text-slate-400">ไม่พบรายการ</div>'
+            return
+        }
+        filtered.slice(0, 100).forEach(o => {
+            const div = document.createElement('div')
+            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50'
+            div.textContent = o.label
+            div.onmousedown = (e) => {
+                e.preventDefault()
+                hiddenEl.value = o.id
+                searchEl.value = o.label
+                dropEl.classList.add('hidden')
+            }
+            dropEl.appendChild(div)
+        })
+    }
+
+    searchEl.addEventListener('focus', () => { renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('input', () => { hiddenEl.value = ''; renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('blur', () => {
+        setTimeout(() => { if (!hiddenEl.value) searchEl.value = ''; dropEl.classList.add('hidden') }, 150)
+    })
+
+    return {
+        setValue(id, label) { hiddenEl.value = id || ''; searchEl.value = label || '' },
+        clear() { hiddenEl.value = ''; searchEl.value = '' }
+    }
+}
+
+const kmAddItemSelect  = initKMSearchSelect({ searchId: 'kmAddItemSearch',  hiddenId: 'kmAddItemId',  dropdownId: 'kmAddItemDropdown',  options: KM_ITEM_OPTIONS })
+const kmEditItemSelect = initKMSearchSelect({ searchId: 'kmEditItemSearch', hiddenId: 'kmEditItemId', dropdownId: 'kmEditItemDropdown', options: KM_ITEM_OPTIONS })
+
+document.getElementById('openAddModal').onclick = () => { kmAddItemSelect.clear(); openModal('addModal') }
+
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = (e) => {
+        e.stopPropagation()
+        document.getElementById('kmEditId').value = btn.dataset.id
+        document.getElementById('kmEditKanbanQr').value = btn.dataset.kanbanQr
+        document.getElementById('kmEditItemQr').value = btn.dataset.itemQr
+        const found = KM_ITEM_OPTIONS.find(o => o.id === btn.dataset.itemId)
+        kmEditItemSelect.setValue(btn.dataset.itemId, found ? found.label : btn.dataset.itemLabel)
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = (e) => {
+        e.stopPropagation()
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+{% elif tab == 'ok_log' or tab == 'ng_log' %}
+function openPhotoModal(btn) {
+    const title = btn.dataset.title || ''
+    const photos = JSON.parse(btn.dataset.photos || '[]')
+    document.getElementById('photoModalTitle').textContent = title
+    const grid = document.getElementById('photoModalGrid')
+    const empty = document.getElementById('photoModalEmpty')
+    if (photos.length === 0) {
+        grid.classList.add('hidden')
+        empty.classList.remove('hidden')
+    } else {
+        empty.classList.add('hidden')
+        grid.classList.remove('hidden')
+        grid.innerHTML = photos.map(p => `
+            <div class="flex flex-col items-center gap-2" style="width:180px">
+                <a href="${p.path}" target="_blank" rel="noopener"
+                   class="block w-44 h-44 overflow-hidden rounded-xl border border-slate-200 hover:border-indigo-400 transition bg-slate-50">
+                    <img src="${p.path}" alt="${p.caption || ''}"
+                         class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                         onerror="this.parentElement.innerHTML='<span class=\'flex items-center justify-center h-full text-slate-300 text-xs\'>ไม่พบรูป</span>'" />
+                </a>
+                <span class="text-xs text-slate-500 text-center break-all">${p.caption || ''}</span>
+            </div>
+        `).join('')
+    }
+    document.getElementById('photoModal').classList.remove('hidden')
+}
+function closePhotoModal() {
+    document.getElementById('photoModal').classList.add('hidden')
+    document.getElementById('photoModalGrid').innerHTML = ''
+}
+{% endif %}
+
+function toggleLogDetail(detailId, iconId) {
+    const detail = document.getElementById(detailId)
+    const icon = document.getElementById(iconId)
+    if (!detail) return
+    const hidden = detail.classList.toggle('hidden')
+    if (icon) icon.style.transform = hidden ? '' : 'rotate(90deg)'
+}
 </script>
 
 {% endblock %}

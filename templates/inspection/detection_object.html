@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+{% block title %}Detection Object — TBSMRD{% endblock %}
+{% block content %}
+<section class="space-y-6">
+  <header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <a href="/inspection/machine/" class="text-sm font-semibold text-indigo-600 hover:underline">← กลับไปหน้า Inspection Machine</a>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Detection Object</h1>
+      <p class="text-sm text-slate-600 mt-1">ชิ้นส่วน/ตำแหน่งที่โมเดล Object Detection ต้องตรวจเจอ</p>
+    </div>
+  </header>
+
+  {% if messages %}
+  <div class="space-y-2">{% for m in messages %}<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ m }}</div>{% endfor %}</div>
+  {% endif %}
+
+  <form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <div class="md:col-span-6">
+        <label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+        <input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาชื่อ Object..."
+          class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <input type="hidden" name="per_page" value="{{ per_page }}">
+      <div class="md:col-span-2 flex items-end">
+        <button type="submit" class="w-full px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900">ค้นหา</button>
+      </div>
+    </div>
+    <div class="mt-3 flex justify-between">
+      <span class="text-xs text-slate-600">ทั้งหมด {{ total_count }} รายการ</span>
+      <a href="?" class="text-sm font-semibold underline">ล้างตัวกรอง</a>
+    </div>
+  </form>
+
+  <div class="rounded-2xl border border-slate-200 overflow-hidden">
+    <div class="bg-slate-100 px-4 py-3 flex justify-between items-center">
+      <span class="font-extrabold text-slate-800">รายการ Detection Object</span>
+      <button id="openAddModal" class="px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700">+ เพิ่ม Object</button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-white text-slate-800">
+          <tr>
+            <th class="px-4 py-3 text-left font-extrabold">ชื่อ Object</th>
+            <th class="px-4 py-3 text-left font-extrabold">คำอธิบาย</th>
+            <th class="px-4 py-3 text-center font-extrabold">จัดการ</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          {% for r in rows %}
+          <tr class="hover:bg-indigo-50/60">
+            <td class="px-4 py-3 font-semibold text-slate-900">{{ r.name }}</td>
+            <td class="px-4 py-3 text-slate-600">{{ r.description|default:"-" }}</td>
+            <td class="px-4 py-3 text-center">
+              <div class="flex justify-center gap-2">
+                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                  data-open-edit data-id="{{ r.id }}" data-name="{{ r.name }}" data-desc="{{ r.description }}">แก้ไข</button>
+                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                  data-open-delete data-id="{{ r.id }}" data-label="{{ r.name }}">ลบ</button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="px-4 py-8 text-center text-slate-500">ยังไม่มีข้อมูล Detection Object</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if paginator.num_pages > 1 %}
+    <div class="border-t border-slate-200 bg-white px-4 py-3 flex flex-wrap gap-1 justify-end">
+      {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}&q={{ q }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200">‹</a>{% endif %}
+      {% for p in page_items %}{% if p is None %}<span class="px-2 py-1.5 text-slate-400">…</span>{% elif p == page_obj.number %}<span class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-indigo-600 text-white">{{ p }}</span>{% else %}<a href="?page={{ p }}&per_page={{ per_page }}&q={{ q }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200">{{ p }}</a>{% endif %}{% endfor %}
+      {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}&q={{ q }}" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 hover:bg-slate-200">›</a>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ADD MODAL -->
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+  <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+  <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    {% csrf_token %}<input type="hidden" name="action" value="create">
+    <h2 class="text-lg font-extrabold mb-4">เพิ่ม Detection Object</h2>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ Object <span class="text-red-500">*</span></label>
+        <input name="name" required placeholder="เช่น BOLT, WASHER, BRACKET" class="w-full border px-3 py-2 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">คำอธิบาย</label>
+        <textarea name="description" rows="2" placeholder="รายละเอียดเพิ่มเติม" class="w-full border px-3 py-2 rounded-md"></textarea>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+      <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold">เพิ่ม</button>
+    </div>
+  </form>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+  <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+  <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+    {% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="id" id="editId">
+    <h2 class="text-lg font-extrabold mb-4">แก้ไข Detection Object</h2>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ Object <span class="text-red-500">*</span></label>
+        <input name="name" id="editName" required class="w-full border px-3 py-2 rounded-md">
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">คำอธิบาย</label>
+        <textarea name="description" id="editDesc" rows="2" class="w-full border px-3 py-2 rounded-md"></textarea>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+      <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold">บันทึก</button>
+    </div>
+  </form>
+</div>
+
+<!-- DELETE MODAL -->
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+  <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+  <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+    {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="id" id="deleteId">
+    <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+    <p class="text-sm mt-2 text-slate-600">ลบ: <span id="deleteLabel" class="font-semibold text-slate-900"></span></p>
+    <div class="mt-5 flex justify-end gap-2">
+      <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+      <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold">ลบ</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  function openModal(id){document.getElementById(id).classList.remove('hidden');document.getElementById(id).classList.add('flex')}
+  function closeAll(){['addModal','editModal','deleteModal'].forEach(id=>{document.getElementById(id).classList.add('hidden');document.getElementById(id).classList.remove('flex')})}
+  document.querySelectorAll('[data-close]').forEach(el=>el.onclick=closeAll)
+  document.getElementById('openAddModal').onclick=()=>openModal('addModal')
+  document.querySelectorAll('[data-open-edit]').forEach(btn=>{
+    btn.onclick=(e)=>{e.stopPropagation();document.getElementById('editId').value=btn.dataset.id;document.getElementById('editName').value=btn.dataset.name;document.getElementById('editDesc').value=btn.dataset.desc;openModal('editModal')}
+  })
+  document.querySelectorAll('[data-open-delete]').forEach(btn=>{
+    btn.onclick=(e)=>{e.stopPropagation();document.getElementById('deleteId').value=btn.dataset.id;document.getElementById('deleteLabel').innerText=btn.dataset.label;openModal('deleteModal')}
+  })
+</script>
+{% endblock %}
