@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import uuid
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -54,6 +56,23 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 class InspectionModelssView(TemplateView):
 	template_name = "inspection/inspection_modelss.html"
 
+	def _save_model_file(self, request) -> str | None:
+		f = request.FILES.get("model_file")
+		if not f:
+			return None
+		dest_dir = os.path.join(settings.MEDIA_ROOT, "inspection_models")
+		os.makedirs(dest_dir, exist_ok=True)
+		name, ext = os.path.splitext(f.name)
+		filename = f"{name}{ext}"
+		dest_path = os.path.join(dest_dir, filename)
+		if os.path.exists(dest_path):
+			filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+			dest_path = os.path.join(dest_dir, filename)
+		with open(dest_path, "wb") as out:
+			for chunk in f.chunks():
+				out.write(chunk)
+		return dest_path
+
 	def get_context_data(self, **kwargs):
 		ctx = super().get_context_data(**kwargs)
 		request = self.request
@@ -103,21 +122,6 @@ class InspectionModelssView(TemplateView):
 		ctx["total_count"] = paginator.count
 		return ctx
 
-	def _save_model_file(self, request) -> str | None:
-		"""รับ file upload จาก request แล้ว save ลง media/inspection_models/ คืน path string หรือ None"""
-		import os
-		from django.conf import settings
-		f = request.FILES.get("model_file")
-		if not f:
-			return None
-		save_dir = os.path.join(settings.MEDIA_ROOT, "inspection_models")
-		os.makedirs(save_dir, exist_ok=True)
-		dest = os.path.join(save_dir, f.name)
-		with open(dest, "wb+") as fh:
-			for chunk in f.chunks():
-				fh.write(chunk)
-		return os.path.join(settings.MEDIA_ROOT, "inspection_models", f.name)
-
 	def post(self, request, *args, **kwargs):
 		action = (request.POST.get("action") or "").strip().lower()
 		obj_id = (request.POST.get("id") or "").strip()
@@ -131,11 +135,6 @@ class InspectionModelssView(TemplateView):
 			count_detect = int(count_detect_raw)
 		except Exception:
 			count_detect = 0
-
-		# ถ้ามีไฟล์อัปโหลดให้ใช้ path ที่ save แทน model_path ที่กรอก
-		uploaded_path = self._save_model_file(request)
-		if uploaded_path:
-			model_path = uploaded_path
 
 		if action == "bulk_delete":
 			bulk_ids = request.POST.getlist("bulk_id")
@@ -168,6 +167,9 @@ class InspectionModelssView(TemplateView):
 				messages.error(request, "กรุณากรอก Class Name")
 				return redirect(request.get_full_path())
 			try:
+				uploaded_path = self._save_model_file(request)
+				if uploaded_path:
+					model_path = uploaded_path
 				with transaction.atomic():
 					InspectionModels.objects.create(
 						class_name=class_name,
@@ -189,6 +191,9 @@ class InspectionModelssView(TemplateView):
 				messages.error(request, "กรุณากรอก Class Name")
 				return redirect(request.get_full_path())
 			try:
+				uploaded_path = self._save_model_file(request)
+				if uploaded_path:
+					model_path = uploaded_path
 				with transaction.atomic():
 					obj = InspectionModels.objects.get(pk=obj_id)
 					obj.class_name = class_name

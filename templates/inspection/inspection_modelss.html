@@ -186,7 +186,13 @@
 					<div id="addFileName" class="text-sm text-slate-500 text-center">คลิกเพื่อเลือกไฟล์ Model</div>
 					<span class="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-semibold">เลือกไฟล์</span>
 				</div>
-				<p class="text-xs text-slate-400 mt-1">รองรับ .pt .pth .onnx .pkl .bin .weights</p>
+				<p class="text-xs text-slate-400 mt-1">รองรับ .pt .pth .onnx .pkl .bin .weights — ไฟล์จะถูก copy เข้าระบบอัตโนมัติ</p>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">หรือพิมพ์ Path ตรงๆ <span class="text-slate-400 font-normal">(ถ้าไม่ได้อัปโหลด)</span></label>
+				<input name="model_path" type="text" placeholder="เช่น /app/media/inspection_models/Bolt_LH.pt"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+				<p class="text-xs text-slate-400 mt-0.5">ถ้าอัปโหลดไฟล์ด้วย ระบบจะใช้ path จากไฟล์ที่อัปโหลดแทน</p>
 			</div>
 			<div id="addCountDetectBlock">
 				<label class="block text-sm font-semibold text-slate-700">Count Detect</label>
@@ -247,6 +253,12 @@
 					<span class="px-3 py-1 rounded-lg bg-slate-600 text-white text-xs font-semibold">เลือกไฟล์</span>
 				</div>
 				<p class="text-xs text-slate-400 mt-1">ถ้าไม่เลือกไฟล์ใหม่ จะใช้ path เดิม</p>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">หรือพิมพ์ Path ใหม่ตรงๆ <span class="text-slate-400 font-normal">(ไม่บังคับ)</span></label>
+				<input name="model_path" id="editModelPath" type="text" placeholder="เช่น /app/media/inspection_models/Bolt_LH.pt"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+				<p class="text-xs text-slate-400 mt-0.5">ถ้าอัปโหลดไฟล์ด้วย ระบบจะใช้ path จากไฟล์ที่อัปโหลดแทน</p>
 			</div>
 			<div id="editCountDetectBlock">
 				<label class="block text-sm font-semibold text-slate-700">Count Detect</label>
@@ -318,15 +330,22 @@
 			document.getElementById('editDescTh').value = btn.dataset.descriptionTh || '';
 			document.getElementById('editCountDetect').value = btn.dataset.countDetect || 0;
 			document.getElementById('editCurrentPath').textContent = btn.dataset.modelPath || '(ไม่มี)';
+			document.getElementById('editModelPath').value = '';
 			const mt = btn.dataset.modelType || 'OBJECT';
 			document.getElementById('editTypeObject').checked = (mt === 'OBJECT');
 			document.getElementById('editTypeDefect').checked = (mt === 'DEFECT');
 			toggleCountDetect('edit', mt);
+			// reset edit file zone
+			document.getElementById('editFileInput').value = '';
+			document.getElementById('editFileName').textContent = 'คลิกเพื่อเลือกไฟล์ใหม่';
+			const ez = document.getElementById('editFileZone');
+			ez.classList.remove('border-emerald-400', 'bg-emerald-50');
+			ez.classList.add('border-slate-300');
 			openModal(editModal);
 		});
 	});
 
-	// File upload display
+	// File input display handlers
 	document.getElementById('addFileInput').addEventListener('change', function() {
 		const nameEl = document.getElementById('addFileName');
 		const zone = document.getElementById('addFileZone');
@@ -399,6 +418,8 @@
 	document.querySelectorAll('#editModal input[name="model_type"]').forEach(radio => {
 		radio.addEventListener('change', () => toggleCountDetect('edit', radio.value));
 	});
+
+
 })();
 </script>
 {% endblock %}
