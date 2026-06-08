@@ -43,6 +43,7 @@ DELETE_ORDER = [
     # App config & content (standalone — only a created_by FK to User)
     "core.EmailReceiver",
     "core.Manual",
+    "core.PartRequest",
 
     # Production recording backbone (children first)
     "core.ProcessDefectScrap",
