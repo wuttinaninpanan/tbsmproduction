@@ -313,7 +313,6 @@ psql -U tbapp_user -d tbapp_db
 ### การDump data ปัจจุบัน
 ```
 poetry run python manage.py data_dump
-
 ```
 ### การโหลดData ที่Dumpใว้เข้าฐานข้อมูล
 

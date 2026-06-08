@@ -150,6 +150,13 @@ class ManualFormView(TemplateView):
             messages.error(request, "กรุณากรอกหัวข้อคู่มือ")
             return redirect(request.get_full_path())
 
+        if "blob:" in detail:
+            messages.error(
+                request,
+                "บันทึกรูปภาพไม่สำเร็จ: กรุณาแทรกรูปใหม่อีกครั้ง แล้วกดบันทึก",
+            )
+            return redirect(request.get_full_path())
+
         try:
             with transaction.atomic():
                 if manual is None:

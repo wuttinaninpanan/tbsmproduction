@@ -147,6 +147,10 @@ STATICFILES_DIRS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Manual pages can embed screenshots as base64 in rich-text HTML. Django's
+# default 2.5 MB request limit is too small for that workflow.
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", str(50 * 1024 * 1024)))
+
 
 # Email (SMTP)
 # Configured via env vars. When EMAIL_HOST is set, real SMTP is used; otherwise
