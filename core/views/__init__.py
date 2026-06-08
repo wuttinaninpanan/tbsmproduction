@@ -40,3 +40,11 @@ from core.views.inspection.machine_line import MachineLineView
 from core.views.inspection.machine_inspection import MachineInspectionView
 from core.views.inspection.machine_product_inspection import MachineProductInspectionView
 from core.views.inspection.scrap_dashboard import InspectionScrapDashboardView
+from core.views.inspection.kanban_item_mapping import KanbanItemMappingView
+from core.views.inspection.detection_object import DetectionObjectView
+from core.views.inspection.item_object import ItemObjectView
+from core.views.inspection.machine_object import MachineObjectView
+from core.views.inspection.object_detection_model import ObjectDetectionModelView
+from core.views.inspection.defect_detection_in_models import DefectDetectionInModelsView
+from core.views.inspection.defect_mode_view import DefectModeView
+from core.views.inspection.inspection_logs import InspectionLogsView

@@ -73,12 +73,13 @@ class MachineObject(BaseModel):
         on_delete=models.PROTECT,
         related_name="machine_objects",
     )
+    camera_number = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
         unique_together = ("machine", "object")
 
     def __str__(self):
-        return f"{self.machine} - {self.object.name}"
+        return f"{self.machine} - {self.object.name} (cam {self.camera_number})"
 
 
 class ObjectDetectionModel(BaseModel):

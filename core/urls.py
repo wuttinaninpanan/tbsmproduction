@@ -3,6 +3,8 @@ from core.views import HomeViews , LoginViews , LogoutView , ContactViews , Cont
 from core.views import InspectionItemView, InspectionModelssView, InspectionModelsDefectView, InspectionResultView, InspectionErrorView, InspectionProductsView, InspectionDefectView, InspectionDefectImageView
 from core.views import MachineLineView, MachineInspectionView, MachineProductInspectionView
 from core.views import InspectionScrapDashboardView
+from core.views import KanbanItemMappingView, DetectionObjectView, ItemObjectView, MachineObjectView, ObjectDetectionModelView, DefectDetectionInModelsView, DefectModeView
+from core.views import InspectionLogsView
 from core.views import EmailReceiverView
 from core.views import ManualListView, ManualDetailView, ManualFormView
 
@@ -56,6 +58,14 @@ urlpatterns = [
 
     path('inspection/scrap-dashboard/', InspectionScrapDashboardView.as_view(), name="inspection_scrap_dashboard"),
 
+    path('inspection/kanban-mapping/', KanbanItemMappingView.as_view(), name="inspection_kanban_mapping"),
+    path('inspection/detection-object/', DetectionObjectView.as_view(), name="inspection_detection_object"),
+    path('inspection/item-object/', ItemObjectView.as_view(), name="inspection_item_object"),
+    path('inspection/machine-object/', MachineObjectView.as_view(), name="inspection_machine_object"),
+    path('inspection/object-detection-model/', ObjectDetectionModelView.as_view(), name="inspection_object_detection_model"),
+    path('inspection/defect-detection-models/', DefectDetectionInModelsView.as_view(), name="inspection_defect_detection_models"),
+    path('inspection/defect-mode/', DefectModeView.as_view(), name="inspection_defect_mode"),
+    path('inspection/logs/', InspectionLogsView.as_view(), name="inspection_logs"),
     path('inspection/machine/', MachineLineView.as_view(), name="inspection_machine"),
     path('inspection/machine/<uuid:machine_id>/', MachineInspectionView.as_view(), name="inspection_machine_detail"),
     path('inspection/machine/<uuid:machine_id>/product/<uuid:item_id>/', MachineProductInspectionView.as_view(), name="inspection_machine_product"),

@@ -77,7 +77,7 @@
 					<tr>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Class Name</th>
-						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description (EN)</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Type</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description (TH)</th>
 						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Model Path</th>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Count Detect</th>
@@ -89,7 +89,13 @@
 						<tr class="hover:bg-slate-50">
 							<td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" /></td>
 							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.class_name|default:"-" }}</td>
-							<td class="px-4 py-3 text-slate-700 max-w-xs truncate">{{ r.description_en|default:"-" }}</td>
+							<td class="px-4 py-3 whitespace-nowrap">
+								{% if r.model_type == "OBJECT" %}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">Object Detection</span>
+								{% elif r.model_type == "DEFECT" %}
+								<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">Defect Detection</span>
+								{% else %}-{% endif %}
+							</td>
 							<td class="px-4 py-3 text-slate-700 max-w-xs truncate">{{ r.description_th|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-600 text-xs font-mono max-w-xs truncate">{{ r.model_path|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 text-center">{{ r.count_detect|default:0 }}</td>
@@ -103,7 +109,8 @@
 										data-description-en="{{ r.description_en|default:'' }}"
 										data-description-th="{{ r.description_th|default:'' }}"
 										data-model-path="{{ r.model_path|default:'' }}"
-										data-count-detect="{{ r.count_detect|default:0 }}">แก้ไข</button>
+										data-count-detect="{{ r.count_detect|default:0 }}"
+								data-model-type="{{ r.model_type|default:'OBJECT' }}">แก้ไข</button>
 									<button type="button"
 										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
 										data-open-delete
@@ -136,173 +143,283 @@
 	</div>
 </section>
 
-<form id="actionForm" method="post" class="hidden">
-	{% csrf_token %}
-	<input type="hidden" name="action" id="actionField" value="" />
-	<input type="hidden" name="id" id="idField" value="" />
-	<input type="hidden" name="class_name" id="classNameField" value="" />
-	<input type="hidden" name="description_en" id="descEnField" value="" />
-	<input type="hidden" name="description_th" id="descThField" value="" />
-	<input type="hidden" name="model_path" id="modelPathField" value="" />
-	<input type="hidden" name="count_detect" id="countDetectField" value="" />
-</form>
+
 
 <!-- Add Modal -->
 <div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
 	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
+	<form method="post" enctype="multipart/form-data" class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6 max-h-[90vh] overflow-y-auto">
+		{% csrf_token %}
+		<input type="hidden" name="action" value="create">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>x</button>
 		<h2 class="text-lg font-extrabold text-slate-900">เพิ่ม Inspection Model</h2>
 		<div class="mt-4 space-y-4">
-			<div><label class="block text-sm font-semibold text-slate-700">Class Name <span class="text-red-500">*</span></label>
-				<input id="addClassName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" /></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Description (EN)</label>
-				<textarea id="addDescEn" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Description (TH)</label>
-				<textarea id="addDescTh" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea></div>
 			<div>
-				<label class="block text-sm font-semibold text-slate-700">Count Detect</label>
-				<input id="addCountDetect" type="number" value="0"
-				class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"/>
+				<label class="block text-sm font-semibold text-slate-700">ประเภท Model <span class="text-red-500">*</span></label>
+				<div class="mt-2 flex gap-6">
+					<label class="inline-flex items-center gap-2 cursor-pointer">
+						<input type="radio" name="model_type" value="OBJECT" checked>
+						<span class="text-sm font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">Object Detection</span>
+					</label>
+					<label class="inline-flex items-center gap-2 cursor-pointer">
+						<input type="radio" name="model_type" value="DEFECT">
+						<span class="text-sm font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">Defect Detection</span>
+					</label>
+				</div>
 			</div>
-			<div><label class="block text-sm font-semibold text-slate-700">Model Path</label>
-				<input id="addModelPath" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 font-mono text-sm" /></div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Class Name <span class="text-red-500">*</span></label>
+				<input name="class_name" required type="text" placeholder="เช่น Bolt_LH, Defect_Scratch" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Description (TH)</label>
+				<textarea name="description_th" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">อัปโหลด Model File</label>
+				<input type="file" id="addFileInput" name="model_file" accept=".pt,.pth,.onnx,.pkl,.bin,.weights" class="hidden" />
+				<div id="addFileZone" onclick="document.getElementById('addFileInput').click()"
+					class="mt-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-xl px-4 py-5 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+					</svg>
+					<div id="addFileName" class="text-sm text-slate-500 text-center">คลิกเพื่อเลือกไฟล์ Model</div>
+					<span class="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-semibold">เลือกไฟล์</span>
+				</div>
+				<p class="text-xs text-slate-400 mt-1">รองรับ .pt .pth .onnx .pkl .bin .weights — ไฟล์จะถูก copy เข้าระบบอัตโนมัติ</p>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">หรือพิมพ์ Path ตรงๆ <span class="text-slate-400 font-normal">(ถ้าไม่ได้อัปโหลด)</span></label>
+				<input name="model_path" type="text" placeholder="เช่น /app/media/inspection_models/Bolt_LH.pt"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+				<p class="text-xs text-slate-400 mt-0.5">ถ้าอัปโหลดไฟล์ด้วย ระบบจะใช้ path จากไฟล์ที่อัปโหลดแทน</p>
+			</div>
+			<div id="addCountDetectBlock">
+				<label class="block text-sm font-semibold text-slate-700">Count Detect</label>
+				<input name="count_detect" type="number" value="0" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
 		</div>
 		<div class="mt-5 flex items-center justify-end gap-2">
 			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-			<button id="addSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+			<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
 		</div>
-	</div>
+	</form>
 </div>
 
 <!-- Edit Modal -->
 <div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
 	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
+	<form method="post" enctype="multipart/form-data" class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6 max-h-[90vh] overflow-y-auto">
+		{% csrf_token %}
+		<input type="hidden" name="action" value="update">
+		<input type="hidden" name="id" id="editId">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>x</button>
 		<h2 class="text-lg font-extrabold text-slate-900">แก้ไข Inspection Model</h2>
-		<p class="text-xs text-slate-500 mt-1" id="editLabel"></p>
 		<div class="mt-4 space-y-4">
-			<div><label class="block text-sm font-semibold text-slate-700">Class Name <span class="text-red-500">*</span></label>
-				<input id="editClassName" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" /></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Description (EN)</label>
-				<textarea id="editDescEn" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea></div>
-			<div><label class="block text-sm font-semibold text-slate-700">Description (TH)</label>
-				<textarea id="editDescTh" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea></div>
 			<div>
-				<label class="block text-sm font-semibold text-slate-700">Count Detect</label>
-				<input id="editCountDetect" type="number"
-				class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"/>
+				<label class="block text-sm font-semibold text-slate-700">ประเภท Model <span class="text-red-500">*</span></label>
+				<div class="mt-2 flex gap-6">
+					<label class="inline-flex items-center gap-2 cursor-pointer">
+						<input type="radio" name="model_type" id="editTypeObject" value="OBJECT">
+						<span class="text-sm font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">Object Detection</span>
+					</label>
+					<label class="inline-flex items-center gap-2 cursor-pointer">
+						<input type="radio" name="model_type" id="editTypeDefect" value="DEFECT">
+						<span class="text-sm font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">Defect Detection</span>
+					</label>
+				</div>
 			</div>
-			<div><label class="block text-sm font-semibold text-slate-700">Model Path</label>
-				<input id="editModelPath" type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 font-mono text-sm" /></div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Class Name <span class="text-red-500">*</span></label>
+				<input name="class_name" id="editClassName" required type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Description (TH)</label>
+				<textarea name="description_th" id="editDescTh" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Model Path ปัจจุบัน</label>
+				<p id="editCurrentPath" class="mt-1 text-xs font-mono text-slate-500 break-all bg-slate-50 border border-slate-200 rounded px-2 py-1.5 min-h-[28px]">(ไม่มี)</p>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">อัปโหลด Model File ใหม่ <span class="text-slate-400 font-normal">(ไม่บังคับ)</span></label>
+				<input type="file" id="editFileInput" name="model_file" accept=".pt,.pth,.onnx,.pkl,.bin,.weights" class="hidden" />
+				<div id="editFileZone" onclick="document.getElementById('editFileInput').click()"
+					class="mt-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-xl px-4 py-5 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition">
+					<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+					</svg>
+					<div id="editFileName" class="text-sm text-slate-500 text-center">คลิกเพื่อเลือกไฟล์ใหม่</div>
+					<span class="px-3 py-1 rounded-lg bg-slate-600 text-white text-xs font-semibold">เลือกไฟล์</span>
+				</div>
+				<p class="text-xs text-slate-400 mt-1">ถ้าไม่เลือกไฟล์ใหม่ จะใช้ path เดิม</p>
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">หรือพิมพ์ Path ใหม่ตรงๆ <span class="text-slate-400 font-normal">(ไม่บังคับ)</span></label>
+				<input name="model_path" id="editModelPath" type="text" placeholder="เช่น /app/media/inspection_models/Bolt_LH.pt"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+				<p class="text-xs text-slate-400 mt-0.5">ถ้าอัปโหลดไฟล์ด้วย ระบบจะใช้ path จากไฟล์ที่อัปโหลดแทน</p>
+			</div>
+			<div id="editCountDetectBlock">
+				<label class="block text-sm font-semibold text-slate-700">Count Detect</label>
+				<input name="count_detect" id="editCountDetect" type="number" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
 		</div>
 		<div class="mt-5 flex items-center justify-end gap-2">
 			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+			<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
 		</div>
-	</div>
+	</form>
 </div>
 
 <!-- Delete Modal -->
 <div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
 	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
-	<div class="relative w-full max-w-md rounded-2xl shadow-2xl bg-white p-6">
-		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
+	<form method="post" class="relative w-full max-w-md rounded-2xl shadow-2xl bg-white p-6">
+		{% csrf_token %}
+		<input type="hidden" name="action" value="delete">
+		<input type="hidden" name="id" id="deleteId">
 		<h2 class="text-lg font-extrabold text-slate-900">ยืนยันการลบ</h2>
 		<p class="text-sm text-slate-700 mt-2">ต้องการลบรายการนี้หรือไม่?</p>
-		<div class="mt-1 text-xs text-slate-500" id="deleteLabel"></div>
+		<div class="mt-1 text-xs text-slate-500 font-semibold" id="deleteLabel"></div>
 		<div class="mt-5 flex items-center justify-end gap-2">
 			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
-			<button id="deleteSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+			<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
 		</div>
-	</div>
+	</form>
 </div>
 
 <script>
 (() => {
-	const init = () => {
-		const actionForm = document.getElementById('actionForm');
-		const actionField = document.getElementById('actionField');
-		const idField = document.getElementById('idField');
-		const classNameField = document.getElementById('classNameField');
-		const descEnField = document.getElementById('descEnField');
-		const descThField = document.getElementById('descThField');
-		const modelPathField = document.getElementById('modelPathField');
-		const countDetectField = document.getElementById('countDetectField');
-		const addModal = document.getElementById('addModal');
-		const editModal = document.getElementById('editModal');
-		const deleteModal = document.getElementById('deleteModal');
+	const addModal = document.getElementById('addModal');
+	const editModal = document.getElementById('editModal');
+	const deleteModal = document.getElementById('deleteModal');
 
-		function openModal(el) { if (!el) return; el.classList.remove('hidden'); el.classList.add('flex'); }
-		function closeModal(el) { if (!el) return; el.classList.add('hidden'); el.classList.remove('flex'); }
-		document.querySelectorAll('[data-modal-close]').forEach(b => b.addEventListener('click', () => { closeModal(addModal); closeModal(editModal); closeModal(deleteModal); }));
-		document.querySelectorAll('[data-modal-backdrop]').forEach(b => b.addEventListener('click', () => { closeModal(addModal); closeModal(editModal); closeModal(deleteModal); }));
+	function openModal(el) { if (!el) return; el.classList.remove('hidden'); el.classList.add('flex'); }
+	function closeAll() { [addModal, editModal, deleteModal].forEach(m => { if(m){ m.classList.add('hidden'); m.classList.remove('flex'); }}); }
+	document.querySelectorAll('[data-modal-close], [data-modal-backdrop]').forEach(b => b.addEventListener('click', closeAll));
 
-		const selectAll = document.getElementById('selectAllRows');
-		const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-		function updateBulk() { bulkDeleteBtn.disabled = !document.querySelectorAll('.rowCheckbox:checked').length; }
-		if (selectAll) selectAll.addEventListener('change', () => { document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = selectAll.checked); updateBulk(); });
-		document.querySelectorAll('.rowCheckbox').forEach(cb => cb.addEventListener('change', updateBulk));
-		updateBulk();
+	const selectAll = document.getElementById('selectAllRows');
+	const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+	function updateBulk() { bulkDeleteBtn.disabled = !document.querySelectorAll('.rowCheckbox:checked').length; }
+	if (selectAll) selectAll.addEventListener('change', () => { document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = selectAll.checked); updateBulk(); });
+	document.querySelectorAll('.rowCheckbox').forEach(cb => cb.addEventListener('change', updateBulk));
+	updateBulk();
 
-		bulkDeleteBtn.addEventListener('click', () => {
-			const ids = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.dataset.id);
-			if (!ids.length) return;
-			if (!confirm(`ต้องการลบ ${ids.length} รายการหรือไม่?`)) return;
-			actionField.value = 'bulk_delete';
-			actionForm.querySelectorAll('input[name="bulk_id"]').forEach(n => n.remove());
-			ids.forEach(id => { const i = document.createElement('input'); i.type = 'hidden'; i.name = 'bulk_id'; i.value = id; actionForm.appendChild(i); });
-			actionForm.submit();
-		});
+	bulkDeleteBtn.addEventListener('click', () => {
+		const ids = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.dataset.id);
+		if (!ids.length) return;
+		if (!confirm('ต้องการลบ ' + ids.length + ' รายการหรือไม่?')) return;
+		const form = document.createElement('form');
+		form.method = 'post'; form.style.display = 'none';
+		const csrfEl = document.createElement('input'); csrfEl.type = 'hidden'; csrfEl.name = 'csrfmiddlewaretoken';
+		csrfEl.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+		form.appendChild(csrfEl);
+		const actionEl = document.createElement('input'); actionEl.type = 'hidden'; actionEl.name = 'action'; actionEl.value = 'bulk_delete';
+		form.appendChild(actionEl);
+		ids.forEach(id => { const i = document.createElement('input'); i.type='hidden'; i.name='bulk_id'; i.value=id; form.appendChild(i); });
+		document.body.appendChild(form); form.submit();
+	});
 
-		document.getElementById('openAddModal').addEventListener('click', () => {
-			document.getElementById('addClassName').value = '';
-			document.getElementById('addDescEn').value = '';
-			document.getElementById('addDescTh').value = '';
-			document.getElementById('addModelPath').value = '';
-			openModal(addModal);
-		});
-		document.getElementById('addSubmit').addEventListener('click', () => {
-			actionField.value = 'create'; idField.value = '';
-			classNameField.value = document.getElementById('addClassName').value.trim();
-			descEnField.value = document.getElementById('addDescEn').value.trim();
-			descThField.value = document.getElementById('addDescTh').value.trim();
-			modelPathField.value = document.getElementById('addModelPath').value.trim();
-			countDetectField.value = document.getElementById('addCountDetect').value || 0;
-			actionForm.submit();
-		});
+	document.getElementById('openAddModal').addEventListener('click', () => openModal(addModal));
 
-		const editLabel = document.getElementById('editLabel');
-		document.querySelectorAll('[data-open-edit]').forEach(btn => {
-			btn.addEventListener('click', () => {
-				idField.value = btn.dataset.id || '';
-				document.getElementById('editClassName').value = btn.dataset.className || '';
-				document.getElementById('editDescEn').value = btn.dataset.descriptionEn || '';
-				document.getElementById('editDescTh').value = btn.dataset.descriptionTh || '';
-				document.getElementById('editModelPath').value = btn.dataset.modelPath || '';
-				document.getElementById('editCountDetect').value = btn.dataset.countDetect || 0;
-				editLabel.textContent = btn.dataset.className || '';
-				openModal(editModal);
-			});
+	document.querySelectorAll('[data-open-edit]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			document.getElementById('editId').value = btn.dataset.id || '';
+			document.getElementById('editClassName').value = btn.dataset.className || '';
+			document.getElementById('editDescTh').value = btn.dataset.descriptionTh || '';
+			document.getElementById('editCountDetect').value = btn.dataset.countDetect || 0;
+			document.getElementById('editCurrentPath').textContent = btn.dataset.modelPath || '(ไม่มี)';
+			document.getElementById('editModelPath').value = '';
+			const mt = btn.dataset.modelType || 'OBJECT';
+			document.getElementById('editTypeObject').checked = (mt === 'OBJECT');
+			document.getElementById('editTypeDefect').checked = (mt === 'DEFECT');
+			toggleCountDetect('edit', mt);
+			// reset edit file zone
+			document.getElementById('editFileInput').value = '';
+			document.getElementById('editFileName').textContent = 'คลิกเพื่อเลือกไฟล์ใหม่';
+			const ez = document.getElementById('editFileZone');
+			ez.classList.remove('border-emerald-400', 'bg-emerald-50');
+			ez.classList.add('border-slate-300');
+			openModal(editModal);
 		});
-		document.getElementById('editSubmit').addEventListener('click', () => {
-			actionField.value = 'update';
-			classNameField.value = document.getElementById('editClassName').value.trim();
-			descEnField.value = document.getElementById('editDescEn').value.trim();
-			descThField.value = document.getElementById('editDescTh').value.trim();
-			modelPathField.value = document.getElementById('editModelPath').value.trim();
-			countDetectField.value = document.getElementById('editCountDetect').value || 0;
-			actionForm.submit();
-		});
+	});
 
-		const deleteLabel = document.getElementById('deleteLabel');
-		document.querySelectorAll('[data-open-delete]').forEach(btn => {
-			btn.addEventListener('click', () => { idField.value = btn.dataset.id || ''; deleteLabel.textContent = btn.dataset.label || ''; openModal(deleteModal); });
+	// File input display handlers
+	document.getElementById('addFileInput').addEventListener('change', function() {
+		const nameEl = document.getElementById('addFileName');
+		const zone = document.getElementById('addFileZone');
+		if (this.files && this.files[0]) {
+			const name = this.files[0].name;
+			const size = (this.files[0].size / 1024 / 1024).toFixed(2);
+			nameEl.innerHTML = '<span class="font-semibold text-indigo-700">' + name + '</span><br><span class="text-xs text-slate-400">' + size + ' MB</span>';
+			zone.classList.remove('border-slate-300');
+			zone.classList.add('border-emerald-400', 'bg-emerald-50');
+		} else {
+			nameEl.textContent = 'คลิกเพื่อเลือกไฟล์ Model';
+			zone.classList.remove('border-emerald-400', 'bg-emerald-50');
+			zone.classList.add('border-slate-300');
+		}
+	});
+
+	document.getElementById('editFileInput').addEventListener('change', function() {
+		const nameEl = document.getElementById('editFileName');
+		const zone = document.getElementById('editFileZone');
+		if (this.files && this.files[0]) {
+			const name = this.files[0].name;
+			const size = (this.files[0].size / 1024 / 1024).toFixed(2);
+			nameEl.innerHTML = '<span class="font-semibold text-indigo-700">' + name + '</span><br><span class="text-xs text-slate-400">' + size + ' MB</span>';
+			zone.classList.remove('border-slate-300');
+			zone.classList.add('border-emerald-400', 'bg-emerald-50');
+		} else {
+			nameEl.textContent = 'คลิกเพื่อเลือกไฟล์ใหม่';
+			zone.classList.remove('border-emerald-400', 'bg-emerald-50');
+			zone.classList.add('border-slate-300');
+		}
+	});
+
+	// Reset add file zone when add modal opens
+	document.getElementById('openAddModal').addEventListener('click', function() {
+		document.getElementById('addFileInput').value = '';
+		document.getElementById('addFileName').textContent = 'คลิกเพื่อเลือกไฟล์ Model';
+		const zone = document.getElementById('addFileZone');
+		zone.classList.remove('border-emerald-400', 'bg-emerald-50');
+		zone.classList.add('border-slate-300');
+	});
+
+	document.querySelectorAll('[data-open-delete]').forEach(btn => {
+		btn.addEventListener('click', () => {
+			document.getElementById('deleteId').value = btn.dataset.id || '';
+			document.getElementById('deleteLabel').textContent = btn.dataset.label || '';
+			openModal(deleteModal);
 		});
-		document.getElementById('deleteSubmit').addEventListener('click', () => { actionField.value = 'delete'; actionForm.submit(); });
-	};
-	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+	});
+
+	// แสดง/ซ่อน Count Detect ตาม model type
+	function toggleCountDetect(prefix, type) {
+		const block = document.getElementById(prefix + 'CountDetectBlock');
+		if (!block) return;
+		if (type === 'DEFECT') {
+			block.style.display = 'none';
+			const input = block.querySelector('input');
+			if (input) input.value = '0';
+		} else {
+			block.style.display = '';
+		}
+	}
+
+	// Add modal radios
+	document.querySelectorAll('#addModal input[name="model_type"]').forEach(radio => {
+		radio.addEventListener('change', () => toggleCountDetect('add', radio.value));
+	});
+	toggleCountDetect('add', 'OBJECT');
+
+	// Edit modal radios
+	document.querySelectorAll('#editModal input[name="model_type"]').forEach(radio => {
+		radio.addEventListener('change', () => toggleCountDetect('edit', radio.value));
+	});
+
+
 })();
 </script>
 {% endblock %}

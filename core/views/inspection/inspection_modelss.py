@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 import uuid
 
+from django.conf import settings
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -54,6 +56,23 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 class InspectionModelssView(TemplateView):
 	template_name = "inspection/inspection_modelss.html"
 
+	def _save_model_file(self, request) -> str | None:
+		f = request.FILES.get("model_file")
+		if not f:
+			return None
+		dest_dir = os.path.join(settings.MEDIA_ROOT, "inspection_models")
+		os.makedirs(dest_dir, exist_ok=True)
+		name, ext = os.path.splitext(f.name)
+		filename = f"{name}{ext}"
+		dest_path = os.path.join(dest_dir, filename)
+		if os.path.exists(dest_path):
+			filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+			dest_path = os.path.join(dest_dir, filename)
+		with open(dest_path, "wb") as out:
+			for chunk in f.chunks():
+				out.write(chunk)
+		return dest_path
+
 	def get_context_data(self, **kwargs):
 		ctx = super().get_context_data(**kwargs)
 		request = self.request
@@ -89,6 +108,7 @@ class InspectionModelssView(TemplateView):
 				"description_en": obj.description_en or "",
 				"description_th": obj.description_th or "",
 				"model_path": obj.model_path or "",
+				"model_type": obj.model_type or "OBJECT",
 				"count_detect": obj.count_detect,
 			})
 
@@ -109,6 +129,7 @@ class InspectionModelssView(TemplateView):
 		description_en = (request.POST.get("description_en") or "").strip()
 		description_th = (request.POST.get("description_th") or "").strip()
 		model_path = (request.POST.get("model_path") or "").strip()
+		model_type = (request.POST.get("model_type") or "OBJECT").strip()
 		count_detect_raw = (request.POST.get("count_detect") or "0").strip()
 		try:
 			count_detect = int(count_detect_raw)
@@ -146,12 +167,16 @@ class InspectionModelssView(TemplateView):
 				messages.error(request, "กรุณากรอก Class Name")
 				return redirect(request.get_full_path())
 			try:
+				uploaded_path = self._save_model_file(request)
+				if uploaded_path:
+					model_path = uploaded_path
 				with transaction.atomic():
 					InspectionModels.objects.create(
 						class_name=class_name,
 						description_en=description_en or None,
 						description_th=description_th or None,
 						model_path=model_path or None,
+						model_type=model_type,
 						count_detect=count_detect,
 					)
 				messages.success(request, "เพิ่ม Inspection Model สำเร็จ")
@@ -166,14 +191,19 @@ class InspectionModelssView(TemplateView):
 				messages.error(request, "กรุณากรอก Class Name")
 				return redirect(request.get_full_path())
 			try:
+				uploaded_path = self._save_model_file(request)
+				if uploaded_path:
+					model_path = uploaded_path
 				with transaction.atomic():
 					obj = InspectionModels.objects.get(pk=obj_id)
 					obj.class_name = class_name
 					obj.description_en = description_en or None
 					obj.description_th = description_th or None
-					obj.model_path = model_path or None
+					obj.model_type = model_type
+					if model_path:
+						obj.model_path = model_path
 					obj.count_detect = count_detect
-					obj.save(update_fields=["class_name", "description_en", "description_th", "model_path", "count_detect", "updated_at"])
+					obj.save(update_fields=["class_name", "description_en", "description_th", "model_path", "model_type", "count_detect", "updated_at"])
 				messages.success(request, "บันทึกการแก้ไขสำเร็จ")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
