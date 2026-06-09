@@ -17,7 +17,10 @@
 		.ac-empty{padding:.5rem .75rem;color:rgb(100 116 139);font-size:.85rem;font-style:italic}
 		.ac-chevron{position:absolute;right:.4rem;top:50%;transform:translateY(-50%);color:rgb(100 116 139);cursor:pointer;display:flex;align-items:center;justify-content:center;width:2rem;height:2rem}
 		/* Part rows (one input row per part on the chosen line) */
-		.parts-grid{display:grid;grid-template-columns:3rem minmax(0,1fr) 7rem 12rem 12rem;gap:.5rem;align-items:center}
+		.parts-grid{display:grid;grid-template-columns:3rem minmax(0,1fr) 7rem;gap:.5rem;align-items:center}
+		.line-header-grid{display:grid;grid-template-columns:minmax(14rem,1.5fr) minmax(9rem,11rem) minmax(9rem,11rem) max-content;gap:1rem;align-items:end;overflow:visible}
+		.line-header-grid > *{min-width:0}
+		.line-time-error{grid-column:1 / -1}
 		.parts-head{font-size:.7rem;font-weight:700;color:rgb(71 85 105);text-transform:uppercase;letter-spacing:.04em;padding:.25rem .5rem}
 		.part-row{border:1px solid rgb(226 232 240);background:#fff;border-radius:.5rem;padding:.5rem .5rem}
 		@media (max-width:768px){
@@ -30,7 +33,7 @@
 		<div class="flex items-center justify-between gap-4 flex-wrap">
 			<div>
 				<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">บันทึกการผลิต — Step 1/2</h1>
-				<p class="text-sm text-slate-600">เลือกไลน์ผลิต กรอกจำนวนการผลิตและเวลาเริ่ม/จบของแต่ละ Part</p>
+				<p class="text-sm text-slate-600">เลือกไลน์ผลิต กรอกเวลาเริ่ม/จบที่ระดับไลน์ แล้วกรอกจำนวนผลิตของแต่ละ Part</p>
 			</div>
 			<div class="text-xs text-slate-500">
 				<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span>Step 1: จำนวนการผลิต</span>
@@ -45,7 +48,7 @@
 		{# Single date + shift for the whole record — applied to every part #}
 		<div class="rounded-2xl bg-blue-50 border border-blue-200 p-4 flex flex-wrap items-center gap-x-6 gap-y-3" id="shift-wrap" data-default-shift="{{ default_shift_id }}">
 			<div class="flex flex-wrap items-center gap-3">
-				<label for="record-date" class="text-sm font-extrabold text-slate-900">วันที่ผลิต</label>
+				<label for="record-date" class="text-sm font-extrabold text-slate-900">วันทำการ</label>
 				<input id="record-date" type="date"
 					class="rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
@@ -63,7 +66,7 @@
 					{% endfor %}
 				</div>
 			</div>
-			<span class="text-xs text-slate-500 w-full mt-2">เลือกวันที่และกะครั้งเดียว — ใช้ร่วมกับทุกรุ่นที่บันทึก (กรอกแค่เวลาในแต่ละ Part)</span>
+			<span class="text-xs text-slate-500 w-full mt-2">เลือกวันทำการและกะครั้งเดียว — เวลาเริ่ม/จบกำหนดที่แต่ละไลน์</span>
 		</div>
 
 		<div id="lines-wrap" class="space-y-6"></div>
@@ -92,8 +95,8 @@
 {# ---- One line section ---- #}
 <template id="line-template">
 	<div class="line-section rounded-2xl bg-orange-50 p-4 sm:p-6 space-y-4">
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-			<div class="sm:col-span-2">
+		<div class="line-header-grid">
+			<div>
 				<label class="block text-sm font-extrabold text-slate-900 mb-1">Production line</label>
 				<div class="ac-wrap" data-ac>
 					<input data-line type="text" autocomplete="off" placeholder="พิมพ์ชื่อไลน์ผลิต..."
@@ -103,6 +106,16 @@
 					</div>
 					<div class="ac-menu" data-ac-menu role="listbox"></div>
 				</div>
+			</div>
+			<div class="flex flex-col gap-1">
+				<label class="block text-sm font-extrabold text-slate-900">เวลาเริ่ม</label>
+				<input data-start type="text" inputmode="none" maxlength="5" placeholder="08:10 (24 ชม.)" autocomplete="off" data-keypad="time" data-keypad-label="กรอกเวลาเริ่ม"
+					class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="flex flex-col gap-1">
+				<label class="block text-sm font-extrabold text-slate-900">เวลาจบ</label>
+				<input data-end type="text" inputmode="none" maxlength="5" placeholder="10:00 (24 ชม.)" autocomplete="off" data-keypad="time" data-keypad-label="กรอกเวลาจบ"
+					class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div class="flex justify-end gap-2">
 				<button type="button" data-remove-line
@@ -116,8 +129,6 @@
 				<div class="text-center">รูป</div>
 				<div>รายละเอียด Part</div>
 				<div class="text-center">จำนวนผลิต</div>
-				<div class="col-time">วัน-เวลาเริ่ม</div>
-				<div class="col-time">วัน-เวลาจบ</div>
 			</div>
 			<div data-parts class="space-y-2"></div>
 			<div data-parts-empty class="hidden text-sm text-slate-500 italic py-3">ไลน์นี้ยังไม่มี Part — กรุณาตั้งค่าใน Manage Line</div>
@@ -137,25 +148,10 @@
 		</div>
 		<input data-prodqty type="number" min="0" step="1" value="" placeholder="0" inputmode="none" data-keypad="int" data-keypad-label="กรอกจำนวนผลิต"
 			class="w-full rounded-md border border-slate-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-		<div class="col-time flex flex-col gap-1">
-			<input data-start-date type="date" lang="en-GB"
-				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-			<input data-start type="text" inputmode="none" maxlength="5" placeholder="08:10 (24 ชม.)" autocomplete="off" data-keypad="time" data-keypad-label="กรอกเวลาเริ่ม"
-				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-		</div>
-		<div class="col-time flex flex-col gap-1">
-			<input data-end-date type="date" lang="en-GB"
-				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-			<input data-end type="text" inputmode="none" maxlength="5" placeholder="10:00 (24 ชม.)" autocomplete="off" data-keypad="time" data-keypad-label="กรอกเวลาจบ"
-				class="w-full rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-		</div>
-		<div data-time-error class="hidden text-xs font-semibold text-red-600 pt-1" style="grid-column:1 / -1">
-			⚠ เวลาจบน้อยกว่าเวลาเริ่มในวันเดียวกัน — กรุณาแก้เวลา หรือปรับ “วันที่จบ” เป็นวันถัดไป
-		</div>
 	</div>
 </template>
 
 {% load static %}
 <script src="{% static 'js/numeric_keypad.js' %}?v=1" defer></script>
-<script src="{% static 'js/record_production.js' %}?v=17" defer></script>
+<script src="{% static 'js/record_production.js' %}?v=22" defer></script>
 {% endblock %}

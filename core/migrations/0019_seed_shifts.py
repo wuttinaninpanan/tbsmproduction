@@ -1,28 +1,40 @@
 # Seeds the 3 organisation work shifts (idempotent).
 #
 # These are the options the operator picks from on Page 1 of /record/.
-# Keyed on `name` so re-running never duplicates a row.
+# Keep these primary keys in sync with core/fixtures/master_seed.json so
+# `loaddata` can update the rows instead of inserting duplicate names.
+import uuid
+
 from django.db import migrations
 
 DEFAULT_SHIFTS = [
-    ("Shift A", 1),
-    ("Shift B", 2),
-    ("Shift D", 3),
+    ("05df7075-4d69-439a-961f-89689efa8910", "Shift A", 1),
+    ("53b977fb-51e6-415a-ad18-3f0df09264e0", "Shift B", 2),
+    ("9eb18f2a-fd35-42bf-b3d5-fae241d25d81", "Shift D", 3),
 ]
 
 
 def create_shifts(apps, schema_editor):
     Shift = apps.get_model("core", "Shift")
-    for name, display_number in DEFAULT_SHIFTS:
-        Shift.objects.update_or_create(
+    for pk, name, display_number in DEFAULT_SHIFTS:
+        canonical_id = uuid.UUID(pk)
+        shift = Shift.objects.filter(pk=canonical_id).first()
+        if shift is not None:
+            shift.name = name
+            shift.display_number = display_number
+            shift.save(update_fields=["name", "display_number"])
+            continue
+
+        Shift.objects.create(
+            id=canonical_id,
             name=name,
-            defaults={"display_number": display_number},
+            display_number=display_number,
         )
 
 
 def remove_shifts(apps, schema_editor):
     Shift = apps.get_model("core", "Shift")
-    Shift.objects.filter(name__in=[n for n, _ in DEFAULT_SHIFTS]).delete()
+    Shift.objects.filter(name__in=[n for _, n, _ in DEFAULT_SHIFTS]).delete()
 
 
 class Migration(migrations.Migration):

@@ -20,7 +20,7 @@
  */
 (() => {
 	const STORAGE_KEY = 'tbsm:record:draft';
-	const DRAFT_VERSION = 1;
+	const DRAFT_VERSION = 2;
 
 	const init = () => {
 		const dataEl = document.getElementById('record-data');
@@ -453,7 +453,7 @@
 		// ----------------------------------------------------------- single part
 		// One block per line for not-yet-assembled parts scrapped on that line
 		// (no product → recorded server-side as NG mode "Other" / "Single part").
-		function buildSinglePartBlock(lineCode) {
+		function buildSinglePartBlock(lineCode, lineEntry = {}) {
 			const scraps = singlePartScraps(lineCode);
 			if (!scraps.length) return null;
 
@@ -470,6 +470,8 @@
 			// Block-level hidden fields read by RecordDefectsView.post.
 			el.appendChild(mkHidden(`blocks[${gi}][production_line]`, lineCode || ''));
 			el.appendChild(mkHidden(`blocks[${gi}][single_part]`, '1'));
+			el.appendChild(mkHidden(`blocks[${gi}][start_time]`, lineEntry.startTime || ''));
+			el.appendChild(mkHidden(`blocks[${gi}][end_time]`, lineEntry.endTime || ''));
 			// Operator-entered reason → ProcessDefect.comment (server falls back
 			// to "Single part" when left blank). Attached to row 0 so the existing
 			// per-row comment parser picks it up.
@@ -619,7 +621,7 @@
 		entries.forEach((e) => {
 			if (!e.lineCode || seenLines.has(e.lineCode)) return;
 			seenLines.add(e.lineCode);
-			buildSinglePartBlock(e.lineCode);
+			buildSinglePartBlock(e.lineCode, e);
 		});
 
 		// Clear draft after a successful submit so coming back doesn't re-populate stale data.

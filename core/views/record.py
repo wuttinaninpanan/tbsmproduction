@@ -2,8 +2,9 @@
 
 Page 1 (``RecordProductionView`` — ``/record/``)
     Operator picks a production line via a typeahead, sees every part
-    configured on that line, and enters the produced quantity + start/end
-    time per part. Multiple lines can be filled in on the same page.
+    configured on that line, enters the line's start/end time, and enters
+    the produced quantity per part. Multiple lines can be filled in on the
+    same page.
     "Next" stores the draft in ``sessionStorage`` and navigates to Page 2.
 
 Page 2 (``RecordDefectsView`` — ``/record/defects/``)
@@ -190,7 +191,7 @@ def _build_record_payload() -> dict:
 
 @method_decorator(user_required, name="dispatch")
 class RecordProductionView(TemplateView):
-    """Page 1 — production quantity & time window per (line, part)."""
+    """Page 1 — line time window & production quantity per part."""
 
     template_name = "record_production.html"
 
@@ -469,6 +470,21 @@ class RecordDefectsView(TemplateView):
 
         production_created = defect_created = scrap_created = skipped = 0
         user = request.user if getattr(request, "user", None) is not None and request.user.is_authenticated else None
+
+        missing_lot_time = False
+        for g in groups.values():
+            has_useful_record = g["prod_qty"] >= 1 or any(
+                b["defect"] is not None and b["defect_qty"] >= 1 for b in g["blocks"]
+            )
+            if not has_useful_record:
+                continue
+            if production_date is None or g["start_time"] is None or g["end_time"] is None:
+                missing_lot_time = True
+                break
+
+        if missing_lot_time:
+            messages.error(request, "บันทึกไม่สำเร็จ: ต้องมีวันทำการและเวลาเริ่ม/จบของไลน์ เพื่อสร้างเลขล็อตให้ถูกต้อง")
+            return redirect("record")
 
         with transaction.atomic():
             for g in groups.values():

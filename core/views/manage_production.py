@@ -89,7 +89,7 @@ class ManageProductionViews(TemplateView):
     def _filtered_queryset(self, q: str, date_from=None, date_to=None):
         """ProductionRecord queryset (newest first) with defects + scraps
         prefetched, optionally filtered by the free-text search `q` and a
-        created-at date range. Shared by the list view and the Excel export so
+        working-day date range. Shared by the list view and the Excel export so
         both honor the same filter."""
         qs = (
             ProductionRecord.objects.select_related("line", "item", "shift", "created_by", "created_by__profile")
@@ -106,12 +106,13 @@ class ManageProductionViews(TemplateView):
             )
         )
         if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
+            qs = qs.filter(Q(production_date__gte=date_from) | Q(production_date__isnull=True, created_at__date__gte=date_from))
         if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
+            qs = qs.filter(Q(production_date__lte=date_to) | Q(production_date__isnull=True, created_at__date__lte=date_to))
         if q:
             qs = qs.filter(
                 Q(line__line_name__icontains=q)
+                | Q(lot_number__icontains=q)
                 | Q(item__sd_code__icontains=q)
                 | Q(item__part_number__icontains=q)
                 | Q(item__part_name__icontains=q)
@@ -132,12 +133,13 @@ class ManageProductionViews(TemplateView):
             "defect_mode",
         ).prefetch_related("details")
         if date_from:
-            qs = qs.filter(**{f"{pr}created_at__date__gte": date_from})
+            qs = qs.filter(Q(**{f"{pr}production_date__gte": date_from}) | Q(**{f"{pr}production_date__isnull": True, f"{pr}created_at__date__gte": date_from}))
         if date_to:
-            qs = qs.filter(**{f"{pr}created_at__date__lte": date_to})
+            qs = qs.filter(Q(**{f"{pr}production_date__lte": date_to}) | Q(**{f"{pr}production_date__isnull": True, f"{pr}created_at__date__lte": date_to}))
         if q:
             qs = qs.filter(
                 Q(**{f"{pr}line__line_name__icontains": q})
+                | Q(**{f"{pr}lot_number__icontains": q})
                 | Q(**{f"{pr}item__sd_code__icontains": q})
                 | Q(**{f"{pr}item__part_number__icontains": q})
                 | Q(**{f"{pr}item__part_name__icontains": q})
@@ -159,12 +161,13 @@ class ManageProductionViews(TemplateView):
             "component_part",
         )
         if date_from:
-            qs = qs.filter(**{f"{pr}created_at__date__gte": date_from})
+            qs = qs.filter(Q(**{f"{pr}production_date__gte": date_from}) | Q(**{f"{pr}production_date__isnull": True, f"{pr}created_at__date__gte": date_from}))
         if date_to:
-            qs = qs.filter(**{f"{pr}created_at__date__lte": date_to})
+            qs = qs.filter(Q(**{f"{pr}production_date__lte": date_to}) | Q(**{f"{pr}production_date__isnull": True, f"{pr}created_at__date__lte": date_to}))
         if q:
             qs = qs.filter(
                 Q(**{f"{pr}line__line_name__icontains": q})
+                | Q(**{f"{pr}lot_number__icontains": q})
                 | Q(**{f"{pr}item__sd_code__icontains": q})
                 | Q(component_part__sd_code__icontains=q)
                 | Q(component_part__part_number__icontains=q)
@@ -253,6 +256,7 @@ class ManageProductionViews(TemplateView):
                     "id": str(pr.id),
                     "created_at": pr.created_at,
                     "production_date": pr.production_date,
+                    "lot_number": pr.lot_number,
                     "created_by_name": pr.created_by.get_short_name() if pr.created_by_id else "",
                     "shift": self._shift_display(pr.created_by if pr.created_by_id else None, pr),
                     "line_name": pr.line.line_name if pr.line_id else "-",
@@ -278,6 +282,7 @@ class ManageProductionViews(TemplateView):
                     "id": str(d.id),
                     "created_at": pr.created_at,
                     "production_date": pr.production_date,
+                    "lot_number": pr.lot_number,
                     "created_by_name": user.get_short_name() if user else "",
                     "shift": self._shift_display(user, pr),
                     "line_name": pr.line.line_name if pr.line_id else "-",
@@ -303,6 +308,7 @@ class ManageProductionViews(TemplateView):
                     "id": str(s.id),
                     "created_at": pr.created_at,
                     "production_date": pr.production_date,
+                    "lot_number": pr.lot_number,
                     "created_by_name": user.get_short_name() if user else "",
                     "shift": self._shift_display(user, pr),
                     "line_name": pr.line.line_name if pr.line_id else "-",
@@ -431,6 +437,7 @@ class ManageProductionViews(TemplateView):
                     user_str,
                     shift_str,
                     line_name,
+                    pr.lot_number or "-",
                     (getattr(pr.item, "sd_code", "") or "-") if pr.item_id else "-",
                     (getattr(pr.item, "part_name", "") or "-") if pr.item_id else "-",
                     pr.products_quantity,
@@ -452,6 +459,7 @@ class ManageProductionViews(TemplateView):
                             user_str,
                             shift_str,
                             line_name,
+                            pr.lot_number or "-",
                             (getattr(comp, "sd_code", "") or "-") or "-",
                             (getattr(comp, "part_number", "") or "-") or "-",
                             (getattr(comp, "part_name", "") or "-") or "-",
