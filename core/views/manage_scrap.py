@@ -41,6 +41,9 @@ def _adapt_scrap(s: ProcessDefectScrap) -> SimpleNamespace:
     return SimpleNamespace(
         id=s.id,
         created_at=s.created_at,
+        production_date=pr.production_date,
+        lot_number=pr.lot_number,
+        shift=pr.shift,
         created_by=pr.created_by,
         production_line=pr.line,       # Line  → str = line_name, .code works
         part_number=pr.item,           # Item_list (produced part) → .sd_code, .id
@@ -107,21 +110,23 @@ class ManageScrapViews(TemplateView):
         qs = ProcessDefectScrap.objects.select_related(
             "process_defect__production_record__line",
             "process_defect__production_record__item",
+            "process_defect__production_record__shift",
             "process_defect__production_record__created_by",
             "process_defect__production_record__created_by__profile",
             "process_defect__defect_mode",
             "component_part",
         ).all()
 
+        pr = "process_defect__production_record__"
         if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
+            qs = qs.filter(Q(**{f"{pr}production_date__gte": date_from}) | Q(**{f"{pr}production_date__isnull": True, "created_at__date__gte": date_from}))
         if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
+            qs = qs.filter(Q(**{f"{pr}production_date__lte": date_to}) | Q(**{f"{pr}production_date__isnull": True, "created_at__date__lte": date_to}))
 
         if q:
-            pr = "process_defect__production_record__"
             qs = qs.filter(
                 Q(**{f"{pr}line__line_name__icontains": q})
+                | Q(**{f"{pr}lot_number__icontains": q})
                 | Q(**{f"{pr}item__part_number__icontains": q})
                 | Q(**{f"{pr}item__sd_code__icontains": q})
                 | Q(**{f"{pr}item__sku__icontains": q})
@@ -477,20 +482,22 @@ class ManageScrapViews(TemplateView):
         qs = ProcessDefectScrap.objects.select_related(
             "process_defect__production_record__line",
             "process_defect__production_record__item",
+            "process_defect__production_record__shift",
             "process_defect__production_record__created_by",
             "process_defect__production_record__created_by__profile",
             "process_defect__defect_mode",
             "component_part",
         ).all()
 
+        pr = "process_defect__production_record__"
         if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
+            qs = qs.filter(Q(**{f"{pr}production_date__gte": date_from}) | Q(**{f"{pr}production_date__isnull": True, "created_at__date__gte": date_from}))
         if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
+            qs = qs.filter(Q(**{f"{pr}production_date__lte": date_to}) | Q(**{f"{pr}production_date__isnull": True, "created_at__date__lte": date_to}))
         if q:
-            pr = "process_defect__production_record__"
             qs = qs.filter(
                 Q(**{f"{pr}line__line_name__icontains": q})
+                | Q(**{f"{pr}lot_number__icontains": q})
                 | Q(**{f"{pr}item__part_number__icontains": q})
                 | Q(process_defect__defect_mode__name_th__icontains=q)
                 | Q(process_defect__defect_mode__name_en__icontains=q)
@@ -508,9 +515,11 @@ class ManageScrapViews(TemplateView):
 
         headers = [
             "วันที่/เวลา",
+            "วันทำการ",
             "ผู้ใช้งาน",
             "กะ",
             "Production line",
+            "Lot no.",
             "SD number",
             "Defect mode",
             "Comment",
@@ -528,7 +537,9 @@ class ManageScrapViews(TemplateView):
         for s in qs:
             r = _adapt_scrap(s)
             shift_display = "-"
-            if r.created_by and hasattr(r.created_by, "profile") and r.created_by.profile:
+            if r.shift:
+                shift_display = r.shift.name
+            elif r.created_by and hasattr(r.created_by, "profile") and r.created_by.profile:
                 shift_value = r.created_by.profile.shift
                 if shift_value == "shift_a":
                     shift_display = "กะ A"
@@ -541,9 +552,11 @@ class ManageScrapViews(TemplateView):
             ws.append(
                 [
                     created_at_local.strftime("%d/%m/%Y %H:%M") if created_at_local else "-",
+                    r.production_date.strftime("%d/%m/%Y") if r.production_date else "-",
                     r.created_by.get_short_name() if r.created_by else "-",
                     shift_display,
                     getattr(r.production_line, "code", "-"),
+                    r.lot_number or "-",
                     getattr(r.part_number, "sd_code", "-") or "-",
                     getattr(r.defect_mode, "name", "-"),
                     r.comment or "-",
@@ -553,14 +566,16 @@ class ManageScrapViews(TemplateView):
             )
 
         ws.column_dimensions["A"].width = 18
-        ws.column_dimensions["B"].width = 15
-        ws.column_dimensions["C"].width = 12
-        ws.column_dimensions["D"].width = 18
+        ws.column_dimensions["B"].width = 14
+        ws.column_dimensions["C"].width = 15
+        ws.column_dimensions["D"].width = 12
         ws.column_dimensions["E"].width = 18
-        ws.column_dimensions["F"].width = 22
-        ws.column_dimensions["G"].width = 22
+        ws.column_dimensions["F"].width = 24
+        ws.column_dimensions["G"].width = 18
         ws.column_dimensions["H"].width = 22
-        ws.column_dimensions["I"].width = 12
+        ws.column_dimensions["I"].width = 22
+        ws.column_dimensions["J"].width = 22
+        ws.column_dimensions["K"].width = 12
 
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

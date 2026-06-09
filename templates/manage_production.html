@@ -40,16 +40,16 @@
 		<div class="flex flex-col gap-3 sm:flex-row sm:items-end">
 			<div class="flex-1 min-w-0">
 				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
-				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา line / SD / part / defect"
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหา line / lot / SD / part / defect"
 					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div class="flex-1 min-w-0">
-				<label class="block text-sm font-semibold text-slate-700">วันที่เริ่มต้น</label>
+				<label class="block text-sm font-semibold text-slate-700">วันทำการเริ่มต้น</label>
 				<input type="text" id="date_from_picker" name="date_from" value="{{ date_from|default:'' }}" placeholder="เลือกวันที่"
 					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
 			<div class="flex-1 min-w-0">
-				<label class="block text-sm font-semibold text-slate-700">วันที่สิ้นสุด</label>
+				<label class="block text-sm font-semibold text-slate-700">วันทำการสิ้นสุด</label>
 				<input type="text" id="date_to_picker" name="date_to" value="{{ date_to|default:'' }}" placeholder="เลือกวันที่"
 					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
 			</div>
@@ -115,10 +115,11 @@
 						<tr>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่ผลิต</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันทำการ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Lot no.</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Defect mode</th>
@@ -136,6 +137,7 @@
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.created_by_name|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.shift|default:"-" }}</td>
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap text-center">{{ r.line_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.lot_number|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.sd_code|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.part_name|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700 text-center">{{ r.defect_name|default:"-" }}</td>
@@ -150,7 +152,7 @@
 								</td>
 							</tr>
 						{% empty %}
-							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="12">ไม่มีรายการของเสีย</td></tr>
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="13">ไม่มีรายการของเสีย</td></tr>
 						{% endfor %}
 					</tbody>
 				</table>
@@ -162,10 +164,11 @@
 						<tr>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่ผลิต</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันทำการ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Lot no.</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">SD number (ชิ้นส่วน)</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Part number (ชิ้นส่วน)</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Part name (ชิ้นส่วน)</th>
@@ -183,6 +186,7 @@
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.created_by_name|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.shift|default:"-" }}</td>
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap text-center">{{ r.line_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.lot_number|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.comp_sd_code|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.comp_part_number|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.comp_part_name|default:"-" }}</td>
@@ -197,7 +201,7 @@
 								</td>
 							</tr>
 						{% empty %}
-							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="12">ไม่มีรายการชิ้นส่วนที่ทิ้ง</td></tr>
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="13">ไม่มีรายการชิ้นส่วนที่ทิ้ง</td></tr>
 						{% endfor %}
 					</tbody>
 				</table>
@@ -210,10 +214,11 @@
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
 							<th class="px-2 py-3"></th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
-							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่ผลิต</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันทำการ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Lot no.</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
 							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จำนวนผลิต</th>
@@ -238,6 +243,7 @@
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.created_by_name|default:"-" }}</td>
 								<td class="px-4 py-3 whitespace-nowrap text-slate-700 text-center">{{ r.shift|default:"-" }}</td>
 								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap text-center">{{ r.line_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.lot_number|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap text-center">{{ r.sd_code|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.part_name|default:"-" }}</td>
 								<td class="px-4 py-3 text-center font-semibold text-slate-900">{{ r.products_quantity }}</td>
@@ -255,7 +261,7 @@
 							</tr>
 							<tr id="detail-{{ r.id }}" class="hidden bg-slate-50">
 								<td></td>
-								<td colspan="12" class="px-6 py-4">
+								<td colspan="13" class="px-6 py-4">
 									{% if r.defects %}
 										<div class="space-y-3">
 											{% for d in r.defects %}

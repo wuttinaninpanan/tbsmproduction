@@ -19,6 +19,7 @@ from email.utils import formataddr, parseaddr
 
 from django.conf import settings
 from django.core.mail import EmailMessage
+from django.db.models import Q
 from django.db.models import Prefetch
 from django.utils import timezone
 
@@ -110,7 +111,10 @@ def _production_export_data(date_from, date_to):
                 ),
             )
         )
-        .filter(created_at__date__gte=date_from, created_at__date__lte=date_to)
+        .filter(
+            Q(production_date__gte=date_from, production_date__lte=date_to)
+            | Q(production_date__isnull=True, created_at__date__gte=date_from, created_at__date__lte=date_to)
+        )
         .order_by("-created_at")
     )
 
@@ -135,6 +139,7 @@ def _production_export_data(date_from, date_to):
                 user_str,
                 shift_str,
                 line_name,
+                pr.lot_number or "-",
                 (getattr(pr.item, "sd_code", "") or "-") if pr.item_id else "-",
                 (getattr(pr.item, "part_name", "") or "-") if pr.item_id else "-",
                 pr.products_quantity,
@@ -156,6 +161,7 @@ def _production_export_data(date_from, date_to):
                         user_str,
                         shift_str,
                         line_name,
+                        pr.lot_number or "-",
                         (getattr(comp, "sd_code", "") or "-") or "-",
                         (getattr(comp, "part_number", "") or "-") or "-",
                         (getattr(comp, "part_name", "") or "-") or "-",

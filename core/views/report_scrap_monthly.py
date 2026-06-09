@@ -2,8 +2,8 @@ import calendar
 from datetime import datetime
 from uuid import UUID
 
-from django.db.models import DateField, ExpressionWrapper, Max, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import DateField, Max, Q, Sum
+from django.db.models.functions import Coalesce, TruncDate
 from django.http import HttpResponse
 from django.utils import timezone
 from django.views.generic import TemplateView
@@ -68,9 +68,10 @@ class MonthlyComponentPartReportViews(TemplateView):
 
         # New backbone: one scrapped-component entry = one ProcessDefectScrap,
         # tied to its produced part via process_defect → production_record.
+        pr = "process_defect__production_record__"
         records_qs = ProcessDefectScrap.objects.filter(
-            created_at__gte=start_dt,
-            created_at__lt=end_dt,
+            Q(**{f"{pr}production_date__gte": start_dt.date(), f"{pr}production_date__lt": end_dt.date()})
+            | Q(**{f"{pr}production_date__isnull": True, "created_at__gte": start_dt, "created_at__lt": end_dt})
         )
         if selected_line:
             records_qs = records_qs.filter(
@@ -78,11 +79,11 @@ class MonthlyComponentPartReportViews(TemplateView):
             )
 
         # Calendar-day bucket (00:00–00:00). Keep it explicit so DB truncation is stable.
-        day_field = ExpressionWrapper(TruncDate("created_at"), output_field=DateField())
+        day_field = Coalesce(f"{pr}production_date", TruncDate("created_at"), output_field=DateField())
 
         # Aggregate by (produced line, produced SD number, day).
-        line_key = "process_defect__production_record__line_id"
-        sd_key = "process_defect__production_record__item__sd_code"
+        line_key = f"{pr}line_id"
+        sd_key = f"{pr}item__sd_code"
         agg = (
             records_qs.annotate(work_date=day_field)
             .values(line_key, sd_key, "work_date")

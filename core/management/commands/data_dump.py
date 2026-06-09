@@ -2,7 +2,8 @@
 
 The snapshot covers every "data" table needed to recreate a running app
 from scratch — users, lookups, items, BoM. Operational/log tables
-(AuditLogEntry, DefectStat) and Django internals (ContentType, Permission,
+(AuditLogEntry, DefectStat), inspection-machine scrap rows (ScrapRecord and
+its defect/photo children), and Django internals (ContentType, Permission,
 Sessions) are deliberately excluded.
 
 The fixture is a Django JSON fixture, so it can be replayed with
@@ -99,11 +100,6 @@ SEED_MODELS = [
     "core.MachineObject",
     "core.ObjectDetectionModel",
     "core.DefectDetectionInModels",
-
-    # Scrap (operational, but include for end-to-end seed)
-    "core.ScrapRecord",
-    "core.InspectionDefect",        # CASCADE off ScrapRecord
-    "core.InspectionDefectImage",   # CASCADE off InspectionDefect
 
     # Production recording backbone (parents before children)
     "core.ProductionRecord",

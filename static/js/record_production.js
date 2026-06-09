@@ -1,10 +1,10 @@
 /**
- * Record — Page 1 (production qty + time window per part).
+ * Record — Page 1 (production qty per part + time window per line).
  *
  * Lets the operator add one or more "line sections". Each section has a
  * custom JS autocomplete (typeahead) for the line, and once a line is
- * picked, every Part configured on that line is rendered as one input row
- * (qty + start_time + end_time).
+ * picked, the operator keys one start/end window for that line, then every
+ * Part configured on that line is rendered as one quantity input row.
  *
  * On "ถัดไป" we serialize all non-empty entries into ``sessionStorage``
  * under ``tbsm:record:draft`` and navigate to Page 2 ("/record/defects/").
@@ -12,7 +12,7 @@
  *
  * Draft shape:
  *   {
- *     version: 1,
+ *     version: 2,
  *     savedAt: <ISO>,
  *     entries: [
  *       { lineCode, partId, sdNumber, partNumber, partName,
@@ -22,7 +22,7 @@
  */
 (() => {
 	const STORAGE_KEY = 'tbsm:record:draft';
-	const DRAFT_VERSION = 1;
+	const DRAFT_VERSION = 2;
 
 	const init = () => {
 		const dataEl = document.getElementById('record-data');
@@ -40,9 +40,9 @@
 
 		// ----------------------------------------------------------- helpers
 		const getLine = (lineCode) => lines.find((l) => l.id === lineCode) || null;
-		const sections = []; // [{ el, lineInput, lineCode, partsWrap, partRows: [{ partId, ... }] }]
+		const sections = []; // [{ el, lineInput, lineCode, start/end fields, partRows: [{ partId, prodQty }] }]
 
-		// Date is keyed once (top of form); each part row only keys the time.
+		// Date is keyed once (top of form); each line section keys the time.
 		// We combine them back into the ``YYYY-MM-DDTHH:MM`` shape Page 2 / the
 		// backend already expect, so nothing downstream needs to change.
 		const todayISO = () => {
@@ -51,8 +51,7 @@
 			return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
 		};
 		// Free-typed time → canonical 24h "HH:MM" (or '' if not a valid time).
-		// Accepts "0810", "810", "8:10", "08.10", "08 10" etc. — minutes are
-		// required (1–2 bare digits = whole hour, e.g. "8" → "08:00").
+		// Accepts "0810", "810", "8:10", "08.10", "08 10" etc.
 		const normalizeTime = (raw) => {
 			const s = String(raw ?? '').trim();
 			if (!s) return '';
@@ -69,6 +68,7 @@
 			const t = normalizeTime(time);
 			return (date && t ? `${date}T${t}` : '');
 		};
+		const combineWorkDateTime = (baseDate, time) => combineDateTime(baseDate, time);
 		// Open the native time/date picker the moment the field is clicked or
 		// focused — so a single tap shows the number selector instead of making
 		// the user hunt for the little clock icon. (No-op on browsers without
@@ -82,32 +82,12 @@
 		// Pull the time half out of a full datetime (or pass a bare time through).
 		const timePart = (dt) => (dt && dt.includes('T') ? dt.split('T')[1] : (dt || ''));
 		const datePart = (dt) => (dt && dt.includes('T') ? dt.split('T')[0] : '');
-		// Shift a "YYYY-MM-DD" string by n days (local, no timezone drift).
-		const addDays = (iso, n) => {
-			if (!iso) return iso;
-			const [y, m, d] = iso.split('-').map(Number);
-			const dt = new Date(y, m - 1, d);
-			dt.setDate(dt.getDate() + n);
-			return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-		};
-
 		if (dateInput && !dateInput.value) dateInput.value = todayISO();
 		openPickerOnInteract(dateInput);
 
-		// The top "วันที่ผลิต" seeds every part row's start/end date. Picking a
-		// new date copies it down to all rows (operators then bump the END date
-		// to the next day for a night shift that crosses midnight).
-		const syncRowDates = () => {
-			const d = (dateInput?.value || '').trim();
-			if (!d) return;
-			sections.forEach((sec) => sec.partRows.forEach((r) => {
-				if (r.startDateEl) r.startDateEl.value = d;
-				if (r.endDateEl) r.endDateEl.value = d;
-				r.applyDateRules?.(); // bump start/end to next day when time < 08:00
-				r.refreshError?.();   // re-check end<start after the date shuffle
-			}));
-		};
-		dateInput?.addEventListener('change', syncRowDates);
+		dateInput?.addEventListener('change', () => {
+			saveDraft();
+		});
 
 		// ----------------------------------------------------------- shift
 		// One shift applies to the whole record. Rendered as checkboxes (per the
@@ -210,8 +190,23 @@
 			const partsList = el.querySelector('[data-parts]');
 			const partsEmpty = el.querySelector('[data-parts-empty]');
 			const removeBtn = el.querySelector('[data-remove-line]');
+			const startEl = el.querySelector('[data-start]');
+			const endEl = el.querySelector('[data-end]');
 
-			const sec = { el, lineInput, lineCode: '', partsWrap, partsList, partRows: [] };
+			const fmtTime = (input) => {
+				const t = normalizeTime(input.value);
+				if (t) {
+					input.value = t;
+					input.classList.remove('ring-2', 'ring-red-500');
+				}
+			};
+			startEl.addEventListener('blur', () => { fmtTime(startEl); saveDraft(); });
+			endEl.addEventListener('blur', () => { fmtTime(endEl); saveDraft(); });
+
+			const sec = {
+				el, lineInput, lineCode: '', partsWrap, partsList, partRows: [],
+				startEl, endEl,
+			};
 
 			const renderParts = () => {
 				partsList.innerHTML = '';
@@ -232,59 +227,8 @@
 					row.querySelector('[data-part-name]').textContent = p.part_name || p.part_number || p.sd_number || '(ไม่มีชื่อ)';
 					row.querySelector('[data-part-meta]').textContent = [p.sd_number, p.part_number].filter(Boolean).join(' · ');
 					const prodQty = row.querySelector('[data-prodqty]');
-					const startEl = row.querySelector('[data-start]');
-					const endEl = row.querySelector('[data-end]');
-					const startDateEl = row.querySelector('[data-start-date]');
-					const endDateEl = row.querySelector('[data-end-date]');
-					const errEl = row.querySelector('[data-time-error]');
-					// Seed both row dates from the top "วันที่ผลิต".
-					const topDate = (dateInput?.value || '').trim();
-					if (topDate) { startDateEl.value = topDate; endDateEl.value = topDate; }
-					openPickerOnInteract(startDateEl);
-					openPickerOnInteract(endDateEl);
-					// Reformat free-typed time to canonical "HH:MM" on blur, and
-					// clear the invalid-time highlight once it parses.
-					const fmtTime = (el) => {
-						const t = normalizeTime(el.value);
-						if (t) {
-							el.value = t;
-							el.classList.remove('ring-2', 'ring-red-500');
-						}
-					};
-					// Night-shift auto-date: a time before 08:00 belongs to the day
-					// after the production date (the lot crossed midnight). Both the
-					// start and end date are derived from the top "วันที่ผลิต": +1 day
-					// when their time is < 08:00, otherwise the production date itself.
-					const applyDateRules = () => {
-						const base = (dateInput?.value || '').trim();
-						if (!base) return;
-						const toMin = (t) => { const [h, mi] = t.split(':').map(Number); return h * 60 + mi; };
-						const st = normalizeTime(startEl.value);
-						const et = normalizeTime(endEl.value);
-						if (st) startDateEl.value = toMin(st) < 8 * 60 ? addDays(base, 1) : base;
-						if (et) endDateEl.value = toMin(et) < 8 * 60 ? addDays(base, 1) : base;
-					};
-					// After the auto-date rule, an end that still lands before the
-					// start can't be a real (cross-midnight) window — it's a typo, so
-					// flag it (red border + message) and let validateTimes() block.
-					const refreshError = () => {
-						const st = normalizeTime(startEl.value);
-						const et = normalizeTime(endEl.value);
-						const sd = (startDateEl.value || '').trim();
-						const ed = (endDateEl.value || '').trim();
-						const bad = !!(st && et && sd && ed) && `${ed}T${et}` < `${sd}T${st}`;
-						if (errEl) errEl.classList.toggle('hidden', !bad);
-						// Swap the slate border for red so the color actually wins.
-						endEl.classList.toggle('border-red-500', bad);
-						endEl.classList.toggle('border-slate-300', !bad);
-						return bad;
-					};
-					startEl.addEventListener('blur', () => { fmtTime(startEl); applyDateRules(); refreshError(); });
-					endEl.addEventListener('blur', () => { fmtTime(endEl); applyDateRules(); refreshError(); });
-					startDateEl.addEventListener('change', refreshError);
-					endDateEl.addEventListener('change', refreshError);
 					partsList.appendChild(row);
-					sec.partRows.push({ part: p, prodQty, startEl, endEl, startDateEl, endDateEl, applyDateRules, refreshError });
+					sec.partRows.push({ part: p, prodQty });
 				});
 				updateNextEnabled();
 			};
@@ -329,20 +273,19 @@
 			if (prefill?.lineCode) {
 				lineInput.value = prefill.lineCode;
 				sec.lineCode = prefill.lineCode;
+				const firstTimed = (prefill.entries || []).find((e) => e.startTime || e.endTime) || {};
+				if (prefill.startTime || firstTimed.startTime) {
+					startEl.value = timePart(prefill.startTime || firstTimed.startTime);
+				}
+				if (prefill.endTime || firstTimed.endTime) {
+					endEl.value = timePart(prefill.endTime || firstTimed.endTime);
+				}
 				renderParts();
-				// pre-fill matching part qty/time
+				// pre-fill matching part quantities
 				(prefill.entries || []).forEach((e) => {
 					const r = sec.partRows.find((row) => row.part.id === e.partId);
 					if (!r) return;
 					if (e.prodQty) r.prodQty.value = e.prodQty;
-					if (e.startTime) {
-						r.startEl.value = timePart(e.startTime);
-						const d = datePart(e.startTime); if (d) r.startDateEl.value = d;
-					}
-					if (e.endTime) {
-						r.endEl.value = timePart(e.endTime);
-						const d = datePart(e.endTime); if (d) r.endDateEl.value = d;
-					}
 				});
 			}
 			updateNextEnabled();
@@ -358,13 +301,11 @@
 			const out = [];
 			for (const sec of sections) {
 				if (!sec.lineCode) continue;
+				const startTime = combineWorkDateTime(topDate, (sec.startEl.value || '').trim());
+				const endTime = combineWorkDateTime(topDate, (sec.endEl.value || '').trim());
 				for (const r of sec.partRows) {
 					const qty = toInt(r.prodQty.value);
 					if (qty < 1) continue;
-					// Each row carries its own start/end date (defaults to the top
-					// date) so a night shift can end on the next day.
-					const sd = (r.startDateEl?.value || topDate || '').trim();
-					const ed = (r.endDateEl?.value || topDate || '').trim();
 					out.push({
 						lineCode: sec.lineCode,
 						partId: r.part.id,
@@ -372,8 +313,8 @@
 						partNumber: r.part.part_number || '',
 						partName: r.part.part_name || '',
 						prodQty: qty,
-						startTime: combineDateTime(sd, (r.startEl.value || '').trim()),
-						endTime: combineDateTime(ed, (r.endEl.value || '').trim()),
+						startTime,
+						endTime,
 					});
 				}
 			}
@@ -410,24 +351,17 @@
 			let firstBad = null;
 			for (const sec of sections) {
 				if (!sec.lineCode) continue;
-				for (const r of sec.partRows) {
-					const hasQty = toInt(r.prodQty.value) >= 1;
-					// Each row needs a valid date + time for both start and end
-					// (missing → red ring, kept separate from the end<start border).
-					const checks = [
-						[r.startDateEl, hasQty && !(r.startDateEl.value || '').trim()],
-						[r.startEl, hasQty && !normalizeTime(r.startEl.value)],
-						[r.endDateEl, hasQty && !(r.endDateEl.value || '').trim()],
-						[r.endEl, hasQty && !normalizeTime(r.endEl.value)],
-					];
-					checks.forEach(([el, bad]) => {
-						el.classList.toggle('ring-2', bad);
-						el.classList.toggle('ring-red-500', bad);
-						if (bad && !firstBad) firstBad = el;
-					});
-					// End-before-start (same-day) → red border + message; blocks too.
-					if (hasQty && r.refreshError?.() && !firstBad) firstBad = r.endEl;
-				}
+				const hasQty = sec.partRows.some((r) => toInt(r.prodQty.value) >= 1);
+				const checks = [
+					[dateInput, hasQty && !(dateInput?.value || '').trim()],
+					[sec.startEl, hasQty && !normalizeTime(sec.startEl.value)],
+					[sec.endEl, hasQty && !normalizeTime(sec.endEl.value)],
+				];
+				checks.forEach(([el, bad]) => {
+					el.classList.toggle('ring-2', bad);
+					el.classList.toggle('ring-red-500', bad);
+					if (bad && !firstBad) firstBad = el;
+				});
 			}
 			if (firstBad) { firstBad.focus(); return false; }
 			return true;
@@ -441,7 +375,7 @@
 				return;
 			}
 			if (!validateTimes()) {
-				alert('ตรวจสอบเวลา: ต้องกรอกวันที่+เวลาเริ่ม/จบ ให้ครบ และเวลาจบต้องมาหลังเวลาเริ่ม ก่อนไปขั้นตอนถัดไป');
+				alert('ตรวจสอบเวลา: ต้องกรอกวันทำการและเวลาเริ่ม/จบให้ครบ');
 				return;
 			}
 			if (!saveDraft()) {
