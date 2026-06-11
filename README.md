@@ -359,3 +359,8 @@ only when local password hashes must be refreshed from the source snapshot.
 To refresh the employee snapshot, copy `tbapp_application/core/fixtures/fixture.json`
 to `core/fixtures/employee_seed.json` before running the sync command. The
 importer ignores unrelated cloud models.
+
+โหลดProductเขียนของเดิม
+```
+poetry run python manage.py loaddata core/fixtures/product_seed.json
+```
