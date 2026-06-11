@@ -9,7 +9,9 @@ What it does, in order, inside a single transaction:
 3. Calls ``loaddata`` to restore the snapshot.
 4. Reports before/after row counts per table.
 
-Tables NOT touched: ``core.AuditLogEntry``, ``core.DefectStat``, Django's
+Tables NOT touched: ``core.AuditLogEntry``, ``core.DefectStat``,
+inspection-machine scrap rows (``core.ScrapRecord`` plus
+``core.InspectionDefect`` / ``core.InspectionDefectImage``), Django's
 ``auth.Permission`` / ``contenttypes.*`` / ``sessions.*`` / ``admin.*``.
 
 Server deployment:
@@ -43,6 +45,7 @@ DELETE_ORDER = [
     # App config & content (standalone — only a created_by FK to User)
     "core.EmailReceiver",
     "core.Manual",
+    "core.PartRequest",
 
     # Production recording backbone (children first)
     "core.ProcessDefectScrap",
@@ -58,12 +61,8 @@ DELETE_ORDER = [
     "core.KanbanItemMapping",
     "core.DetectionObject",
 
-    # Inspection defect photos (CASCADE chain off ScrapRecord)
-    "core.InspectionDefectImage",
-    "core.InspectionDefect",
-
-    # Scrap & inspection
-    "core.ScrapRecord",
+    # Inspection master/config. Keep ScrapRecord + InspectionDefect/Image out
+    # of seed sync so inspection-machine scrap saved on the server survives.
     "core.Machine",
     "core.InspectionResult",
     "core.InspectionError",

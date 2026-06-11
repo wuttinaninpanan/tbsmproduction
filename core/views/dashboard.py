@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from django.db.models import F, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import DateField, DecimalField, ExpressionWrapper, F, Q, Sum
+from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView  # type:ignore
@@ -43,17 +43,48 @@ class DashboardViews(TemplateView):
             pd_qs = pd_qs.filter(production_record__created_by=user)
             scrap_qs = scrap_qs.filter(process_defect__production_record__created_by=user)
 
-        pr_month = pr_qs.filter(created_at__year=year, created_at__month=month)
-        pd_month = pd_qs.filter(created_at__year=year, created_at__month=month)
+        pr_month = pr_qs.filter(
+            Q(production_date__year=year, production_date__month=month)
+            | Q(production_date__isnull=True, created_at__year=year, created_at__month=month)
+        )
+        pd_month = pd_qs.filter(
+            Q(production_record__production_date__year=year, production_record__production_date__month=month)
+            | Q(production_record__production_date__isnull=True, created_at__year=year, created_at__month=month)
+        )
+        scrap_month_qs = scrap_qs.filter(
+            Q(process_defect__production_record__production_date__year=year, process_defect__production_record__production_date__month=month)
+            | Q(process_defect__production_record__production_date__isnull=True, created_at__year=year, created_at__month=month)
+        )
 
         def _sum(qs, field):
             return qs.aggregate(s=Sum(field))["s"] or 0
 
+        scrap_amount_expr = ExpressionWrapper(
+            F("quantity") * F("component_part__cost"),
+            output_field=DecimalField(max_digits=18, decimal_places=2),
+        )
+
+        def _scrap_amount(qs):
+            return qs.aggregate(s=Sum(scrap_amount_expr))["s"] or 0
+
         produced_month = _sum(pr_month, "products_quantity")
         defects_month = _sum(pd_month, "quantity")
-        produced_today = _sum(pr_qs.filter(created_at__date=today), "products_quantity")
-        defects_today = _sum(pd_qs.filter(created_at__date=today), "quantity")
-        scrap_month = _sum(scrap_qs.filter(created_at__year=year, created_at__month=month), "quantity")
+        produced_today = _sum(
+            pr_qs.filter(Q(production_date=today) | Q(production_date__isnull=True, created_at__date=today)),
+            "products_quantity",
+        )
+        defects_today = _sum(
+            pd_qs.filter(
+                Q(production_record__production_date=today)
+                | Q(production_record__production_date__isnull=True, created_at__date=today)
+            ),
+            "quantity",
+        )
+        scrap_month = _sum(scrap_month_qs, "quantity")
+        scrap_today_qs = scrap_qs.filter(
+            Q(process_defect__production_record__production_date=today)
+            | Q(process_defect__production_record__production_date__isnull=True, created_at__date=today)
+        )
 
         ctx["kpi"] = {
             "produced_today": produced_today,
@@ -64,6 +95,9 @@ class DashboardViews(TemplateView):
             "defects_total": _sum(pd_qs, "quantity"),
             "defect_rate_month": _rate(defects_month, produced_month),
             "scrap_month": scrap_month,
+            "scrap_amount_today": _scrap_amount(scrap_today_qs),
+            "scrap_amount_month": _scrap_amount(scrap_month_qs),
+            "scrap_amount_total": _scrap_amount(scrap_qs),
             "lines_total": Line.objects.count(),
             "parts_total": Item_list.objects.count(),
             "component_parts_total": Item_list.objects.count(),
@@ -137,25 +171,40 @@ class DashboardViews(TemplateView):
             date_labels.append(d.strftime("%d %b"))
 
         def _daily_map(qs, field):
+            date_field = Coalesce("production_date", TruncDate("created_at"), output_field=DateField())
             return {
                 (row["d"].isoformat() if row.get("d") else ""): int(row.get("s") or 0)
-                for row in qs.filter(created_at__date__gte=start_date, created_at__date__lte=today)
-                .annotate(d=TruncDate("created_at"))
+                for row in qs.filter(
+                    Q(production_date__gte=start_date, production_date__lte=today)
+                    | Q(production_date__isnull=True, created_at__date__gte=start_date, created_at__date__lte=today)
+                )
+                .annotate(d=date_field)
+                .values("d")
+                .annotate(s=Sum(field))
+            }
+
+        def _related_daily_map(qs, field, pr_prefix):
+            date_field = Coalesce(f"{pr_prefix}production_date", TruncDate("created_at"), output_field=DateField())
+            return {
+                (row["d"].isoformat() if row.get("d") else ""): int(row.get("s") or 0)
+                for row in qs.filter(
+                    Q(**{f"{pr_prefix}production_date__gte": start_date, f"{pr_prefix}production_date__lte": today})
+                    | Q(**{f"{pr_prefix}production_date__isnull": True, "created_at__date__gte": start_date, "created_at__date__lte": today})
+                )
+                .annotate(d=date_field)
                 .values("d")
                 .annotate(s=Sum(field))
             }
 
         produced_daily = _daily_map(pr_qs, "products_quantity")
-        defects_daily = _daily_map(pd_qs, "quantity")
-        scrap_daily = _daily_map(scrap_qs, "quantity")  # pieces thrown (ProcessDefectScrap)
+        defects_daily = _related_daily_map(pd_qs, "quantity", "production_record__")
+        scrap_daily = _related_daily_map(scrap_qs, "quantity", "process_defect__production_record__")  # pieces thrown (ProcessDefectScrap)
 
         # ---- Top "Single part" scraps this month ----
         # A single-part scrap is a not-yet-assembled component thrown away with
         # no produced product → its ProductionRecord has item IS NULL (the unique
         # marker set by /record/defects/). Broken down by the scrapped component.
-        single_scrap_qs = scrap_qs.filter(
-            created_at__year=year,
-            created_at__month=month,
+        single_scrap_qs = scrap_month_qs.filter(
             process_defect__production_record__item__isnull=True,
         )
         single_part_rows = [
@@ -194,7 +243,7 @@ class DashboardViews(TemplateView):
 
         # ---- Recent production records (line · part · produced · defects · rate) ----
         recent_records = list(
-            pr_qs.select_related("line", "item", "created_by", "created_by__profile")
+            pr_qs.select_related("line", "item", "shift", "created_by", "created_by__profile")
             .prefetch_related("defects")
             .order_by("-created_at")[:10]
         )

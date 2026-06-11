@@ -20,7 +20,7 @@
  */
 (() => {
 	const STORAGE_KEY = 'tbsm:record:draft';
-	const DRAFT_VERSION = 1;
+	const DRAFT_VERSION = 2;
 
 	const init = () => {
 		const dataEl = document.getElementById('record-data');
@@ -41,9 +41,54 @@
 		const saveBtn = document.getElementById('save');
 
 		let nextGi = 1; // global field-name index across all blocks
+		const productBlocks = [];
 
 		const toInt = (v) => { const n = parseInt(String(v ?? '').replace(/[^0-9]/g, ''), 10); return Number.isFinite(n) ? n : 0; };
 		const fmtQty = (n) => String(Math.round(n));
+		const defectLimitMessage = (total, max) => `จำนวนของเสียรวม (${total}) ต้องไม่เกินจำนวนผลิต (${max})`;
+		const setInvalid = (input, message) => {
+			if (!input) return;
+			input.setCustomValidity(message || '');
+			input.classList.toggle('border-red-500', Boolean(message));
+			input.classList.toggle('bg-red-50', Boolean(message));
+			input.title = message || '';
+		};
+		const validateBlockDefectLimit = (block) => {
+			const max = toInt(block?.entry?.prodQty);
+			const total = (block?.sections || []).reduce((sum, sec) => sum + toInt(sec.defQtyInput.value), 0);
+			const message = total > max ? defectLimitMessage(total, max) : '';
+			(block?.sections || []).forEach((sec) => {
+				setInvalid(sec.defQtyInput, message);
+				if (sec.limitMsg) {
+					sec.limitMsg.textContent = message;
+					sec.limitMsg.classList.toggle('hidden', !message);
+				}
+			});
+			return !message;
+		};
+		const validateAllDefectTotals = ({ report = false } = {}) => {
+			let ok = true;
+			productBlocks.forEach((block) => {
+				if (!validateBlockDefectLimit(block)) ok = false;
+			});
+			if (!ok && report) {
+				const firstInvalid = productBlocks
+					.flatMap((block) => block.sections || [])
+					.map((sec) => sec.defQtyInput)
+					.find((input) => input && !input.checkValidity());
+				if (firstInvalid) {
+					firstInvalid.focus();
+					firstInvalid.reportValidity();
+				} else {
+					recordForm?.reportValidity();
+				}
+			}
+			return ok;
+		};
+		const refreshSaveState = () => {
+			if (!saveBtn) return;
+			saveBtn.disabled = !validateAllDefectTotals();
+		};
 
 		// ----------------------------------------------------------- data lookups
 		const getLine = (id) => lines.find((l) => l.id === id) || null;
@@ -337,6 +382,10 @@
 				const defectSelect = secEl.querySelector('[data-defect]');
 				const defQtyInput = secEl.querySelector('[data-defqty]');
 				defQtyInput.name = `blocks[${gi}][defect_quantity]`;
+				defQtyInput.max = String(toInt(entry.prodQty));
+				const limitMsg = document.createElement('p');
+				limitMsg.className = 'hidden mt-1 text-xs font-semibold text-red-600';
+				defQtyInput.insertAdjacentElement('afterend', limitMsg);
 				const commentInput = secEl.querySelector('[data-comment]');
 				commentInput.name = `blocks[${gi}][rows][0][comment]`;
 				const scrapsWrap = secEl.querySelector('[data-scraps]');
@@ -353,7 +402,7 @@
 
 				const sec = {
 					gi, el: secEl, defectSelect, defQtyInput, commentInput,
-					scrapsWrap, scrapsEmpty, selectAll, defectHint,
+					scrapsWrap, scrapsEmpty, selectAll, defectHint, limitMsg,
 				};
 
 				setDefectOptions(defectSelect, []);
@@ -362,7 +411,11 @@
 					toggleComment(sec);
 					defectHint.style.display = defectSelect.value ? 'none' : '';
 				});
-				defQtyInput.addEventListener('input', () => recomputeSectionQtys(sec));
+				defQtyInput.addEventListener('input', () => {
+					recomputeSectionQtys(sec);
+					validateBlockDefectLimit(block);
+					refreshSaveState();
+				});
 				selectAll.addEventListener('change', () => {
 					const on = selectAll.checked;
 					const fg = fgEnable(sec);
@@ -375,6 +428,7 @@
 				sectionsWrap.appendChild(secEl);
 				repopulateDefects(sec);
 				rebuildScraps(sec);
+				validateBlockDefectLimit(block);
 				updateButtons();
 				return sec;
 			};
@@ -383,6 +437,8 @@
 				if (block.sections.length <= 1) return;
 				const sec = block.sections.pop();
 				sec.el.remove();
+				validateBlockDefectLimit(block);
+				refreshSaveState();
 				updateButtons();
 			};
 
@@ -397,7 +453,7 @@
 		// ----------------------------------------------------------- single part
 		// One block per line for not-yet-assembled parts scrapped on that line
 		// (no product → recorded server-side as NG mode "Other" / "Single part").
-		function buildSinglePartBlock(lineCode) {
+		function buildSinglePartBlock(lineCode, lineEntry = {}) {
 			const scraps = singlePartScraps(lineCode);
 			if (!scraps.length) return null;
 
@@ -414,6 +470,8 @@
 			// Block-level hidden fields read by RecordDefectsView.post.
 			el.appendChild(mkHidden(`blocks[${gi}][production_line]`, lineCode || ''));
 			el.appendChild(mkHidden(`blocks[${gi}][single_part]`, '1'));
+			el.appendChild(mkHidden(`blocks[${gi}][start_time]`, lineEntry.startTime || ''));
+			el.appendChild(mkHidden(`blocks[${gi}][end_time]`, lineEntry.endTime || ''));
 			// Operator-entered reason → ProcessDefect.comment (server falls back
 			// to "Single part" when left blank). Attached to row 0 so the existing
 			// per-row comment parser picks it up.
@@ -555,18 +613,24 @@
 		// RecordDefectsView.post applies them to every ProductionRecord it creates.
 		if (draftShift && recordForm) recordForm.appendChild(mkHidden('shift', draftShift));
 		if (draftDate && recordForm) recordForm.appendChild(mkHidden('production_date', draftDate));
-		entries.forEach((e) => buildBlock(e));
+		entries.forEach((e) => productBlocks.push(buildBlock(e)));
+		refreshSaveState();
 
 		// One "single part" block per distinct line in the draft (order preserved).
 		const seenLines = new Set();
 		entries.forEach((e) => {
 			if (!e.lineCode || seenLines.has(e.lineCode)) return;
 			seenLines.add(e.lineCode);
-			buildSinglePartBlock(e.lineCode);
+			buildSinglePartBlock(e.lineCode, e);
 		});
 
 		// Clear draft after a successful submit so coming back doesn't re-populate stale data.
-		recordForm.addEventListener('submit', () => {
+		recordForm.addEventListener('submit', (e) => {
+			if (!validateAllDefectTotals({ report: true })) {
+				e.preventDefault();
+				refreshSaveState();
+				return;
+			}
 			try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
 			saveBtn.disabled = true;
 		});

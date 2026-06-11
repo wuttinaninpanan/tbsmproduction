@@ -249,7 +249,6 @@ poetry run python manage.py tailwind start
 ```
 
 # อื่นๆ
-
 เกี่ยวกับpoetry
 ทุกครั้งที่มีการBuild projectใหม่จะต้องรันคำสั่งนีัทุกครั้ง
 ```
@@ -313,7 +312,6 @@ psql -U tbapp_user -d tbapp_db
 ### การDump data ปัจจุบัน
 ```
 poetry run python manage.py data_dump
-
 ```
 ### การโหลดData ที่Dumpใว้เข้าฐานข้อมูล
 
