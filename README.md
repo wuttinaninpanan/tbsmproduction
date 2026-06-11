@@ -12,6 +12,7 @@ poetry run python manage.py tailwind start
 ```
 .env.local
 ```
+
 นำโค๊ดนี้ไปใส่ในไฟล์ชื่อ .env.local
 ```
 POSTGRES_DB=app_db
@@ -21,12 +22,6 @@ POSTGRES_HOST=db
 POSTGRES_PORT=5432
 DJANGO_SETTINGS_MODULE=config.settings.local
 ```
-
-<!-- 1) สร้าง Google App Password (ผมทำแทนไม่ได้)
-
-เปิด 2-Step Verification ที่บัญชี Google ก่อน → https://myaccount.google.com/security
-สร้าง App Password ที่ → https://myaccount.google.com/apppasswords
-จะได้รหัส 16 หลัก → วางลงบรรทัด EMAIL_HOST_PASSWORD= (พิมพ์ติดกัน ไม่ต้องเว้นวรรค) -->
 
 ไฟล์ที่ต้องมี
 ```
@@ -364,3 +359,8 @@ only when local password hashes must be refreshed from the source snapshot.
 To refresh the employee snapshot, copy `tbapp_application/core/fixtures/fixture.json`
 to `core/fixtures/employee_seed.json` before running the sync command. The
 importer ignores unrelated cloud models.
+
+โหลดProductเขียนของเดิม
+```
+poetry run python manage.py loaddata core/fixtures/product_seed.json
+```

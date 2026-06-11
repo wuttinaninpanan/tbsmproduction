@@ -63,9 +63,16 @@ class DashboardViews(TemplateView):
             F("quantity") * F("component_part__cost"),
             output_field=DecimalField(max_digits=18, decimal_places=2),
         )
+        scrap_weight_expr = ExpressionWrapper(
+            F("quantity") * F("component_part__weight"),
+            output_field=DecimalField(max_digits=18, decimal_places=2),
+        )
 
         def _scrap_amount(qs):
             return qs.aggregate(s=Sum(scrap_amount_expr))["s"] or 0
+
+        def _scrap_weight(qs):
+            return qs.aggregate(s=Sum(scrap_weight_expr))["s"] or 0
 
         produced_month = _sum(pr_month, "products_quantity")
         defects_month = _sum(pd_month, "quantity")
@@ -98,6 +105,9 @@ class DashboardViews(TemplateView):
             "scrap_amount_today": _scrap_amount(scrap_today_qs),
             "scrap_amount_month": _scrap_amount(scrap_month_qs),
             "scrap_amount_total": _scrap_amount(scrap_qs),
+            "scrap_weight_today": _scrap_weight(scrap_today_qs),
+            "scrap_weight_month": _scrap_weight(scrap_month_qs),
+            "scrap_weight_total": _scrap_weight(scrap_qs),
             "lines_total": Line.objects.count(),
             "parts_total": Item_list.objects.count(),
             "component_parts_total": Item_list.objects.count(),
