@@ -147,6 +147,10 @@ STATICFILES_DIRS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Windows path ของ host machine ที่ map กับ /app ใน Docker
+# ใช้แปลง Docker path → Windows path เพื่อ save ลง DB ให้ PySide6 ใช้ได้ตรงๆ
+WINDOWS_APP_BASE = os.getenv("WINDOWS_APP_BASE", r"D:\tb_app\tbsmproduction")
+
 
 # Email (SMTP)
 # Configured via env vars. When EMAIL_HOST is set, real SMTP is used; otherwise

@@ -71,7 +71,11 @@ class InspectionModelssView(TemplateView):
 		with open(dest_path, "wb") as out:
 			for chunk in f.chunks():
 				out.write(chunk)
-		return dest_path
+		# แปลง Docker path → Windows path เพื่อ save ลง DB
+		# /app/media/inspection_models/x.pt → D:\tb_app\tbsmproduction\media\inspection_models\x.pt
+		win_base = settings.WINDOWS_APP_BASE.rstrip("/\\").replace("\\", "/")
+		windows_path = win_base + dest_path.replace("/app", "")
+		return windows_path
 
 	def get_context_data(self, **kwargs):
 		ctx = super().get_context_data(**kwargs)
@@ -120,6 +124,7 @@ class InspectionModelssView(TemplateView):
 		ctx["rows_total"] = paginator.count
 		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
 		ctx["total_count"] = paginator.count
+		ctx["windows_app_base"] = settings.WINDOWS_APP_BASE
 		return ctx
 
 	def post(self, request, *args, **kwargs):
@@ -167,9 +172,9 @@ class InspectionModelssView(TemplateView):
 				messages.error(request, "กรุณากรอก Class Name")
 				return redirect(request.get_full_path())
 			try:
-				uploaded_path = self._save_model_file(request)
-				if uploaded_path:
-					model_path = uploaded_path
+				uploaded = self._save_model_file(request)
+				if uploaded and not model_path:
+					model_path = uploaded
 				with transaction.atomic():
 					InspectionModels.objects.create(
 						class_name=class_name,
@@ -191,9 +196,9 @@ class InspectionModelssView(TemplateView):
 				messages.error(request, "กรุณากรอก Class Name")
 				return redirect(request.get_full_path())
 			try:
-				uploaded_path = self._save_model_file(request)
-				if uploaded_path:
-					model_path = uploaded_path
+				uploaded = self._save_model_file(request)
+				if uploaded and not model_path:
+					model_path = uploaded
 				with transaction.atomic():
 					obj = InspectionModels.objects.get(pk=obj_id)
 					obj.class_name = class_name
@@ -215,10 +220,10 @@ class InspectionModelssView(TemplateView):
 			try:
 				with transaction.atomic():
 					obj = InspectionModels.objects.get(pk=obj_id)
+					obj.object_detection_models.all().delete()
+					obj.defect_detection_models.all().delete()
 					obj.delete()
 				messages.success(request, "ลบสำเร็จ")
-			except ProtectedError:
-				messages.error(request, "ลบไม่ได้ มีข้อมูลอ้างอิงอยู่")
 			except Exception as e:
 				messages.error(request, f"เกิดข้อผิดพลาด: {e}")
 			return redirect(request.get_full_path())
