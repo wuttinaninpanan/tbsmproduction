@@ -80,22 +80,24 @@
   </table>
 </div>
 
-{% if page_items.has_other_pages %}
+{% if page_obj.has_other_pages %}
 <div class="flex flex-wrap items-center justify-center gap-1 mt-4">
-  {% if page_items.has_previous %}
-  <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:25 }}&page={{ page_items.previous_page_number }}"
+  {% if page_obj.has_previous %}
+  <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:50 }}&page={{ page_obj.previous_page_number }}"
      class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm">&laquo;</a>
   {% endif %}
-  {% for num in page_items.paginator.page_range %}
-    {% if page_items.number == num %}
+  {% for num in page_items %}
+    {% if num == None %}
+    <span class="px-2 py-1.5 text-slate-400 text-sm">…</span>
+    {% elif page_obj.number == num %}
     <span class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium">{{ num }}</span>
-    {% elif num > page_items.number|add:'-3' and num < page_items.number|add:'3' %}
-    <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:25 }}&page={{ num }}"
+    {% else %}
+    <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:50 }}&page={{ num }}"
        class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm">{{ num }}</a>
     {% endif %}
   {% endfor %}
-  {% if page_items.has_next %}
-  <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:25 }}&page={{ page_items.next_page_number }}"
+  {% if page_obj.has_next %}
+  <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:50 }}&page={{ page_obj.next_page_number }}"
      class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm">&raquo;</a>
   {% endif %}
 </div>

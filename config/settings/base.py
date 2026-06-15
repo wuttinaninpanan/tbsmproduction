@@ -147,6 +147,9 @@ STATICFILES_DIRS = [
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Windows path ของ host machine ที่ map กับ /app ใน Docker
+# ใช้แปลง Docker path → Windows path เพื่อ save ลง DB ให้ PySide6 ใช้ได้ตรงๆ
+WINDOWS_APP_BASE = os.getenv("WINDOWS_APP_BASE", r"D:\tb_app\tbsmproduction")
 # Manual pages can embed screenshots as base64 in rich-text HTML. Django's
 # default 2.5 MB request limit is too small for that workflow.
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", str(50 * 1024 * 1024)))
