@@ -13,36 +13,15 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 TAILWIND_APP_NAME = 'theme'
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-fag18($irl(la%2jh1&1(ss^0trk*pb5%%#=yq4sdt*-=1q3i@'
 SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-secret")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
-DEBUG = os.getenv("DEBUG", "True") == "True"
-
-# ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ["*"]
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://172.29.66.227:8003",
-    "https://172.29.66.227:8003",
-    "http://172.29.66.227",
-    "https://172.29.66.227",
-    "https://tapeless-joseph-fallalishly.ngrok-free.dev",
-    "http://tapeless-joseph-fallalishly.ngrok-free.dev",
-]
+# DEBUG, ALLOWED_HOSTS and CSRF_TRUSTED_ORIGINS are environment-specific.
+# See config/settings/local.py (development) and
+# config/settings/production.py (real server).
 
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -55,7 +34,6 @@ INSTALLED_APPS = [
     'theme',
 ]
 
-# Use our custom User model (do not use Django's default auth.User)
 AUTH_USER_MODEL = "core.User"
 
 MIDDLEWARE = [
@@ -74,7 +52,9 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR/'templates'],
+        # Templates live inside each app (e.g. core/templates/core/), discovered
+        # via APP_DIRS. No project-level template directory.
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -103,6 +83,11 @@ DATABASES = {
   }
 }
 
+# ``core_user`` is an alias that points at the same physical database as
+# ``default``. Shared by both dev and production so behaviour is identical.
+import copy
+DATABASES["core_user"] = copy.deepcopy(DATABASES["default"])
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -121,43 +106,24 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
-# Display times in Thailand; datetimes are still stored in UTC when USE_TZ=True.
 TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Bangkok")
 
 USE_I18N = True
-
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
 STATIC_URL = "/static/"
-STATICFILES_DIRS = [
-    BASE_DIR / "static",
-]
+# Static files live inside each app (e.g. core/static/core/), discovered via
+# AppDirectoriesFinder. No project-level static directory.
+# Destination for `collectstatic` on the server (served by the web server /
+# WhiteNoise in production; unused but harmless in development).
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Media (uploaded files)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-
-# Windows path ของ host machine ที่ map กับ /app ใน Docker
-# ใช้แปลง Docker path → Windows path เพื่อ save ลง DB ให้ PySide6 ใช้ได้ตรงๆ
 WINDOWS_APP_BASE = os.getenv("WINDOWS_APP_BASE", r"D:\tb_app\tbsmproduction")
-# Manual pages can embed screenshots as base64 in rich-text HTML. Django's
-# default 2.5 MB request limit is too small for that workflow.
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", str(50 * 1024 * 1024)))
 
-
-# Email (SMTP)
-# Configured via env vars. When EMAIL_HOST is set, real SMTP is used; otherwise
-# emails are printed to the console (safe default for dev / when SMTP isn't ready).
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
@@ -168,7 +134,7 @@ EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "30"))
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@tbsmrd.local"
 )
-# ชื่อที่แสดงเป็นผู้ส่ง (no-reply) ของอีเมลรายงานอัตโนมัติ
+
 REPORT_FROM_NAME = os.getenv("REPORT_FROM_NAME", "TBSMRD รายงานอัตโนมัติ (no-reply)")
 
 if EMAIL_HOST:

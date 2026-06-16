@@ -45,7 +45,7 @@ def readable_qs(user):
 class ManualListView(TemplateView):
     """หน้ารวมคู่มือ — ทุกคนอ่านได้ (กรองตาม role); staff เห็นปุ่มเพิ่ม/แก้ไข/ลบ."""
 
-    template_name = "manual_list.html"
+    template_name = "core/manual_list.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -96,7 +96,7 @@ class ManualListView(TemplateView):
 class ManualDetailView(TemplateView):
     """อ่านคู่มือ 1 เรื่อง + ปุ่ม Export PDF (client-side)."""
 
-    template_name = "manual_detail.html"
+    template_name = "core/manual_detail.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -116,7 +116,7 @@ class ManualDetailView(TemplateView):
 class ManualFormView(TemplateView):
     """สร้าง/แก้ไขคู่มือด้วย WYSIWYG — staff/admin เท่านั้น."""
 
-    template_name = "manual_form.html"
+    template_name = "core/manual_form.html"
 
     def _get_object(self):
         manual_id = self.kwargs.get("id")

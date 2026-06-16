@@ -141,7 +141,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 @method_decorator(staff_required, name="dispatch")
 class ManageBusinessPartnerViews(TemplateView):
-	template_name = "manage_businesspartner.html"
+	template_name = "core/manage_businesspartner.html"
 
 	def get(self, request, *args, **kwargs):
 		action = (request.GET.get("action") or "").strip().lower()

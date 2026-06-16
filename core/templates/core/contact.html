@@ -1,0 +1,186 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}ติดต่อ — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="py-8">
+    <div class="max-w-3xl mx-auto">
+        <div class="bg-white p-8 rounded-xl shadow-lg">
+            <h1 class="text-2xl font-bold text-gray-900 mb-1">ติดต่อ / ส่งคำขอ</h1>
+            <p class="text-gray-600 mb-6 text-sm">
+                เลือกประเภทเรื่องที่ต้องการด้านล่าง
+            </p>
+
+            <!-- Tabs -->
+            <div class="flex flex-wrap gap-2 border-b border-gray-200 mb-6" role="tablist">
+                <button type="button" data-tab="general"
+                    class="contact-tab px-4 py-2 -mb-px border-b-2 border-red-500 text-red-600 font-semibold text-sm">
+                    ติดต่อทั่วไป
+                </button>
+                {% if user.is_authenticated %}
+                <button type="button" data-tab="bom"
+                    class="contact-tab px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-sm">
+                    ขอเพิ่มพาร์ทใน BoM
+                </button>
+                <button type="button" data-tab="line"
+                    class="contact-tab px-4 py-2 -mb-px border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-semibold text-sm">
+                    ขอเพิ่มพาร์ทในไลน์ผลิต
+                </button>
+                {% endif %}
+            </div>
+
+            {% with input_cls="w-full rounded-md border border-gray-300 p-2 focus:outline-none focus:ring-2 focus:ring-red-500" %}
+
+            <!-- ===== Panel: General ===== -->
+            <div class="contact-panel" data-panel="general">
+                <form action="/contact/" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="general" />
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ <span class="text-red-500">*</span></label>
+                        <input name="name" required class="{{ input_cls }}"
+                            {% if user.is_authenticated %}value="{{ user.get_full_name|default:user.username }}"{% endif %} />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
+                        <input type="email" name="email" class="{{ input_cls }}"
+                            {% if user.is_authenticated %}value="{{ user.email|default_if_none:'' }}"{% endif %} />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ข้อความ <span class="text-red-500">*</span></label>
+                        <textarea name="message" rows="6" required class="{{ input_cls }}"></textarea>
+                    </div>
+                    <button type="submit"
+                        class="inline-flex items-center px-5 py-2 rounded-md bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold hover:opacity-90">
+                        ส่งข้อความ
+                    </button>
+                </form>
+            </div>
+
+            {% if user.is_authenticated %}
+            <!-- ===== Panel: BoM component request ===== -->
+            <div class="contact-panel" data-panel="bom" hidden>
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
+                    คำขอนี้จะถูกส่งให้ Admin พิจารณาอนุมัติก่อน จึงจะถูกเพิ่มเข้าระบบจริง
+                </p>
+                <form action="/contact/" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="bom_component" />
+                    <div class="relative" data-autocomplete data-type="bom">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">BoM ปลายทาง <span class="text-red-500">*</span></label>
+                        <input type="hidden" name="bom_id" data-ac-id value="" />
+                        <input type="text" data-ac-input autocomplete="off"
+                            placeholder="ค้นหา BoM ด้วย Part Number / Part Name / SKU" class="{{ input_cls }}" />
+                        <div data-ac-results class="hidden absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"></div>
+                        <p data-ac-hint class="mt-1 text-xs text-gray-500">พิมพ์เพื่อค้นหา</p>
+                    </div>
+                    <div class="relative" data-autocomplete data-type="item">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">พาร์ท (component) ที่จะเพิ่ม <span class="text-red-500">*</span></label>
+                        <input type="hidden" name="component_id" data-ac-id value="" />
+                        <input type="text" data-ac-input autocomplete="off"
+                            placeholder="ค้นหาพาร์ทด้วย SD Code / Part Number / Part Name / Item Code" class="{{ input_cls }}" />
+                        <div data-ac-results class="hidden absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"></div>
+                        <p data-ac-hint class="mt-1 text-xs text-gray-500">พิมพ์เพื่อค้นหา</p>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">จำนวน <span class="text-red-500">*</span></label>
+                            <input name="quantity" type="number" step="0.0001" min="0" required class="{{ input_cls }}" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">หน่วย <span class="text-red-500">*</span></label>
+                            <input name="unit" required placeholder="เช่น pcs, kg" class="{{ input_cls }}" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ลำดับ</label>
+                            <input name="sequence" type="number" min="1" value="1" class="{{ input_cls }}" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
+                        <textarea name="note" rows="3" class="{{ input_cls }}"></textarea>
+                    </div>
+                    <button type="submit"
+                        class="inline-flex items-center px-5 py-2 rounded-md bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold hover:opacity-90">
+                        ส่งคำขอ
+                    </button>
+                </form>
+            </div>
+
+            <!-- ===== Panel: Line item request ===== -->
+            <div class="contact-panel" data-panel="line" hidden>
+                <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-4">
+                    คำขอนี้จะถูกส่งให้ Admin พิจารณาอนุมัติก่อน จึงจะถูกเพิ่มเข้าระบบจริง
+                </p>
+                <form action="/contact/" method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="line_item" />
+                    <div class="relative" data-autocomplete data-type="item">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">พาร์ท (Item) <span class="text-red-500">*</span></label>
+                        <input type="hidden" name="item_id" data-ac-id value="" />
+                        <input type="text" data-ac-input autocomplete="off"
+                            placeholder="ค้นหาพาร์ทด้วย SD Code / Part Number / Part Name / Item Code" class="{{ input_cls }}" />
+                        <div data-ac-results class="hidden absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"></div>
+                        <p data-ac-hint class="mt-1 text-xs text-gray-500">พิมพ์เพื่อค้นหา</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="relative" data-autocomplete data-type="line">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ไลน์ผลิต <span class="text-red-500">*</span></label>
+                            <input type="hidden" name="line_id" data-ac-id value="" />
+                            <input type="text" data-ac-input autocomplete="off" required
+                                placeholder="ค้นหาไลน์ผลิต" class="{{ input_cls }}" />
+                            <div data-ac-results class="hidden absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"></div>
+                            <p data-ac-hint class="mt-1 text-xs text-gray-500">พิมพ์เพื่อค้นหา</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Stage <span class="text-red-500">*</span></label>
+                            <select name="stage_id" required class="{{ input_cls }}">
+                                <option value="">— เลือก Stage —</option>
+                                {% for s in stages %}<option value="{{ s.id }}">{{ s.display_name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">หมายเหตุ</label>
+                        <textarea name="note" rows="3" class="{{ input_cls }}"></textarea>
+                    </div>
+                    <button type="submit"
+                        class="inline-flex items-center px-5 py-2 rounded-md bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold hover:opacity-90">
+                        ส่งคำขอ
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+
+            {% endwith %}
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var tabs = document.querySelectorAll('.contact-tab');
+    var panels = document.querySelectorAll('.contact-panel');
+    function activate(name) {
+        tabs.forEach(function (t) {
+            var on = t.getAttribute('data-tab') === name;
+            t.classList.toggle('border-red-500', on);
+            t.classList.toggle('text-red-600', on);
+            t.classList.toggle('border-transparent', !on);
+            t.classList.toggle('text-gray-500', !on);
+        });
+        panels.forEach(function (p) {
+            p.hidden = p.getAttribute('data-panel') !== name;
+        });
+    }
+    tabs.forEach(function (t) {
+        t.addEventListener('click', function () { activate(t.getAttribute('data-tab')); });
+    });
+});
+</script>
+{% if user.is_authenticated %}
+<script>window.CONTACT_AUTOCOMPLETE = { searchUrl: "{% url 'contact_search' %}" };</script>
+<script src="{% static 'core/js/contact_autocomplete.js' %}" defer></script>
+{% endif %}
+{% endblock %}

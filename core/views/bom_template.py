@@ -553,7 +553,7 @@ def _sd_suffix(sd_code: str) -> str:
 
 @method_decorator(staff_required, name="dispatch")
 class BomTemplateView(TemplateView):
-	template_name = "bom_template.html"
+	template_name = "core/bom_template.html"
 
 	def get(self, request, *args, **kwargs):
 		action = (request.GET.get("action") or "").strip().lower()

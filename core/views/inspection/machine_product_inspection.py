@@ -59,7 +59,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 class MachineProductInspectionView(TemplateView):
     """หน้าจัดการ Inspection Item ของผลิตภัณฑ์ (เบอร์งาน) หนึ่งตัว ภายใต้เครื่องที่เลือก (detail)."""
 
-    template_name = "inspection/machine_product_inspection.html"
+    template_name = "core/inspection/machine_product_inspection.html"
 
     def _get_machine(self):
         machine = (

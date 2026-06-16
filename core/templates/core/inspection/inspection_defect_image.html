@@ -1,0 +1,241 @@
+{% extends "core/base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Inspection Defect Images — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Inspection Defect Images</h1>
+			<p class="text-sm text-slate-600 mt-1">ภาพ Defect ที่เครื่อง Inspection บันทึก (ผูกกับ Inspection Defect)</p>
+		</div>
+		<a href="/inspection/inspection_defect/" class="text-sm font-semibold text-indigo-600 hover:underline">→ ไปยัง Inspection Defects</a>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	{% if q_defect %}
+		<div class="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-800 flex items-center justify-between">
+			<span>กำลังกรองเฉพาะ Defect ID: <span class="font-mono text-xs">{{ q_defect }}</span></span>
+			<a href="?" class="font-semibold hover:underline">ล้างตัวกรอง</a>
+		</div>
+	{% endif %}
+
+	<!-- SEARCH -->
+	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">SD Code</label>
+				<input name="sd_code" value="{{ q_sd|default:'' }}" placeholder="ค้นหาด้วย SD Code"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">QR (Work)</label>
+				<input name="qr_work" value="{{ q_qr|default:'' }}" placeholder="ค้นหาด้วย QR"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">Caption</label>
+				<input name="caption" value="{{ q_caption|default:'' }}" placeholder="ค้นหา Caption"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">วันที่ (จาก)</label>
+				<input name="date_from" type="date" value="{{ q_date_from|default:'' }}"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">วันที่ (ถึง)</label>
+				<input name="date_to" type="date" value="{{ q_date_to|default:'' }}"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+			</div>
+			{% if q_defect %}<input type="hidden" name="defect_id" value="{{ q_defect }}" />{% endif %}
+			<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
+		</div>
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+			<div class="text-xs text-slate-600">ทั้งหมด {{ total_count|default:0 }} ภาพ</div>
+			<div class="flex gap-3">
+				<button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">ค้นหา</button>
+				<a href="?" class="inline-flex items-center text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+			</div>
+		</div>
+	</form>
+
+	<!-- VIEW MODE TOGGLE + PER PAGE -->
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+			<div class="font-extrabold text-slate-800">Defect Image Gallery</div>
+			<div class="flex items-center gap-3">
+				<div class="inline-flex rounded-md shadow-xs" role="group">
+					<button type="button" id="viewTable" class="px-3 py-1.5 text-sm font-semibold border border-gray-300 bg-white text-slate-700 hover:bg-slate-50 rounded-l-md">ตาราง</button>
+					<button type="button" id="viewGrid" class="px-3 py-1.5 text-sm font-semibold border border-gray-300 bg-indigo-600 text-white hover:bg-indigo-700 rounded-r-md">Grid</button>
+				</div>
+				<form method="get" class="flex items-center gap-2">
+					<input type="hidden" name="sd_code" value="{{ q_sd|default:'' }}" />
+					<input type="hidden" name="qr_work" value="{{ q_qr|default:'' }}" />
+					<input type="hidden" name="caption" value="{{ q_caption|default:'' }}" />
+					<input type="hidden" name="date_from" value="{{ q_date_from|default:'' }}" />
+					<input type="hidden" name="date_to" value="{{ q_date_to|default:'' }}" />
+					{% if q_defect %}<input type="hidden" name="defect_id" value="{{ q_defect }}" />{% endif %}
+					<span class="text-sm text-gray-700">Show</span>
+					<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+						<option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+						<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+						<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+						<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+					</select>
+					<span class="text-sm text-gray-700">entries</span>
+				</form>
+			</div>
+		</div>
+
+		<!-- GRID VIEW (default) -->
+		<div id="gridView" class="p-4">
+			{% if rows %}
+				<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+					{% for r in rows %}
+					<div class="rounded-xl border border-slate-200 overflow-hidden bg-white hover:shadow-md transition">
+						<div class="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+							{% if r.image_url %}
+								<a href="{{ r.image_url }}" target="_blank" rel="noreferrer" class="block w-full h-full">
+									<img src="{{ r.image_url }}" alt="{{ r.caption|default:'defect image' }}" class="w-full h-full object-cover hover:scale-105 transition-transform" />
+								</a>
+							{% else %}
+								<span class="text-xs text-slate-400">ไม่มีรูป</span>
+							{% endif %}
+						</div>
+						<div class="p-3 space-y-1">
+							<div class="text-xs text-slate-500">{{ r.created_at|default:"-" }}</div>
+							<div class="text-sm font-semibold text-slate-900 truncate" title="{{ r.sd_code }}">SD: {{ r.sd_code|default:"-" }}</div>
+							<div class="text-xs text-slate-700 truncate" title="{{ r.qr_work }}">QR: {{ r.qr_work|default:"-" }}</div>
+							{% if r.defect_name %}<div class="inline-block text-xs px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">{{ r.defect_name }}</div>{% endif %}
+							{% if r.caption %}<div class="text-xs text-slate-600 italic truncate" title="{{ r.caption }}">"{{ r.caption }}"</div>{% endif %}
+							<div class="text-xs text-slate-400">ลำดับ: {{ r.order }}</div>
+							{% if not q_defect %}
+								<a href="?defect_id={{ r.defect_id }}" class="block text-xs text-indigo-600 hover:underline mt-1">ดูภาพอื่นของ defect นี้ →</a>
+							{% endif %}
+						</div>
+					</div>
+					{% endfor %}
+				</div>
+			{% else %}
+				<div class="text-center py-12 text-slate-500">รอภาพ Defect จากเครื่อง Inspection...</div>
+			{% endif %}
+		</div>
+
+		<!-- TABLE VIEW -->
+		<div id="tableView" class="hidden">
+			<div class="overflow-x-auto">
+				<table class="min-w-full text-sm">
+					<thead class="bg-white text-slate-800">
+						<tr>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">วันที่</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Image</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD Code</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">QR (Work)</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Defect Mode</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Caption</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Order</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Image Path</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-slate-200">
+						{% for r in rows %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.created_at|default:"-" }}</td>
+							<td class="px-4 py-3">
+								{% if r.image_url %}
+									<a href="{{ r.image_url }}" target="_blank" rel="noreferrer">
+										<img src="{{ r.image_url }}" alt="defect image" class="w-12 h-12 rounded-md object-cover border border-slate-300 bg-slate-100 hover:opacity-80 transition" />
+									</a>
+								{% else %}
+									<span class="text-xs text-slate-400">-</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.qr_work|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.defect_name|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.caption|default:"-" }}</td>
+							<td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ r.order }}</td>
+							<td class="px-4 py-3 font-mono text-xs text-slate-500 break-all">{{ r.image_path|default:"-" }}</td>
+						</tr>
+						{% empty %}
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="8">รอภาพ Defect จากเครื่อง Inspection...</td></tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		{% if page_obj and paginator and paginator.num_pages > 1 %}
+			<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+				<p class="text-sm text-gray-700">Showing <span class="font-medium">{{ page_obj.start_index }}</span> to <span class="font-medium">{{ page_obj.end_index }}</span> of <span class="font-medium">{{ rows_total }}</span> images</p>
+				<nav class="isolate inline-flex -space-x-px rounded-md shadow-xs">
+					{% if page_obj.has_previous %}
+						<a href="?sd_code={{ q_sd|urlencode }}&qr_work={{ q_qr|urlencode }}&caption={{ q_caption|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&defect_id={{ q_defect|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-500 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">‹</a>
+					{% endif %}
+					{% for item in page_items %}
+						{% if item %}
+							{% if item == page_obj.number %}
+								<span class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">{{ item }}</span>
+							{% else %}
+								<a href="?sd_code={{ q_sd|urlencode }}&qr_work={{ q_qr|urlencode }}&caption={{ q_caption|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&defect_id={{ q_defect|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">{{ item }}</a>
+							{% endif %}
+						{% else %}
+							<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">…</span>
+						{% endif %}
+					{% endfor %}
+					{% if page_obj.has_next %}
+						<a href="?sd_code={{ q_sd|urlencode }}&qr_work={{ q_qr|urlencode }}&caption={{ q_caption|urlencode }}&date_from={{ q_date_from|urlencode }}&date_to={{ q_date_to|urlencode }}&defect_id={{ q_defect|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-500 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">›</a>
+					{% endif %}
+				</nav>
+			</div>
+		{% endif %}
+	</div>
+</section>
+
+<script>
+(() => {
+	const init = () => {
+		const gridView = document.getElementById('gridView');
+		const tableView = document.getElementById('tableView');
+		const btnTable = document.getElementById('viewTable');
+		const btnGrid = document.getElementById('viewGrid');
+		function setMode(mode) {
+			if (mode === 'table') {
+				gridView.classList.add('hidden');
+				tableView.classList.remove('hidden');
+				btnTable.classList.add('bg-indigo-600', 'text-white');
+				btnTable.classList.remove('bg-white', 'text-slate-700');
+				btnGrid.classList.add('bg-white', 'text-slate-700');
+				btnGrid.classList.remove('bg-indigo-600', 'text-white');
+			} else {
+				tableView.classList.add('hidden');
+				gridView.classList.remove('hidden');
+				btnGrid.classList.add('bg-indigo-600', 'text-white');
+				btnGrid.classList.remove('bg-white', 'text-slate-700');
+				btnTable.classList.add('bg-white', 'text-slate-700');
+				btnTable.classList.remove('bg-indigo-600', 'text-white');
+			}
+			try { localStorage.setItem('inspection_defect_image_view', mode); } catch (_) {}
+		}
+		btnTable.addEventListener('click', () => setMode('table'));
+		btnGrid.addEventListener('click', () => setMode('grid'));
+		try {
+			const saved = localStorage.getItem('inspection_defect_image_view');
+			if (saved === 'table') setMode('table');
+		} catch (_) {}
+	};
+	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+	else init();
+})();
+</script>
+{% endblock %}

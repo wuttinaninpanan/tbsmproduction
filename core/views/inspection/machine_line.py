@@ -101,7 +101,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 
 class MachineLineView(TemplateView):
-    template_name = "inspection/machine_line.html"
+    template_name = "core/inspection/machine_line.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

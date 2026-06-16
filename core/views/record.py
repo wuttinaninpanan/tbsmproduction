@@ -193,7 +193,7 @@ def _build_record_payload() -> dict:
 class RecordProductionView(TemplateView):
     """Page 1 — line time window & production quantity per part."""
 
-    template_name = "record_production.html"
+    template_name = "core/record_production.html"
 
     # Map the employee's standing UserProfile.shift to the matching Shift row's
     # display_number, so the right checkbox is pre-ticked (gp A→1, B→2, Day→3).
@@ -223,7 +223,7 @@ class RecordProductionView(TemplateView):
 class RecordDefectsView(TemplateView):
     """Page 2 — defect & scrap entry, persists the whole submission."""
 
-    template_name = "record_defects.html"
+    template_name = "core/record_defects.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -563,7 +563,3 @@ class RecordDefectsView(TemplateView):
 
         # After save, send the user back to Page 1 to start a new lot.
         return redirect("record")
-
-
-# Backwards-compat alias — some imports still reference ``RecordViews``.
-RecordViews = RecordProductionView

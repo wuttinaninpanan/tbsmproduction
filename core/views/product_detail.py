@@ -59,7 +59,7 @@ class ProductDetailView(TemplateView):
 	"""Single-page editor for an FG item: top section edits the Item itself,
 	bottom section manages the BOM components that make up this FG."""
 
-	template_name = "product_detail.html"
+	template_name = "core/product_detail.html"
 
 	def get_item(self, item_id):
 		if not _is_uuid(item_id):

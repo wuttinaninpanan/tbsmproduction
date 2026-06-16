@@ -49,7 +49,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 
 class KanbanItemMappingView(TemplateView):
-    template_name = "inspection/kanban_item_mapping.html"
+    template_name = "core/inspection/kanban_item_mapping.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

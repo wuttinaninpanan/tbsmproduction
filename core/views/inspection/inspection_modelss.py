@@ -54,7 +54,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 
 class InspectionModelssView(TemplateView):
-	template_name = "inspection/inspection_modelss.html"
+	template_name = "core/inspection/inspection_modelss.html"
 
 	def _save_model_file(self, request) -> str | None:
 		f = request.FILES.get("model_file")

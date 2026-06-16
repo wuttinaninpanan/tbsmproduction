@@ -56,7 +56,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 @method_decorator(staff_required, name="dispatch")
 class ManageContactViews(TemplateView):
-	template_name = "manage_contact.html"
+	template_name = "core/manage_contact.html"
 
 	def get_context_data(self, **kwargs):
 		ctx = super().get_context_data(**kwargs)

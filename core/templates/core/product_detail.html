@@ -1,0 +1,325 @@
+{% extends "core/base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<style>
+	#componentSelect-ts-dropdown .ts-dropdown-content,
+	.ts-wrapper.component-wide .ts-dropdown .ts-dropdown-content {
+		max-height: 360px;
+	}
+	.ts-wrapper.component-wide .ts-dropdown {
+		width: max-content;
+		min-width: 100%;
+		max-width: 90vw;
+	}
+	.ts-wrapper.component-wide .ts-dropdown .option {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+</style>
+{% endblock %}
+
+{% block title %}{{ item.item_code|default:item.sd_code }} — Product Detail{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<a href="/products/" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline">← กลับหน้า Products</a>
+			<h1 class="mt-1 text-2xl sm:text-3xl font-extrabold text-slate-900">
+				{{ item.item_code|default:"-" }} — {{ item.part_name|default:"-" }}
+			</h1>
+			<p class="text-sm text-slate-600 mt-1">SD Code: {{ item.sd_code|default:"-" }} · Part No.: {{ item.part_number|default:"-" }}</p>
+		</div>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	{# ============================================================== #}
+	{#  Section 1 — Edit / Update item                                #}
+	{# ============================================================== #}
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3 flex items-center gap-2">
+			<svg class="w-5 h-5 text-slate-700" viewBox="0 0 20 20" fill="currentColor"><path d="M2.695 14.762l-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"/></svg>
+			<div class="font-extrabold text-slate-800">1. แก้ไข / อัปเดตข้อมูล Item</div>
+		</div>
+
+		<form method="post" enctype="multipart/form-data" class="p-4 sm:p-5 space-y-4">
+			{% csrf_token %}
+			<input type="hidden" name="action" value="update_item" />
+
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">SD Code <span class="text-red-600">*</span></label>
+					<input name="sd_code" type="text" value="{{ item.sd_code|default:'' }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Part Number <span class="text-red-600">*</span></label>
+					<input name="part_number" type="text" value="{{ item.part_number|default:'' }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Part Name <span class="text-red-600">*</span></label>
+					<input name="part_name" type="text" value="{{ item.part_name|default:'' }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+			</div>
+
+			<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">SKU</label>
+					<input name="sku" type="text" value="{{ item.sku|default:'' }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Weight (kg)</label>
+					<input name="weight" type="number" step="0.01" value="{{ item.weight }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Cost</label>
+					<input name="cost" type="number" step="0.01" value="{{ item.cost }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Purchased price</label>
+					<input name="purchased_price" type="number" step="0.01" value="{{ item.purchased_price }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+			</div>
+
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Category</label>
+					<select name="category_id" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">(ไม่ระบุ)</option>
+						{% for c in categories %}
+							<option value="{{ c.id }}" {% if item.category_id|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Stage</label>
+					<select name="stage_id" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">(ไม่ระบุ)</option>
+						{% for s in stages %}
+							<option value="{{ s.id }}" {% if item.stage_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.display_name }}{% if s.code_prefix %} — {{ s.code_prefix }}{% endif %}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Line(s)</label>
+					<select id="lineSelect" name="line_ids" multiple class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						{% for l in lines %}
+							<option value="{{ l.id }}" {% if l.id in item_line_ids %}selected{% endif %}>{{ l.line_name }}</option>
+						{% endfor %}
+					</select>
+					<p class="text-xs text-slate-500 mt-1">พิมพ์เพื่อค้นหา หรือพิมพ์ชื่อใหม่แล้วกด Enter — Line ใหม่จะถูกสร้างอัตโนมัติเมื่อกดบันทึก</p>
+				</div>
+			</div>
+
+			<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Portion</label>
+					<select name="portion_id" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">(ไม่ระบุ)</option>
+						{% for p in portions %}
+							<option value="{{ p.id }}" {% if item.portion_id|stringformat:"s" == p.id|stringformat:"s" %}selected{% endif %}>{{ p.title }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Side</label>
+					<select name="side_id" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">(ไม่ระบุ)</option>
+						{% for s in sides %}
+							<option value="{{ s.id }}" {% if item.side_id|stringformat:"s" == s.id|stringformat:"s" %}selected{% endif %}>{{ s.title }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">In/Out</label>
+					<select name="inout_id" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">(ไม่ระบุ)</option>
+						{% for io in inouts %}
+							<option value="{{ io.id }}" {% if item.inout_id|stringformat:"s" == io.id|stringformat:"s" %}selected{% endif %}>{{ io.title }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Way</label>
+					<select name="way_id" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">(ไม่ระบุ)</option>
+						{% for w in ways %}
+							<option value="{{ w.id }}" {% if item.way_id|stringformat:"s" == w.id|stringformat:"s" %}selected{% endif %}>{{ w.title }}</option>
+						{% endfor %}
+					</select>
+				</div>
+			</div>
+
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Comment</label>
+				<input name="comment" type="text" value="{{ item.comment|default:'' }}" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">รูปภาพ (Reference)</label>
+				<div class="mt-1 flex items-center gap-3">
+					<img id="editImagePreview" src="{% if item.reference_image %}{{ item.reference_image.url }}{% endif %}" alt="preview"
+						class="{% if not item.reference_image %}opacity-40 {% endif %}w-16 h-16 rounded-lg object-cover border border-slate-300 bg-slate-100" />
+					<input name="reference_image" type="file" accept="image/*" id="editImageInput"
+						onchange="(function(i){var f=i.files&&i.files[0];var p=document.getElementById('editImagePreview');if(!p)return;if(f){p.src=URL.createObjectURL(f);p.classList.remove('opacity-40');}})(this)"
+						class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+				</div>
+				<label class="mt-2 inline-flex items-center gap-2 text-sm text-slate-700">
+					<input type="checkbox" name="clear_image" value="1" class="h-4 w-4" />
+					ลบรูปเดิม (ตั้งเป็นค่าว่าง)
+				</label>
+				<p class="text-xs text-slate-500 mt-1">เลือกไฟล์ใหม่เพื่อแทนที่รูปเดิม หรือเลือก "ลบรูปเดิม"</p>
+			</div>
+			<div class="flex justify-end gap-2">
+				<button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition">
+					<svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path d="M2.695 14.762l-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z"/></svg>
+					บันทึกข้อมูล Item
+				</button>
+			</div>
+		</form>
+	</div>
+
+	{# ============================================================== #}
+	{#  Section 2 — BOM components                                    #}
+	{# ============================================================== #}
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+			<div class="flex items-center gap-2">
+				<svg class="w-5 h-5 text-slate-700" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd"/></svg>
+				<div class="font-extrabold text-slate-800">2. เพิ่มพาร์ทที่ผลิต (Components)</div>
+			</div>
+		</div>
+
+		{# Add component form #}
+		<form method="post" class="p-4 sm:p-5 border-b border-slate-200 bg-emerald-50/40">
+			{% csrf_token %}
+			<input type="hidden" name="action" value="add_component" />
+			<div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+				<div class="md:col-span-12">
+					<label class="block text-sm font-semibold text-slate-700">Component (SD Code — Part No. — Part Name)</label>
+					<select id="componentSelect" name="component_id" required class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">เลือก Component</option>
+						{% for c in components %}
+							<option value="{{ c.id }}">{{ c.sd_code }} — {{ c.part_number }} — {{ c.part_name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="md:col-span-2">
+					<label class="block text-sm font-semibold text-slate-700">Quantity</label>
+					<input name="quantity" type="number" step="0.0001" value="1" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div class="md:col-span-2">
+					<label class="block text-sm font-semibold text-slate-700">Unit</label>
+					<input name="unit" type="text" value="PCS" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<div class="md:col-span-2">
+					<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+						<svg viewBox="0 0 20 20" fill="currentColor" class="size-5"><path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd"/></svg>
+						เพิ่มพาร์ท
+					</button>
+				</div>
+			</div>
+		</form>
+
+		{# Hidden update/delete forms — referenced by inputs/buttons via form="" #}
+		{% for r in bom_rows %}
+			<form id="bom-update-{{ r.id }}" method="post" class="hidden">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="update_component" />
+				<input type="hidden" name="bom_item_id" value="{{ r.id }}" />
+			</form>
+			<form id="bom-delete-{{ r.id }}" method="post" class="hidden" onsubmit="return confirm('ลบ Component นี้?')">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="delete_component" />
+				<input type="hidden" name="bom_item_id" value="{{ r.id }}" />
+			</form>
+		{% endfor %}
+
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Seq</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Item Code</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD Code</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Number</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Name</th>
+						<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Quantity</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Unit</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for r in bom_rows %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3 whitespace-nowrap">
+								<input form="bom-update-{{ r.id }}" name="sequence" type="number" value="{{ r.sequence }}" min="1" class="w-16 rounded-md border border-slate-300 px-2 py-1 text-xs" />
+							</td>
+							<td class="px-4 py-3 font-mono text-slate-900 whitespace-nowrap">{{ r.component_item_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.component_sd_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.component_part_number|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.component_part_name|default:"-" }}</td>
+							<td class="px-4 py-3 text-right whitespace-nowrap">
+								<input form="bom-update-{{ r.id }}" name="quantity" type="number" step="0.0001" value="{{ r.quantity }}" class="w-24 rounded-md border border-slate-300 px-2 py-1 text-xs text-right" />
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap">
+								<input form="bom-update-{{ r.id }}" name="unit" type="text" value="{{ r.unit }}" class="w-20 rounded-md border border-slate-300 px-2 py-1 text-xs" />
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap">
+								<div class="flex items-center justify-center gap-2">
+									<button form="bom-update-{{ r.id }}" type="submit" class="inline-flex items-center px-3 py-1 rounded-md font-semibold text-white bg-amber-500 hover:bg-amber-600 transition text-xs">บันทึก</button>
+									<button form="bom-delete-{{ r.id }}" type="submit" class="inline-flex items-center px-3 py-1 rounded-md font-semibold text-white bg-red-600 hover:bg-red-700 transition text-xs">ลบ</button>
+								</div>
+							</td>
+						</tr>
+					{% empty %}
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="8">ยังไม่มี Component ใน BOM นี้ — เพิ่มได้ที่ฟอร์มด้านบน</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</section>
+
+<script>
+(function(){
+	function init(){
+		var el = document.getElementById('lineSelect');
+		if (el && !el.tomselect) {
+			new TomSelect(el, {
+				create: true,
+				persist: false,
+				plugins: ['remove_button'],
+				maxOptions: 200,
+				placeholder: 'พิมพ์เพื่อค้นหา / เพิ่ม Line ใหม่...',
+			});
+		}
+		var comp = document.getElementById('componentSelect');
+		if (comp && !comp.tomselect) {
+			new TomSelect(comp, {
+				maxOptions: false,
+				allowEmptyOption: true,
+				placeholder: 'พิมพ์เพื่อค้นหา Component...',
+				wrapperClass: 'ts-wrapper component-wide',
+			});
+		}
+	}
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+})();
+</script>
+{% endblock %}

@@ -55,7 +55,7 @@ class InspectionScrapDashboardView(TemplateView):
     export of the filtered rows. No editing here — view + export only.
     """
 
-    template_name = "inspection/inspection_scrap_dashboard.html"
+    template_name = "core/inspection/inspection_scrap_dashboard.html"
 
     def get(self, request, *args, **kwargs):
         if (request.GET.get("action") or "").strip().lower() == "export_excel":

@@ -187,7 +187,7 @@ def _parse_xlsx(uploaded_file):
 
 @method_decorator(staff_required, name="dispatch")
 class ManageUserViews(TemplateView):
-	template_name = "manage_user.html"
+	template_name = "core/manage_user.html"
 
 	def get(self, request, *args, **kwargs):
 		action = (request.GET.get("action") or "").strip().lower()

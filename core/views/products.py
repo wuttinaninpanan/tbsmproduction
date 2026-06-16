@@ -75,7 +75,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 @method_decorator(staff_required, name="dispatch")
 class ProductsView(TemplateView):
 	"""Read-only listing of items that have at least one ItemLine assignment."""
-	template_name = "products.html"
+	template_name = "core/products.html"
 
 	def get_context_data(self, **kwargs):
 		ctx = super().get_context_data(**kwargs)

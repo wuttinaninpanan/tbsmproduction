@@ -25,7 +25,7 @@ except Exception:  # pragma: no cover
 
 @method_decorator(staff_required, name="dispatch")
 class ScrapWeightReportViews(TemplateView):
-    template_name = "report_scrap_weight.html"
+    template_name = "core/report_scrap_weight.html"
 
     def get(self, request, *args, **kwargs):
         export = (request.GET.get("export") or "").strip().lower()

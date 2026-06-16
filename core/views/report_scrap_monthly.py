@@ -23,7 +23,7 @@ except Exception:  # pragma: no cover
 
 @method_decorator(staff_required, name="dispatch")
 class MonthlyComponentPartReportViews(TemplateView):
-    template_name = "report_scrap_monthly.html"
+    template_name = "core/report_scrap_monthly.html"
 
     def get(self, request, *args, **kwargs):
         export = (request.GET.get("export") or "").strip().lower()

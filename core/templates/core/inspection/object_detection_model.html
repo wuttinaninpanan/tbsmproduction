@@ -1,0 +1,211 @@
+﻿{% extends "core/base.html" %}
+{% block title %}Object Detection Model — TBSMRD{% endblock %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <a href="/inspection/machine/" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">&larr; Back to Machine</a>
+</div>
+
+<div class="flex items-center justify-between mb-2">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">Object Detection Model</h1>
+    <p class="text-slate-500 text-sm mt-1">กำหนดว่า Detection Object แต่ละตัวใช้ ML Model ใดตรวจ</p>
+  </div>
+  <button onclick="openModal('addModal')" class="inline-flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition">
+    + Add
+  </button>
+</div>
+
+{% if messages %}
+<div class="mb-4 space-y-2">
+  {% for message in messages %}
+  <div class="px-4 py-2 rounded-lg text-sm font-medium
+    {% if message.tags == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+    {% elif message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+    {% else %}bg-amber-50 text-amber-700 border border-amber-200{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<form method="get" class="flex flex-wrap gap-2 mb-4">
+  <input type="text" name="q" value="{{ q|default:'' }}" placeholder="ค้นหา..." class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 w-56">
+  <input type="hidden" name="per_page" value="{{ per_page|default:25 }}">
+  <button type="submit" class="bg-slate-700 hover:bg-slate-800 text-white text-sm px-4 py-2 rounded-lg transition">ค้นหา</button>
+</form>
+
+<div class="overflow-x-auto rounded-xl border border-slate-200">
+  <table class="min-w-full text-sm text-slate-700">
+    <thead class="bg-slate-50 text-slate-600 uppercase text-xs">
+      <tr>
+        <th class="px-4 py-3 text-left">#</th>
+        <th class="px-4 py-3 text-left">Detection Object</th>
+        <th class="px-4 py-3 text-left">Inspection Model</th>
+        <th class="px-4 py-3 text-center">จัดการ</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100">
+      {% for r in rows %}
+      <tr class="hover:bg-slate-50 transition">
+        <td class="px-4 py-3 text-slate-400">{{ forloop.counter }}</td>
+        <td class="px-4 py-3 font-medium">{{ r.object_name }}</td>
+        <td class="px-4 py-3">{{ r.model_class }}</td>
+        <td class="px-4 py-3 text-center">
+          <div class="flex justify-center gap-2">
+            <button
+              onclick="openEdit(this)"
+              data-id="{{ r.id }}"
+              data-object-id="{{ r.object_id }}"
+              data-model-id="{{ r.model_id }}"
+              class="text-amber-500 hover:text-amber-700 font-medium transition">แก้ไข</button>
+            <button
+              onclick="openDelete('{{ r.id }}')"
+              class="text-red-600 hover:text-red-800 font-medium transition">ลบ</button>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="4" class="px-4 py-8 text-center text-slate-400">ไม่พบข้อมูล</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_items.has_other_pages %}
+<div class="flex flex-wrap items-center justify-center gap-1 mt-4">
+  {% if page_items.has_previous %}
+  <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:25 }}&page={{ page_items.previous_page_number }}"
+     class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm">&laquo;</a>
+  {% endif %}
+  {% for num in page_items.paginator.page_range %}
+    {% if page_items.number == num %}
+    <span class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-medium">{{ num }}</span>
+    {% elif num > page_items.number|add:'-3' and num < page_items.number|add:'3' %}
+    <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:25 }}&page={{ num }}"
+       class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm">{{ num }}</a>
+    {% endif %}
+  {% endfor %}
+  {% if page_items.has_next %}
+  <a href="?q={{ q|default:'' }}&per_page={{ per_page|default:25 }}&page={{ page_items.next_page_number }}"
+     class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm">&raquo;</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Add Modal -->
+<div id="addModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/40">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-slate-800">เพิ่ม Object Detection Model</h2>
+      <button data-close class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Detection Object</label>
+          <select name="object_id" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="">-- เลือก Object --</option>
+            {% for obj in objects_list %}
+            <option value="{{ obj.id }}">{{ obj.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Inspection Model</label>
+          <select name="model_id" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="">-- เลือก Model --</option>
+            {% for mdl in models_list %}
+            <option value="{{ mdl.id }}">{{ mdl.class_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button type="button" data-close class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/40">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-slate-800">แก้ไข Object Detection Model</h2>
+      <button data-close class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update">
+      <input type="hidden" name="id" id="editId">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Detection Object</label>
+          <select name="object_id" id="editObjectId" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="">-- เลือก Object --</option>
+            {% for obj in objects_list %}
+            <option value="{{ obj.id }}">{{ obj.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Inspection Model</label>
+          <select name="model_id" id="editModelId" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="">-- เลือก Model --</option>
+            {% for mdl in models_list %}
+            <option value="{{ mdl.id }}">{{ mdl.class_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button type="button" data-close class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium transition">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/40">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-2">ยืนยันการลบ</h2>
+    <p class="text-slate-500 text-sm mb-6">คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?</p>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="delete">
+      <input type="hidden" name="id" id="deleteId">
+      <div class="flex justify-end gap-2">
+        <button type="button" data-close class="px-4 py-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 text-sm">ยกเลิก</button>
+        <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition">ลบ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openModal(id){document.getElementById(id).classList.remove('hidden');document.getElementById(id).classList.add('flex')}
+function closeAll(){['addModal','editModal','deleteModal'].forEach(id=>{document.getElementById(id).classList.add('hidden');document.getElementById(id).classList.remove('flex')})}
+document.querySelectorAll('[data-close]').forEach(el=>el.onclick=closeAll)
+
+function openEdit(btn) {
+  document.getElementById('editId').value = btn.dataset.id;
+  document.getElementById('editObjectId').value = btn.dataset.objectId;
+  document.getElementById('editModelId').value = btn.dataset.modelId;
+  openModal('editModal');
+}
+
+function openDelete(id) {
+  document.getElementById('deleteId').value = id;
+  openModal('deleteModal');
+}
+</script>
+{% endblock %}

@@ -19,7 +19,7 @@ from core.models import AuditLogEntry
     name="dispatch",
 )
 class AuditLogViews(TemplateView):
-    template_name = "auditlog.html"
+    template_name = "core/auditlog.html"
 
     def get(self, request, *args, **kwargs):
         export = (request.GET.get("export") or "").strip().lower()

@@ -8,7 +8,7 @@ from core.models.process_defect import ProcessDefectScrap
 
 # Create your views here.
 class HomeViews(TemplateView):
-    template_name = "index.html"
+    template_name = "core/index.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

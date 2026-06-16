@@ -1,0 +1,3 @@
+# Keeps the fixtures/ directory in git so data_dump has a target.
+# Regenerate the consolidated seed with:
+#   python manage.py data_dump   (writes core/fixtures/master_seed.json)

@@ -68,7 +68,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 @method_decorator(staff_required, name="dispatch")
 class ManageSettingsViews(TemplateView):
-	template_name = "manage_settings.html"
+	template_name = "core/manage_settings.html"
 
 	# ------------------------------------------------------------------ GET
 

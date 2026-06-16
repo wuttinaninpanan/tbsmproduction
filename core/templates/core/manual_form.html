@@ -1,0 +1,224 @@
+{% extends "core/base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}{% if manual %}แก้ไขคู่มือ{% else %}เพิ่มคู่มือ{% endif %} — TBSMRD{% endblock %}
+
+{% block extra_head %}
+<style>
+    .manual-workspace {
+        width: 90%;
+        max-width: none;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .tox-tinymce {
+        max-height: calc(100vh - 270px);
+    }
+    @media (max-width: 768px) {
+        .manual-workspace { width: 100%; }
+        .tox-tinymce { max-height: calc(100vh - 320px); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="manual-workspace space-y-6">
+
+    <header class="flex items-center justify-between">
+        <h1 class="text-2xl font-extrabold text-slate-900">{% if manual %}แก้ไขคู่มือ{% else %}เพิ่มคู่มือ{% endif %}</h1>
+        <a href="{% url 'manual_list' %}" class="text-sm font-semibold underline text-slate-600">← กลับรายการ</a>
+    </header>
+
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+        <div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="manualForm" class="space-y-4">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-700 mb-1">หัวข้อคู่มือ <span class="text-red-500">*</span></label>
+                <input name="title" required value="{{ manual.title|default:'' }}" placeholder="เช่น วิธีบันทึกข้อมูลของเสีย"
+                    class="w-full border px-3 py-2 rounded-md">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">สำหรับกลุ่ม</label>
+                <select name="usefor" class="w-full border px-3 py-2 rounded-md bg-white">
+                    {% for value, label in usefor_choices %}
+                    <option value="{{ value }}" {% if manual.usefor == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">คำอธิบายสั้นๆ</label>
+            <input name="description" value="{{ manual.description|default:'' }}" placeholder="สรุปสั้นๆ ว่าคู่มือนี้เกี่ยวกับอะไร"
+                class="w-full border px-3 py-2 rounded-md">
+        </div>
+
+        <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1">เนื้อหา (ตกแต่ง/แปะรูปได้)</label>
+            <textarea name="detail" id="detail">{{ manual.detail|default:'' }}</textarea>
+        </div>
+
+        <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" name="is_active" value="true" {% if manual.is_active or manual is None %}checked{% endif %} class="rounded border-slate-300">
+            เปิดใช้งาน (แสดงให้ผู้ใช้เห็น)
+        </label>
+
+        <div class="flex justify-end gap-2 pt-2">
+            <a href="{% url 'manual_list' %}" class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</a>
+            <button type="submit" class="px-5 py-2 bg-emerald-600 text-white rounded-lg font-semibold">บันทึก</button>
+        </div>
+    </form>
+</section>
+
+<!-- WYSIWYG: TinyMCE (self-hosted build จาก jsDelivr — ไม่ต้องใช้ API key) -->
+<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+    const blobToDataUrl = async (url) => {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    };
+    const imageBlobToCompressedDataUrl = async (blob) => {
+        if (!blob.type || !blob.type.startsWith('image/')) {
+            return await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+        const sourceUrl = URL.createObjectURL(blob);
+        try {
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = sourceUrl;
+            });
+            const maxWidth = 1400;
+            const scale = Math.min(1, maxWidth / Math.max(img.naturalWidth || img.width, 1));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+            canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.82);
+        } finally {
+            URL.revokeObjectURL(sourceUrl);
+        }
+    };
+    const srcToCompressedDataUrl = async (src) => {
+        if ((src || '').startsWith('data:image/')) {
+            const blob = await (await fetch(src)).blob();
+            return imageBlobToCompressedDataUrl(blob);
+        }
+        if ((src || '').startsWith('blob:')) {
+            const blob = await (await fetch(src)).blob();
+            return imageBlobToCompressedDataUrl(blob);
+        }
+        return src;
+    };
+
+    const inlineBlobImages = async (editor) => {
+        const body = editor.getBody();
+        const images = Array.from(body.querySelectorAll('img[src^="blob:"], img[src^="data:image/"]'));
+        for (const img of images) {
+            try {
+                img.setAttribute('src', await srcToCompressedDataUrl(img.getAttribute('src')));
+            } catch (err) {
+                const note = editor.getDoc().createElement('p');
+                note.textContent = 'รูปนี้ไม่ได้ถูกบันทึกไว้ในคู่มือ กรุณาแทรกรูปใหม่อีกครั้ง';
+                note.style.border = '1px dashed #f59e0b';
+                note.style.background = '#fffbeb';
+                note.style.color = '#92400e';
+                note.style.borderRadius = '8px';
+                note.style.padding = '12px';
+                note.style.fontWeight = '600';
+                img.replaceWith(note);
+            }
+        }
+        editor.save();
+    };
+
+    tinymce.init({
+        selector: '#detail',
+        height: Math.max(520, Math.min(760, window.innerHeight - 280)),
+        menubar: false,
+        promotion: false,
+        branding: false,
+        resize: false,
+        plugins: 'lists link image table code',
+        toolbar: 'undo redo | blocks | bold italic underline forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link image table | removeformat | code',
+        // แปะรูป (paste/วาง) -> ฝังเป็น base64 ในเนื้อหาเลย (ไม่ต้องอัปโหลดไฟล์)
+        paste_data_images: true,
+        automatic_uploads: false,
+        file_picker_types: 'image',
+        file_picker_callback: function (cb, value, meta) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function () {
+                const file = input.files[0];
+                imageBlobToCompressedDataUrl(file).then(function (dataUrl) {
+                    cb(dataUrl, { title: file.name });
+                });
+            };
+            input.click();
+        },
+        content_style: "body{font-family:'Sarabun',sans-serif;font-size:14px}"
+    }).then(function (editors) {
+        const form = document.getElementById('manualForm');
+        const editor = editors[0];
+        if (!form || !editor) return;
+
+        const resizeEditor = function () {
+            const height = Math.max(520, Math.min(760, window.innerHeight - 280));
+            if (editor.theme && typeof editor.theme.resizeTo === 'function') {
+                editor.theme.resizeTo(null, height);
+            }
+        };
+        window.addEventListener('resize', resizeEditor);
+
+        form.addEventListener('submit', async function (event) {
+            if (form.dataset.ready === '1') return;
+            event.preventDefault();
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'กำลังบันทึก...';
+            }
+
+            try {
+                await inlineBlobImages(editor);
+                form.dataset.ready = '1';
+                form.submit();
+            } catch (err) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'บันทึก';
+                }
+                alert('บันทึกรูปภาพไม่สำเร็จ กรุณาลองแทรกรูปอีกครั้ง');
+            }
+        });
+    });
+</script>
+
+{% endblock %}

@@ -43,7 +43,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 
 class ItemObjectView(TemplateView):
-    template_name = "inspection/item_object.html"
+    template_name = "core/inspection/item_object.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

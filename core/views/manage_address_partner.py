@@ -177,7 +177,7 @@ ADDRESS_TYPE_CHOICES = [
 
 @method_decorator(staff_required, name="dispatch")
 class ManageAddressPartnerViews(TemplateView):
-	template_name = "manage_address_partner.html"
+	template_name = "core/manage_address_partner.html"
 
 	def get(self, request, *args, **kwargs):
 		action = (request.GET.get("action") or "").strip().lower()

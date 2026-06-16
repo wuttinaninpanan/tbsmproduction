@@ -1,0 +1,349 @@
+{% extends "core/base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Item List — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Item List</h1>
+			<p class="text-sm text-slate-600 mt-1">รายการ Item ทั้งหมดใน Item_list (FG / component / วัตถุดิบ)</p>
+		</div>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">{{ message }}</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	<!-- TABS -->
+	<div class="border-b border-slate-200">
+		<nav class="-mb-px flex flex-wrap items-center gap-x-6 gap-y-1" aria-label="Tabs">
+			<a href="?tab=all" class="inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-semibold {% if tab == 'all' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700{% endif %}">
+				All Item
+				<span class="rounded-full px-2 py-0.5 text-xs font-semibold {% if tab == 'all' %}bg-indigo-50 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ count_all }}</span>
+			</a>
+			<a href="?tab=nosd" class="inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-semibold {% if tab == 'nosd' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700{% endif %}">
+				NOSD
+				<span class="rounded-full px-2 py-0.5 text-xs font-semibold {% if tab == 'nosd' %}bg-indigo-50 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ count_nosd }}</span>
+			</a>
+			<a href="?tab=no_partno" class="inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-semibold {% if tab == 'no_partno' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700{% endif %}">
+				NO Part no
+				<span class="rounded-full px-2 py-0.5 text-xs font-semibold {% if tab == 'no_partno' %}bg-indigo-50 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ count_no_partno }}</span>
+			</a>
+			<a href="?tab=no_partname" class="inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-semibold {% if tab == 'no_partname' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700{% endif %}">
+				NO Part name
+				<span class="rounded-full px-2 py-0.5 text-xs font-semibold {% if tab == 'no_partname' %}bg-indigo-50 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ count_no_partname }}</span>
+			</a>
+			<a href="?tab=no_bom" class="inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-semibold {% if tab == 'no_bom' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700{% endif %}">
+				No BoM
+				<span class="rounded-full px-2 py-0.5 text-xs font-semibold {% if tab == 'no_bom' %}bg-indigo-50 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ count_no_bom }}</span>
+			</a>
+			<a href="?tab=add" class="inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-3 text-sm font-semibold {% if tab == 'add' %}border-emerald-600 text-emerald-700{% else %}border-transparent text-emerald-600 hover:border-emerald-300 hover:text-emerald-700{% endif %}">
+				<svg viewBox="0 0 20 20" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd"/></svg>
+				Add new
+			</a>
+		</nav>
+	</div>
+
+	{% if tab == 'add' %}
+		<!-- IMPORT EXCEL -->
+		<div class="rounded-2xl border border-slate-200 p-5 sm:p-6 mb-4">
+			<div class="flex flex-wrap items-start justify-between gap-3">
+				<div>
+					<h2 class="text-lg font-extrabold text-slate-900">นำเข้าจาก Excel</h2>
+					<p class="text-xs text-slate-500 mt-1">หัวคอลัมน์: <code class="text-slate-700">sd_code, part_number*, part_name*, sku*, weight, cost, purchased_price, comment, category, stage</code> — category/stage ใส่เป็นชื่อ • * = จำเป็น • SD Code ที่ซ้ำจะถูกข้าม</p>
+				</div>
+				<a href="?tab=add&amp;action=import_template" class="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ดาวน์โหลดเทมเพลต</a>
+			</div>
+			<form method="post" enctype="multipart/form-data" class="mt-4 flex flex-col sm:flex-row sm:items-end gap-3">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="import_excel" />
+				<div class="flex-1">
+					<label class="block text-sm font-semibold text-slate-700">ไฟล์ Excel (.xlsx)</label>
+					<input name="excel_file" type="file" accept=".xlsx" required class="mt-1 block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+				</div>
+				<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 whitespace-nowrap">นำเข้า</button>
+			</form>
+		</div>
+
+		<!-- ADD FORM -->
+		<div class="rounded-2xl border border-slate-200 p-5 sm:p-6">
+			<h2 class="text-lg font-extrabold text-slate-900">เพิ่ม Item ใหม่</h2>
+			<p class="text-xs text-slate-500 mt-1">สร้างรายการใน Item_list (master) — การผูก Line ทำได้ที่หน้า Products</p>
+			<form method="post" enctype="multipart/form-data" class="mt-4 space-y-4">
+				{% csrf_token %}
+				<input type="hidden" name="action" value="create_item" />
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">SD Code</label>
+						<input name="sd_code" type="text" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Part Number <span class="text-red-600">*</span></label>
+						<input name="part_number" type="text" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Part Name <span class="text-red-600">*</span></label>
+						<input name="part_name" type="text" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+				</div>
+				<div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">SKU <span class="text-red-600">*</span></label>
+						<input name="sku" type="text" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Weight (kg)</label>
+						<input name="weight" type="number" step="0.01" value="0" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Cost</label>
+						<input name="cost" type="number" step="0.01" value="0" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Purchased</label>
+						<input name="purchased_price" type="number" step="0.01" value="0" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+					</div>
+				</div>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Category</label>
+						<select name="category_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+							<option value="">(ไม่ระบุ)</option>
+							{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+						</select>
+					</div>
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Stage</label>
+						<select name="stage_id" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+							<option value="">(ไม่ระบุ)</option>
+							{% for s in stages %}<option value="{{ s.id }}">{{ s.display_name }}{% if s.code_prefix %} — {{ s.code_prefix }}{% endif %}</option>{% endfor %}
+						</select>
+						<p class="text-xs text-slate-500 mt-1">เลือก Stage เพื่อให้ระบบออก Item Code ให้อัตโนมัติ</p>
+					</div>
+				</div>
+				<div>
+					<label class="block text-sm font-semibold text-slate-700">Comment</label>
+					<input name="comment" type="text" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+				</div>
+				<div>
+						<label class="block text-sm font-semibold text-slate-700">รูปภาพ (Reference)</label>
+						<div class="mt-1 flex items-center gap-3">
+							<img id="addImagePreview" class="hidden w-16 h-16 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="preview" />
+							<input name="reference_image" type="file" accept="image/*" id="addImageInput"
+								onchange="(function(i){var f=i.files&&i.files[0];var p=document.getElementById('addImagePreview');if(!p)return;if(f){p.src=URL.createObjectURL(f);p.classList.remove('hidden');}else{p.removeAttribute('src');p.classList.add('hidden');}})(this)"
+								class="block w-full text-sm text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200" />
+						</div>
+						<p class="text-xs text-slate-500 mt-1">อัปโหลดรูปอ้างอิงของชิ้นงาน (ไม่บังคับ)</p>
+					</div>
+					<div class="flex items-center justify-end gap-2 pt-2">
+					<a href="?tab=all" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ยกเลิก</a>
+					<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+				</div>
+			</form>
+		</div>
+	{% else %}
+		<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+			<input type="hidden" name="tab" value="{{ tab }}" />
+			<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+				<div class="md:col-span-5">
+					<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+					<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย Item Code / SD Code / Part No. / Part Name / SKU / Category / Stage"
+						class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+				</div>
+				<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
+				<div class="md:col-span-2 flex items-end">
+					<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+						<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+							<path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.04 4.92l3.02 3.02a.75.75 0 1 1-1.06 1.06l-3.02-3.02A7 7 0 0 1 2 9Z" clip-rule="evenodd" />
+						</svg>
+						ค้นหา
+					</button>
+				</div>
+			</div>
+			<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+				<div class="text-xs text-slate-600">ทั้งหมด {{ total_count|default:0 }} รายการ</div>
+				<a href="?tab={{ tab }}" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+			</div>
+		</form>
+
+		<div class="rounded-2xl border border-slate-200 overflow-hidden">
+			<div class="bg-slate-100 px-4 py-3">
+				<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<div class="font-extrabold text-slate-800">Item List</div>
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="tab" value="{{ tab }}" />
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<span class="text-sm text-gray-700">Show</span>
+						<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+							<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+							<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+							<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
+						</select>
+						<span class="text-sm text-gray-700">entries</span>
+					</form>
+				</div>
+			</div>
+
+			<div class="overflow-x-auto">
+				<table class="min-w-full text-sm">
+					<thead class="bg-white text-slate-800">
+						<tr>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Item Code</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD Code</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Number</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Name</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Image</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SKU</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Weight (kg)</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Cost</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">Purchased</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Category</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Stage</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Portion</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Side</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Inout</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Way</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Line</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Comment</th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-slate-200">
+						{% for r in rows %}
+							<tr class="hover:bg-slate-50 cursor-pointer" data-detail-url="/products/{{ r.id }}/">
+								<td class="px-4 py-3 font-mono font-semibold whitespace-nowrap">
+									<a href="/products/{{ r.id }}/" class="text-indigo-600 hover:text-indigo-800 hover:underline">{{ r.item_code|default:"-" }}</a>
+								</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_name|default:"-" }}</td>
+								<td class="px-4 py-3">
+									{% if r.reference_image_url %}
+										<a href="{{ r.reference_image_url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
+											<img src="{{ r.reference_image_url }}" alt="{{ r.part_name|default:'Item image' }}" class="w-10 h-10 rounded-lg object-cover border border-slate-300 bg-slate-100" />
+										</a>
+									{% else %}
+										<span class="text-xs text-slate-500">-</span>
+									{% endif %}
+								</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.sku|default:"-" }}</td>
+								<td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ r.weight|default:"0" }}</td>
+								<td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ r.cost|default:"0" }}</td>
+								<td class="px-4 py-3 text-right text-slate-700 whitespace-nowrap">{{ r.purchased_price|default:"0" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.category_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.stage_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.portion_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.side_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.inout_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.way_name|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.line_names|default:"-" }}</td>
+								<td class="px-4 py-3 text-slate-700">{{ r.comment|default:"-" }}</td>
+							</tr>
+						{% empty %}
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="17">ยังไม่มีข้อมูล Item</td></tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+
+			{% if page_obj and paginator %}
+				<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<p class="text-sm text-gray-700">
+							Showing
+							<span class="font-medium">{{ page_obj.start_index }}</span>
+							to
+							<span class="font-medium">{{ page_obj.end_index }}</span>
+							of
+							<span class="font-medium">{{ rows_total }}</span>
+							results
+						</p>
+					</div>
+					{% if paginator.num_pages > 1 %}
+						<div class="flex items-center justify-between gap-3 sm:justify-end">
+							<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-xs">
+								{% if page_obj.has_previous %}
+									<a href="?tab={{ tab }}&q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+										<span class="sr-only">Previous</span>
+										<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+											<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 0 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" fill-rule="evenodd" clip-rule="evenodd" />
+										</svg>
+									</a>
+								{% else %}
+									<span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200">
+										<span class="sr-only">Previous</span>
+										<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+											<path d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 0 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" fill-rule="evenodd" clip-rule="evenodd" />
+										</svg>
+									</span>
+								{% endif %}
+
+								{% for item in page_items %}
+									{% if item %}
+										{% if item == page_obj.number %}
+											<a href="?tab={{ tab }}&q={{ q|urlencode }}&per_page={{ per_page }}&page={{ item }}" aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">{{ item }}</a>
+										{% else %}
+											<a href="?tab={{ tab }}&q={{ q|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">{{ item }}</a>
+										{% endif %}
+									{% else %}
+										<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 inset-ring inset-ring-gray-300">...</span>
+									{% endif %}
+								{% endfor %}
+
+								{% if page_obj.has_next %}
+									<a href="?tab={{ tab }}&q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+										<span class="sr-only">Next</span>
+										<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+											<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" fill-rule="evenodd" clip-rule="evenodd" />
+									</svg>
+									</a>
+								{% else %}
+									<span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-200">
+										<span class="sr-only">Next</span>
+										<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+											<path d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" fill-rule="evenodd" clip-rule="evenodd" />
+									</svg>
+									</span>
+								{% endif %}
+							</nav>
+						</div>
+					{% endif %}
+				</div>
+			{% endif %}
+		</div>
+	{% endif %}
+</section>
+
+<script>
+(() => {
+	const init = () => {
+		// Whole-row click navigates to the item editor. Clicks on real links
+		// (e.g. the Item Code anchor or the image) keep their own behaviour.
+		document.querySelectorAll('tr[data-detail-url]').forEach(tr => {
+			tr.addEventListener('click', (e) => {
+				if (e.target.closest('a, button, input, label, select, textarea')) return;
+				const url = tr.dataset.detailUrl;
+				if (!url) return;
+				if (e.ctrlKey || e.metaKey || e.button === 1) {
+					window.open(url, '_blank');
+				} else {
+					window.location.href = url;
+				}
+			});
+		});
+	};
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', init);
+	} else {
+		init();
+	}
+})();
+</script>
+{% endblock %}

@@ -70,7 +70,7 @@ def _scrap_label(sr) -> str:
 
 
 class InspectionDefectView(TemplateView):
-    template_name = "inspection/inspection_defect.html"
+    template_name = "core/inspection/inspection_defect.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

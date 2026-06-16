@@ -7,7 +7,7 @@ from core.services.auditlog import log_event
 
 
 class LoginViews(TemplateView):
-    template_name = "login.html"
+    template_name = "core/login.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

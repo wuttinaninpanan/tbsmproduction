@@ -40,7 +40,7 @@ class ManageSettingsDefectByCategoryView(TemplateView):
 	and the save can safely reconcile against the full catalogue.
 	"""
 
-	template_name = "manage_settings_defect_by_category.html"
+	template_name = "core/manage_settings_defect_by_category.html"
 
 	def _get_category(self):
 		category_id = self.kwargs.get("category_id")

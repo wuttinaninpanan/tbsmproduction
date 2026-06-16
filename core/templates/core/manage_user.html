@@ -1,0 +1,536 @@
+{% extends "core/base.html" %}
+{% load tz %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}Manage Users — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">จัดการผู้ใช้งาน</h1>
+		</div>
+	</header>
+
+	{% if messages %}
+		<div class="space-y-2">
+			{% for message in messages %}
+				<div class="rounded-xl border px-4 py-3 text-sm bg-slate-50 border-slate-200 text-slate-800">
+					{{ message }}
+				</div>
+			{% endfor %}
+		</div>
+	{% endif %}
+
+	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+			<div class="md:col-span-5">
+				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+				<input name="q" value="{{ q|default:'' }}" placeholder="ค้นหาด้วย username / ชื่อ / email"
+					   class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">บทบาท</label>
+				<select name="role" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">ทั้งหมด</option>
+					<option value="user" {% if role == 'user' %}selected{% endif %}>ผู้ใช้ทั่วไป</option>
+					<option value="staff" {% if role == 'staff' %}selected{% endif %}>เจ้าหน้าที่</option>
+					<option value="admin" {% if role == 'admin' %}selected{% endif %}>ผู้ดูแลระบบ</option>
+				</select>
+			</div>
+			<div class="md:col-span-3">
+				<label class="block text-sm font-semibold text-slate-700">สถานะ</label>
+				<select name="status" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">ทั้งหมด</option>
+					<option value="active" {% if status == 'active' %}selected{% endif %}>ใช้งาน</option>
+					<option value="disabled" {% if status == 'disabled' %}selected{% endif %}>ปิดใช้งาน</option>
+				</select>
+			</div>
+			<div class="md:col-span-1 flex items-end">
+				<button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-slate-600 hover:bg-slate-700 transition">
+					ค้นหา
+				</button>
+			</div>
+		</div>
+
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+			<div class="text-xs text-slate-600">
+				{% if total_count %}ทั้งหมด {{ total_count }} ผู้ใช้งาน{% else %}—{% endif %}
+			</div>
+			<a href="?" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+		</div>
+	</form>
+
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3">
+			<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+				<div class="font-extrabold text-slate-800">Users</div>
+				<div class="flex items-center gap-2 flex-wrap">
+					{% if perms.core.add_user %}
+						<a href="?action=download_template&format=xlsx" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition whitespace-nowrap">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path d="M4 2.75A1.75 1.75 0 0 1 5.75 1h6.19c.46 0 .9.18 1.23.51l2.32 2.32c.33.33.51.77.51 1.23v12.19A1.75 1.75 0 0 1 14.25 19H5.75A1.75 1.75 0 0 1 4 17.25V2.75Z" />
+								<path d="M12 1.5v2.25c0 .69.56 1.25 1.25 1.25H15.5" />
+							</svg>
+							Template Excel
+						</a>
+					{% endif %}
+					{% if perms.core.add_user and perms.core.change_user %}
+						<form id="importForm" method="post" enctype="multipart/form-data" class="inline">
+							{% csrf_token %}
+							<input type="hidden" name="action" value="import" />
+							<input id="importFile" type="file" name="excel_file" accept=".csv,.xlsx" class="hidden" />
+							<button type="button" id="importBtn" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold border border-green-600 bg-green-600 text-white hover:bg-green-700 transition whitespace-nowrap">
+								<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+									<path fill-rule="evenodd" d="M10 1.75a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V2.5a.75.75 0 0 1 .75-.75ZM3.5 13.25a.75.75 0 0 1 .75.75v1.25c0 .69.56 1.25 1.25 1.25h9c.69 0 1.25-.56 1.25-1.25V14a.75.75 0 0 1 1.5 0v1.25A2.75 2.75 0 0 1 14.5 18h-9a2.75 2.75 0 0 1-2.75-2.75V14a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+								</svg>
+								นำเข้าข้อมูล
+							</button>
+						</form>
+					{% endif %}
+					{% if perms.core.add_user %}
+						<button type="button" data-open-add-user class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+							+ เพิ่มผู้ใช้งาน
+						</button>
+					{% endif %}
+					{% if perms.core.delete_user %}
+						<form id="bulkDeleteForm" method="post" class="inline">
+							{% csrf_token %}
+							<input type="hidden" name="action" value="bulk_delete" />
+							<button type="button" id="bulkDeleteBtn" disabled class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+								<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+									<path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+									<path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+								</svg>
+								ลบที่เลือก
+							</button>
+						</form>
+					{% endif %}
+					<form method="get" class="flex items-center gap-2">
+						<input type="hidden" name="q" value="{{ q|default:'' }}" />
+						<input type="hidden" name="role" value="{{ role|default:'' }}" />
+						<input type="hidden" name="status" value="{{ status|default:'' }}" />
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-gray-700">Show</span>
+							<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+								<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+								<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+								<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+								<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
+							</select>
+							<span class="text-sm text-gray-700">entries</span>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">
+							<input id="selectAllRows" type="checkbox" class="h-4 w-4" />
+						</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Username</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ชื่อ - นามสกุล</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Email</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Role</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Shift</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Group</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">สถานะ</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">เข้าใช้งานล่าสุด</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for u in users %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3">
+								<input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ u.id|default:u.pk|default:'' }}" />
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap font-semibold text-slate-900">{{ u.username|default:"-" }}</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ u.get_full_name|default:u.username }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ u.email|default:"-" }}</td>
+							<td class="px-4 py-3">
+								{% if u.is_superuser %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-200">admin</span>
+								{% elif u.is_staff %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">staff</span>
+								{% else %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-50 text-slate-700 border border-slate-200">user</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">
+								{% if u.profile %}
+									{% if u.profile.shift == 'shift_a' %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">กะ A</span>
+									{% elif u.profile.shift == 'shift_b' %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">กะ B</span>
+									{% else %}
+										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-200">กะ Day</span>
+									{% endif %}
+								{% else %}
+									<span class="text-slate-400">—</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">
+								{% if u.groups.all %}
+									{% for g in u.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+								{% else %}
+									<span class="text-slate-400">—</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3">
+								{% if u.is_active|default:True %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">active</span>
+								{% else %}
+									<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">disabled</span>
+								{% endif %}
+							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ u.last_login|localtime|date:"d M Y H:i"|default:"-" }}</td>
+							<td class="px-4 py-3">
+								<div class="flex items-center justify-end gap-2">
+									{% if perms.core.change_user %}
+										<button
+											type="button"
+											class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition"
+											data-edit-user
+											data-id="{{ u.id|default:u.pk|default:'' }}"
+											data-username="{{ u.username|default:'' }}"
+											data-first-name="{{ u.first_name|default:'' }}"
+											data-last-name="{{ u.last_name|default:'' }}"
+											data-email="{{ u.email|default:'' }}"
+											data-role="{% if u.is_superuser %}admin{% elif u.is_staff %}staff{% else %}user{% endif %}"
+											data-shift="{{ u.profile.shift|default:'shift_day' }}"
+											data-group="{% if u.groups.all %}{% for g in u.groups.all|slice:':1' %}{{ g.name }}{% endfor %}{% endif %}"
+											data-active="{% if u.is_active|default:True %}1{% else %}0{% endif %}"
+										>
+										แก้ไข
+										</button>
+									{% endif %}
+									{% if perms.core.delete_user %}
+										<form method="post" class="inline-flex" data-confirm-delete data-username="{{ u.username|default:'' }}">
+											{% csrf_token %}
+											<input type="hidden" name="action" value="delete" />
+											<input type="hidden" name="id" value="{{ u.id|default:u.pk|default:'' }}" />
+											<button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition">
+												ลบ
+											</button>
+										</form>
+									{% endif %}
+								</div>
+							</td>
+						</tr>
+					{% empty %}
+						<tr>
+							<td class="px-4 py-10 text-center text-slate-600" colspan="10">
+								ยังไม่มีข้อมูลผู้ใช้งาน
+								<div class="mt-3">
+									{% if perms.core.add_user %}
+										<button type="button" data-open-add-user class="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+											+ เพิ่มผู้ใช้งาน
+										</button>
+									{% endif %}
+								</div>
+							</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	{% if page_obj and paginator %}
+		<div class="flex flex-col gap-3 border border-slate-200 rounded-2xl bg-white px-4 py-3 sm:px-6">
+			<div class="text-sm text-gray-700">
+				Showing
+				<span class="font-medium">{{ page_obj.start_index }}</span>
+				to
+				<span class="font-medium">{{ page_obj.end_index }}</span>
+				of
+				<span class="font-medium">{{ rows_total }}</span>
+				results
+			</div>
+			{% if paginator.num_pages > 1 %}
+				<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md shadow-xs">
+					{% if page_obj.has_previous %}
+						<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+							<span class="sr-only">Previous</span>
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+							</svg>
+						</a>
+					{% else %}
+						<span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-300">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+							</svg>
+						</span>
+					{% endif %}
+
+					{% for item in page_items %}
+						{% if item is None %}
+							<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 inset-ring inset-ring-gray-300">…</span>
+						{% elif item == page_obj.number %}
+							<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ item }}" aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20">{{ item }}</a>
+						{% else %}
+							<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20">{{ item }}</a>
+						{% endif %}
+					{% endfor %}
+
+					{% if page_obj.has_next %}
+						<a href="?q={{ q|urlencode }}&role={{ role|urlencode }}&status={{ status|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0">
+							<span class="sr-only">Next</span>
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L12.44 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+							</svg>
+						</a>
+					{% else %}
+						<span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-300 inset-ring inset-ring-gray-300">
+							<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+								<path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 1 1-1.06-1.06L12.44 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+							</svg>
+						</span>
+					{% endif %}
+				</nav>
+			{% endif %}
+		</div>
+	{% endif %}
+</section>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-add-modal-backdrop></div>
+
+	<div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl bg-white">
+		<button type="button"
+			class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow"
+			aria-label="Close"
+			data-add-modal-close>
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+
+		<div class="grid grid-cols-1 md:grid-cols-5">
+			<div class="md:col-span-2 bg-indigo-700 text-white p-6 sm:p-7">
+				<div class="text-xs font-extrabold tracking-widest opacity-90">USER MANAGEMENT</div>
+				<div class="mt-3 text-2xl sm:text-3xl font-extrabold leading-tight">ADD USER</div>
+				<div class="mt-6 border-t border-white/30 pt-6">
+					<div class="text-5xl font-extrabold">TBSM</div>
+				</div>
+			</div>
+			<div class="md:col-span-3 p-6 sm:p-7">
+				<div class="pr-10">
+					<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">เพิ่มผู้ใช้งาน</h2>
+					<p class="text-xs text-slate-600 mt-1">กรอกข้อมูล แล้วกดบันทึก</p>
+				</div>
+
+				<form method="post" class="mt-5 space-y-4" id="addUserForm">
+					{% csrf_token %}
+					<input type="hidden" name="action" value="create" />
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Username <span class="text-red-600">*</span></label>
+							<input name="username" type="text" placeholder="เช่น john.doe"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Email</label>
+							<input name="email" type="email" placeholder="name@example.com"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+					</div>
+
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">ชื่อ - นามสกุล</label>
+						<input name="full_name" type="text" placeholder="เช่น สมชาย ใจดี"
+							class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					</div>
+
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Role</label>
+							<select name="role" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="user">ผู้ใช้ทั่วไป</option>
+								<option value="staff">เจ้าหน้าที่</option>
+								<option value="admin">ผู้ดูแลระบบ</option>
+							</select>
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">กะการทำงาน</label>
+							<select name="shift" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="shift_a">กะ A</option>
+								<option value="shift_b">กะ B</option>
+								<option value="shift_day" selected>กะ Day</option>
+							</select>
+						</div>
+					</div>
+
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Group</label>
+							<select name="group" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="">—</option>
+								{% for g in group_options %}
+									<option value="{{ g }}">{{ g }}</option>
+								{% endfor %}
+							</select>
+						</div>
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">รหัสผ่าน <span class="text-red-600">*</span></label>
+							<input name="password" type="password" autocomplete="new-password"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">ยืนยันรหัสผ่าน <span class="text-red-600">*</span></label>
+							<input name="password_confirm" type="password" autocomplete="new-password"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+					</div>
+
+					<div class="flex items-center justify-between gap-4">
+						<label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+							<input type="checkbox" name="is_active" checked
+								class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+							<span>เปิดใช้งานบัญชี</span>
+						</label>
+						<div class="text-xs text-slate-500">ถ้าปิดใช้งาน ผู้ใช้จะล็อกอินไม่ได้</div>
+					</div>
+
+					<div class="flex items-center justify-end gap-2 pt-1">
+						<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-add-modal-close>
+							ยกเลิก
+						</button>
+						<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">
+							บันทึก
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Edit User Modal (Centered overlay) -->
+<div id="editUserModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+
+	<div class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl bg-white">
+		<button type="button"
+			class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow"
+			aria-label="Close"
+			data-modal-close>
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+
+		<div class="grid grid-cols-1 md:grid-cols-5">
+			<!-- Left panel (like example) -->
+			<div class="md:col-span-2 bg-indigo-700 text-white p-6 sm:p-7">
+				<div class="text-xs font-extrabold tracking-widest opacity-90">USER MANAGEMENT</div>
+				<div class="mt-3 text-2xl sm:text-3xl font-extrabold leading-tight">
+					EDIT USER
+				</div>
+				<div class="mt-6 border-t border-white/30 pt-6">
+					<div class="text-5xl font-extrabold">TBSM</div>
+				</div>
+			</div>
+
+			<!-- Right panel -->
+			<div class="md:col-span-3 p-6 sm:p-7">
+				<div class="pr-10">
+					<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไขผู้ใช้งาน</h2>
+					<p class="text-xs text-slate-600 mt-1">แก้ไขข้อมูล แล้วกดบันทึก</p>
+				</div>
+
+				<form method="post" class="mt-5 space-y-4" id="editUserForm">
+					{% csrf_token %}
+					<input type="hidden" name="action" value="update" />
+					<input type="hidden" name="id" id="edit_id" value="" />
+
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Username</label>
+							<input id="edit_username" type="text" readonly
+								class="mt-1 w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-slate-700" />
+						</div>
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Role</label>
+							<select name="role" id="edit_role"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="user">ผู้ใช้ทั่วไป</option>
+								<option value="staff">เจ้าหน้าที่</option>
+								<option value="admin">ผู้ดูแลระบบ</option>
+							</select>
+						</div>
+					</div>
+
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">ชื่อ - นามสกุล</label>
+							<input name="full_name" id="edit_full_name" type="text" placeholder="เช่น สมชาย ใจดี"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+						</div>
+
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">กะการทำงาน</label>
+							<select name="shift" id="edit_shift"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="shift_a">กะ A</option>
+								<option value="shift_b">กะ B</option>
+								<option value="shift_day" selected>กะ Day</option>
+							</select>
+						</div>
+					</div>
+
+						<div>
+							<label class="block text-sm font-semibold text-slate-700">Group</label>
+							<select name="group" id="edit_group"
+								class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+								<option value="">—</option>
+								{% for g in group_options %}
+									<option value="{{ g }}">{{ g }}</option>
+								{% endfor %}
+							</select>
+						</div>
+
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">Email</label>
+						<input name="email" id="edit_email" type="email"
+							class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					</div>
+
+					<div class="flex items-center justify-between gap-4">
+						<label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+							<input type="checkbox" name="is_active" id="edit_is_active"
+								class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+							<span>เปิดใช้งานบัญชี</span>
+						</label>
+						<div class="text-xs text-slate-500">ถ้าปิดใช้งาน ผู้ใช้จะล็อกอินไม่ได้</div>
+					</div>
+
+					<div>
+						<label class="block text-sm font-semibold text-slate-700">ตั้งรหัสผ่านใหม่ (ไม่บังคับ)</label>
+						<input name="password" id="edit_password" type="password" autocomplete="new-password"
+							placeholder="เว้นว่าง ถ้าไม่ต้องการเปลี่ยน"
+							class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					</div>
+
+					<div class="flex items-center justify-end gap-2 pt-1">
+						<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>
+							ยกเลิก
+						</button>
+						<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">
+							บันทึก
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% load static %}
+<script src="{% static 'core/js/manage_user.js' %}" defer></script>
+{% endblock %}

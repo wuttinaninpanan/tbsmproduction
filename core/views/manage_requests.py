@@ -27,7 +27,7 @@ def _is_uuid(value: str) -> bool:
 
 @method_decorator(staff_required, name="dispatch")
 class ManageRequestsViews(TemplateView):
-    template_name = "manage_requests.html"
+    template_name = "core/manage_requests.html"
 
     VALID_TABS = {"bom", "line", "messages"}
 

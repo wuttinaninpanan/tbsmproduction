@@ -209,7 +209,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 @method_decorator(staff_required, name="dispatch")
 class ManageLineViews(TemplateView):
-    template_name = "manage_line.html"
+    template_name = "core/manage_line.html"
 
     def get(self, request, *args, **kwargs):
         action = (request.GET.get("action") or "").strip().lower()
@@ -608,7 +608,7 @@ class ManageLineViews(TemplateView):
 
 @method_decorator(staff_required, name="dispatch")
 class ManageLineEditViews(TemplateView):
-    template_name = "manage_line_edit.html"
+    template_name = "core/manage_line_edit.html"
 
     def _get_line(self, line_id):
         return (

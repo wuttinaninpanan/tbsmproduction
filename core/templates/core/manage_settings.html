@@ -1,0 +1,363 @@
+{% extends "core/base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}ตั้งค่าทั่วไป — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">ตั้งค่าทั่วไป</h1>
+			<p class="text-sm text-slate-600 mt-1">จัดการข้อมูลพื้นฐาน: Item Stage, Item Category, Defect Mode, Way</p>
+		</div>
+	</header>
+
+	{# Tab nav (preserves search/per_page via JS-less URL switching) #}
+	<nav class="flex flex-wrap gap-1 border-b border-slate-200">
+		<a href="?tab=item_stage" class="px-4 py-2 -mb-px border-b-2 text-sm font-semibold {% if tab == 'item_stage' %}border-indigo-600 text-indigo-700{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300{% endif %}">
+			Item Stage <span class="ml-1 inline-flex items-center justify-center text-xs rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ count_item_stage }}</span>
+		</a>
+		<a href="?tab=item_category" class="px-4 py-2 -mb-px border-b-2 text-sm font-semibold {% if tab == 'item_category' %}border-indigo-600 text-indigo-700{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300{% endif %}">
+			Item Category <span class="ml-1 inline-flex items-center justify-center text-xs rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ count_item_category }}</span>
+		</a>
+		<a href="?tab=defect_mode" class="px-4 py-2 -mb-px border-b-2 text-sm font-semibold {% if tab == 'defect_mode' %}border-indigo-600 text-indigo-700{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300{% endif %}">
+			Defect Mode <span class="ml-1 inline-flex items-center justify-center text-xs rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ count_defect_mode }}</span>
+		</a>
+		<a href="?tab=way" class="px-4 py-2 -mb-px border-b-2 text-sm font-semibold {% if tab == 'way' %}border-indigo-600 text-indigo-700{% else %}border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-300{% endif %}">
+			Way <span class="ml-1 inline-flex items-center justify-center text-xs rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">{{ count_way }}</span>
+		</a>
+	</nav>
+
+	{# Search + toolbar #}
+	<form method="get" class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<input type="hidden" name="tab" value="{{ tab }}" />
+		<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+			<div class="md:col-span-5">
+				<label class="block text-sm font-semibold text-slate-700">ค้นหา</label>
+				<input name="q" value="{{ q|default:'' }}" placeholder="พิมพ์เพื่อค้นหาใน Section นี้"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<input type="hidden" name="per_page" value="{{ per_page|default:100 }}" />
+			<div class="md:col-span-2 flex items-end">
+				<button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-800 hover:bg-slate-900 transition">
+					ค้นหา
+				</button>
+			</div>
+		</div>
+		<div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+			<div class="text-xs text-slate-600">ทั้งหมด {{ total_count|default:0 }} รายการ</div>
+			<a href="?tab={{ tab }}" class="text-sm font-semibold text-slate-700 hover:text-slate-900 underline">ล้างตัวกรอง</a>
+		</div>
+	</form>
+
+	{# Table + add button toolbar #}
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+			<div class="font-extrabold text-slate-800">
+				{% if tab == 'item_stage' %}Item Stages
+				{% elif tab == 'item_category' %}Item Categories
+				{% elif tab == 'defect_mode' %}Defect Modes
+				{% else %}Ways
+				{% endif %}
+			</div>
+			<div class="flex items-center gap-2">
+				<button type="button" id="openAddModal" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+					<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+						<path fill-rule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z" clip-rule="evenodd" />
+					</svg>
+					{% if tab == 'defect_mode' %}เพิ่มรายการของเสีย{% else %}เพิ่มข้อมูล{% endif %}
+				</button>
+				<form method="get" class="flex items-center gap-2">
+					<input type="hidden" name="tab" value="{{ tab }}" />
+					<input type="hidden" name="q" value="{{ q|default:'' }}" />
+					<div class="flex items-center gap-2">
+						<span class="text-sm text-gray-700">Show</span>
+						<select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 py-1 pl-3 pr-8 text-sm focus:border-blue-500 focus:ring-blue-500">
+							<option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+							<option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
+							<option value="500" {% if per_page == 500 %}selected{% endif %}>500</option>
+							<option value="1000" {% if per_page == 1000 %}selected{% endif %}>1000</option>
+						</select>
+						<span class="text-sm text-gray-700">entries</span>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					{% if tab == 'item_stage' %}
+						<tr>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Name</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Display name</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+						</tr>
+					{% elif tab == 'item_category' %}
+						<tr>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Name</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">ของเสีย</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+						</tr>
+					{% elif tab == 'defect_mode' %}
+						<tr>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">TH</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">EN</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">JP</th>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Description (EN)</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+						</tr>
+					{% else %}
+						<tr>
+							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Title</th>
+							<th class="text-right px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+						</tr>
+					{% endif %}
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for r in rows %}
+						{% if tab == 'item_stage' %}
+							<tr class="hover:bg-slate-50">
+								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name|default:'-' }}</td>
+								<td class="px-4 py-3 text-slate-700">{{ r.display_name|default:'-' }}</td>
+								<td class="px-4 py-3">
+									<div class="flex items-center justify-end gap-2">
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
+											data-id="{{ r.id }}" data-name="{{ r.name }}" data-display-name="{{ r.display_name }}">แก้ไข</button>
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
+											data-id="{{ r.id }}" data-label="{{ r.name }}">ลบ</button>
+									</div>
+								</td>
+							</tr>
+						{% elif tab == 'item_category' %}
+							<tr class="hover:bg-slate-50">
+								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name|default:'-' }}</td>
+								<td class="px-4 py-3 text-slate-700">{{ r.description|default:'-' }}</td>
+								<td class="px-4 py-3 text-sm text-slate-600 whitespace-nowrap">ตั้งค่าของเสียแล้ว {{ r.defect_count }} รายการ</td>
+								<td class="px-4 py-3">
+									<div class="flex items-center justify-end gap-2">
+										<a href="{% url 'manage_settings_defect_by_category' category_id=r.id %}"
+											class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition whitespace-nowrap">
+											จัดการ Defect
+										</a>
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
+											data-id="{{ r.id }}" data-name="{{ r.name }}" data-description="{{ r.description }}">แก้ไข</button>
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
+											data-id="{{ r.id }}" data-label="{{ r.name }}">ลบ</button>
+									</div>
+								</td>
+							</tr>
+						{% elif tab == 'defect_mode' %}
+							<tr class="hover:bg-slate-50">
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_th|default:'-' }}</td>
+								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name_en|default:'-' }}</td>
+								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.name_jp|default:'-' }}</td>
+								<td class="px-4 py-3 text-slate-700">{{ r.description_en|default:'-' }}</td>
+								<td class="px-4 py-3">
+									<div class="flex items-center justify-end gap-2">
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
+											data-id="{{ r.id }}"
+											data-name-th="{{ r.name_th }}" data-name-en="{{ r.name_en }}" data-name-jp="{{ r.name_jp }}"
+											data-description-th="{{ r.description_th }}" data-description-en="{{ r.description_en }}" data-description-jp="{{ r.description_jp }}">แก้ไข</button>
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
+											data-id="{{ r.id }}" data-label="{{ r.name_en }}">ลบ</button>
+									</div>
+								</td>
+							</tr>
+						{% else %}
+							<tr class="hover:bg-slate-50">
+								<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.title|default:'-' }}</td>
+								<td class="px-4 py-3">
+									<div class="flex items-center justify-end gap-2">
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 transition" data-open-edit
+											data-id="{{ r.id }}" data-title="{{ r.title }}">แก้ไข</button>
+										<button type="button" class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition" data-open-delete
+											data-id="{{ r.id }}" data-label="{{ r.title }}">ลบ</button>
+									</div>
+								</td>
+							</tr>
+						{% endif %}
+					{% empty %}
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="6">ยังไม่มีข้อมูลใน Section นี้</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+
+		{# Pagination #}
+		{% if page_obj and paginator %}
+			<div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+				<p class="text-sm text-gray-700">
+					Showing <span class="font-medium">{{ page_obj.start_index }}</span> to <span class="font-medium">{{ page_obj.end_index }}</span> of <span class="font-medium">{{ rows_total }}</span> results
+				</p>
+				{% if paginator.num_pages > 1 %}
+					<nav aria-label="Pagination" class="isolate inline-flex -space-x-px rounded-md">
+						{% if page_obj.has_previous %}
+							<a href="?tab={{ tab }}&q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">‹</a>
+						{% else %}
+							<span class="relative inline-flex items-center rounded-l-md px-3 py-2 text-gray-300 ring-1 ring-inset ring-gray-200">‹</span>
+						{% endif %}
+						{% for item in page_items %}
+							{% if item %}
+								{% if item == page_obj.number %}
+									<span aria-current="page" class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">{{ item }}</span>
+								{% else %}
+									<a href="?tab={{ tab }}&q={{ q|urlencode }}&per_page={{ per_page }}&page={{ item }}" class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">{{ item }}</a>
+								{% endif %}
+							{% else %}
+								<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">...</span>
+							{% endif %}
+						{% endfor %}
+						{% if page_obj.has_next %}
+							<a href="?tab={{ tab }}&q={{ q|urlencode }}&per_page={{ per_page }}&page={{ page_obj.next_page_number }}" class="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">›</a>
+						{% else %}
+							<span class="relative inline-flex items-center rounded-r-md px-3 py-2 text-gray-300 ring-1 ring-inset ring-gray-200">›</span>
+						{% endif %}
+					</nav>
+				{% endif %}
+			</div>
+		{% endif %}
+	</div>
+</section>
+
+{# Hidden action form used by all modals to POST #}
+<form id="actionForm" method="post" class="hidden">
+	{% csrf_token %}
+	<input type="hidden" name="action" id="actionField" value="" />
+	<input type="hidden" name="id" id="idField" value="" />
+
+	{# fields used by stage/category sections #}
+	<input type="hidden" name="name" id="f_name" value="" />
+	<input type="hidden" name="display_name" id="f_display_name" value="" />
+	<input type="hidden" name="description" id="f_description" value="" />
+
+	{# fields used by defect_mode section #}
+	<input type="hidden" name="name_th" id="f_name_th" value="" />
+	<input type="hidden" name="name_en" id="f_name_en" value="" />
+	<input type="hidden" name="name_jp" id="f_name_jp" value="" />
+	<input type="hidden" name="description_th" id="f_description_th" value="" />
+	<input type="hidden" name="description_en" id="f_description_en" value="" />
+	<input type="hidden" name="description_jp" id="f_description_jp" value="" />
+
+	{# field used by way section #}
+	<input type="hidden" name="title" id="f_title" value="" />
+
+	{# field used by defect_mode add: links the new defect to a category #}
+	<input type="hidden" name="category_id" id="f_category_id" value="" />
+
+</form>
+
+{# ----------------------- ADD modal ----------------------- #}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-2xl rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close"><span class="text-slate-700 text-xl">×</span></button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900" id="addTitle">{% if tab == 'defect_mode' %}เพิ่มรายการของเสีย{% else %}เพิ่มข้อมูล{% endif %}</h2>
+		<div class="mt-4 space-y-4">
+			{% if tab == 'item_stage' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Name</label>
+					<input id="add_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" placeholder="e.g. semi_fg" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Display name</label>
+					<input id="add_display_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" placeholder="e.g. Semi finished goods" /></div>
+			{% elif tab == 'item_category' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Name</label>
+					<input id="add_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description</label>
+					<input id="add_description" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+			{% elif tab == 'defect_mode' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Category <span class="text-red-600">*</span></label>
+					<select id="add_category_id" required class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
+						<option value="">เลือก Category</option>
+						{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+					</select></div>
+				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+					<div><label class="block text-sm font-semibold text-slate-700">TH</label>
+						<input id="add_name_th" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+					<div><label class="block text-sm font-semibold text-slate-700">EN</label>
+						<input id="add_name_en" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+					<div><label class="block text-sm font-semibold text-slate-700">JP</label>
+						<input id="add_name_jp" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				</div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description TH</label>
+					<input id="add_description_th" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description EN</label>
+					<input id="add_description_en" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description JP</label>
+					<input id="add_description_jp" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+			{% elif tab == 'way' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Title</label>
+					<input id="add_title" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" placeholder="e.g. M4" /></div>
+			{% endif %}
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="addSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+		</div>
+	</div>
+</div>
+
+{# ----------------------- EDIT modal ----------------------- #}
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-2xl rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close"><span class="text-slate-700 text-xl">×</span></button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">แก้ไขข้อมูล</h2>
+		<div class="mt-4 space-y-4">
+			{% if tab == 'item_stage' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Name</label>
+					<input id="edit_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Display name</label>
+					<input id="edit_display_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+			{% elif tab == 'item_category' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Name</label>
+					<input id="edit_name" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description</label>
+					<input id="edit_description" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+			{% elif tab == 'defect_mode' %}
+				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+					<div><label class="block text-sm font-semibold text-slate-700">TH</label>
+						<input id="edit_name_th" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+					<div><label class="block text-sm font-semibold text-slate-700">EN</label>
+						<input id="edit_name_en" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+					<div><label class="block text-sm font-semibold text-slate-700">JP</label>
+						<input id="edit_name_jp" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				</div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description TH</label>
+					<input id="edit_description_th" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description EN</label>
+					<input id="edit_description_en" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+				<div><label class="block text-sm font-semibold text-slate-700">Description JP</label>
+					<input id="edit_description_jp" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+			{% elif tab == 'way' %}
+				<div><label class="block text-sm font-semibold text-slate-700">Title</label>
+					<input id="edit_title" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" /></div>
+			{% endif %}
+		</div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="editSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+		</div>
+	</div>
+</div>
+
+{# ----------------------- DELETE modal ----------------------- #}
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close"><span class="text-slate-700 text-xl">×</span></button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">ยืนยันการลบ</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบรายการนี้หรือไม่?</p>
+		<div class="mt-2 text-xs text-slate-500 break-words" id="deleteLabel"></div>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="deleteSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</div>
+	</div>
+</div>
+
+{% load static %}
+<script>window.__SETTINGS_TAB__ = "{{ tab }}";</script>
+<script src="{% static 'core/js/manage_settings.js' %}?v=20260524-defectcat" defer></script>
+{% endblock %}

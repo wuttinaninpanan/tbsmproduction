@@ -10,7 +10,7 @@ from core.services.auditlog import log_event
 
 @method_decorator(user_required, name='dispatch')
 class ProfileViews(TemplateView):
-    template_name = "profile.html"
+    template_name = "core/profile.html"
 
     def post(self, request, *args, **kwargs):
         action = (request.POST.get("action") or "").strip().lower()

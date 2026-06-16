@@ -1,0 +1,160 @@
+{% extends "core/base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}{{ manual.title }} — TBSMRD{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* สไตล์เนื้อหา rich-text ให้แสดงผลสวยทั้งบนเว็บและตอน Export PDF */
+    .manual-content { color:#1e293b; line-height:1.7; word-break:break-word; }
+    .manual-content h1{ font-size:1.6rem; font-weight:800; margin:.8em 0 .4em; }
+    .manual-content h2{ font-size:1.3rem; font-weight:700; margin:.8em 0 .4em; }
+    .manual-content h3{ font-size:1.1rem; font-weight:700; margin:.6em 0 .3em; }
+    .manual-content p{ margin:.5em 0; }
+    .manual-content ul{ list-style:disc; padding-left:1.5rem; margin:.5em 0; }
+    .manual-content ol{ list-style:decimal; padding-left:1.5rem; margin:.5em 0; }
+    .manual-content a{ color:#2563eb; text-decoration:underline; }
+    .manual-content img{ max-width:100%; height:auto; border-radius:.4rem; }
+    .manual-content table{ border-collapse:collapse; width:100%; margin:.6em 0; }
+    .manual-content table td, .manual-content table th{ border:1px solid #cbd5e1; padding:.4rem .6rem; }
+    .manual-content blockquote{ border-left:4px solid #cbd5e1; padding-left:1rem; color:#475569; margin:.6em 0; }
+    .manual-image-missing{ border:1px dashed #f59e0b; background:#fffbeb; color:#92400e; border-radius:.5rem; padding:1rem; font-size:.9rem; font-weight:600; }
+    .manual-detail-workspace {
+        width: 90%;
+        max-width: none;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    @media (max-width: 768px) {
+        .manual-detail-workspace { width: 100%; }
+    }
+    @media print {
+        body * { visibility:hidden !important; }
+        #manualContent, #manualContent * { visibility:visible !important; }
+        #manualContent {
+            position:absolute;
+            inset:0 auto auto 0;
+            width:100%;
+            border:0 !important;
+            border-radius:0 !important;
+            box-shadow:none !important;
+            padding:0 !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="manual-detail-workspace space-y-5">
+
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+            <a href="{% url 'manual_list' %}" class="text-sm font-semibold underline text-slate-600">← กลับรายการคู่มือ</a>
+        </div>
+        <div class="flex gap-2 shrink-0">
+            <button id="exportPdf" type="button"
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-rose-600 hover:bg-rose-700">
+                ⬇ Export PDF
+            </button>
+            {% if can_manage %}
+            <a href="{% url 'manual_edit' id=manual.id %}"
+                class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600">แก้ไข</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- เนื้อหาที่จะถูก Export เป็น PDF -->
+    <article id="manualContent" class="manual-content rounded-2xl border border-slate-200 p-6 bg-white">
+        <h1 style="margin-top:0">{{ manual.title }}</h1>
+        {% if manual.description %}<p class="text-slate-600">{{ manual.description }}</p>{% endif %}
+        {{ manual.detail|safe }}
+    </article>
+</section>
+
+<!-- Export PDF: html2pdf.js (client-side) — render จาก DOM จริง รองรับภาษาไทย + รูป base64 -->
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
+<script>
+    document.querySelectorAll('#manualContent img').forEach(function (img) {
+        function replaceMissingImage() {
+            const note = document.createElement('div');
+            note.className = 'manual-image-missing';
+            note.textContent = 'รูปนี้ไม่ได้ถูกบันทึกไว้ในคู่มือ กรุณากดแก้ไขแล้วแทรกรูปใหม่อีกครั้ง';
+            img.replaceWith(note);
+        }
+        if ((img.getAttribute('src') || '').startsWith('blob:')) {
+            replaceMissingImage();
+        } else {
+            img.addEventListener('error', replaceMissingImage, { once: true });
+        }
+    });
+
+    document.getElementById('exportPdf').addEventListener('click', function () {
+        const el = document.getElementById('manualContent');
+        const safeName = ("{{ manual.title|escapejs }}" || 'manual').replace(/[\\/:*?"<>|]+/g, '_');
+        const btn = this;
+        btn.disabled = true; btn.textContent = 'กำลังสร้าง PDF...';
+        html2pdf().set({
+            margin: 10,
+            filename: safeName + '.pdf',
+            image: { type: 'jpeg', quality: 0.95 },
+            html2canvas: { scale: 2, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        }).from(el).save().then(function () {
+            btn.disabled = false; btn.textContent = '⬇ Export PDF';
+        }).catch(function () {
+            btn.disabled = false; btn.textContent = '⬇ Export PDF';
+        });
+    });
+</script>
+
+<script>
+    (function () {
+        const oldButton = document.getElementById('exportPdf');
+        const manualContent = document.getElementById('manualContent');
+        if (!oldButton || !manualContent) return;
+
+        const button = oldButton.cloneNode(true);
+        oldButton.replaceWith(button);
+
+        const originalText = button.textContent.trim() || 'Export PDF';
+        const resetButton = function () {
+            button.disabled = false;
+            button.textContent = originalText;
+        };
+        const exportWithPrintDialog = function () {
+            button.textContent = 'เปิดหน้าต่างพิมพ์...';
+            window.addEventListener('afterprint', resetButton, { once: true });
+            setTimeout(resetButton, 1500);
+            window.print();
+        };
+
+        button.addEventListener('click', async function () {
+            const safeName = ("{{ manual.title|escapejs }}" || 'manual').replace(/[\\/:*?"<>|]+/g, '_');
+            button.disabled = true;
+            button.textContent = 'กำลังสร้าง PDF...';
+
+            if (typeof html2pdf !== 'function') {
+                exportWithPrintDialog();
+                return;
+            }
+
+            try {
+                await html2pdf().set({
+                    margin: 10,
+                    filename: safeName + '.pdf',
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+                }).from(manualContent).save();
+                resetButton();
+            } catch (err) {
+                exportWithPrintDialog();
+            }
+        });
+    })();
+</script>
+
+{% endblock %}

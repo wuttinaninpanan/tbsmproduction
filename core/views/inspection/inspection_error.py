@@ -64,7 +64,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 class InspectionErrorView(TemplateView):
 
-    template_name = "inspection/inspection_error.html"
+    template_name = "core/inspection/inspection_error.html"
 
     # ================= GET =================
     def get_context_data(self, **kwargs):

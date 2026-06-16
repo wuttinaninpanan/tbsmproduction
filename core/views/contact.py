@@ -29,7 +29,7 @@ def _is_uuid(value: str) -> bool:
 
 
 class ContactViews(TemplateView):
-    template_name = "contact.html"
+    template_name = "core/contact.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

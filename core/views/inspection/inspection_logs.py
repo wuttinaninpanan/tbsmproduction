@@ -45,7 +45,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 
 class InspectionLogsView(TemplateView):
-    template_name = "inspection/inspection_logs.html"
+    template_name = "core/inspection/inspection_logs.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

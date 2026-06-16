@@ -11,3 +11,9 @@ __pycache__/
 node_modules/
 **/node_modules/
 media/
+staticfiles/
+
+# Secrets — provided at runtime via compose env_file, never baked into the image
+.env
+.env.local
+.env.production

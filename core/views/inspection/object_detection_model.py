@@ -43,7 +43,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 
 class ObjectDetectionModelView(TemplateView):
-    template_name = "inspection/object_detection_model.html"
+    template_name = "core/inspection/object_detection_model.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

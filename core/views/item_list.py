@@ -100,7 +100,7 @@ class ItemListView(TemplateView):
     regardless of Line assignment, organised into tabs. The "Add new" tab
     exposes a form for creating a new item."""
 
-    template_name = "item_list.html"
+    template_name = "core/item_list.html"
 
     def get(self, request, *args, **kwargs):
         if (request.GET.get("action") or "").strip().lower() == "import_template":

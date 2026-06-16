@@ -1,0 +1,194 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}แก้ไข Production line — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<nav class="text-xs text-slate-500 mb-1">
+				<a href="{% url 'manage_line' %}" class="hover:text-slate-800">จัดการข้อมูล Production line</a>
+				<span class="mx-1">/</span>
+				<span class="text-slate-700">แก้ไข</span>
+			</nav>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">
+				แก้ไข Production line
+				<span class="text-slate-500 font-semibold text-base">— {{ line.line_name }}</span>
+			</h1>
+		</div>
+		<a href="{% url 'manage_line' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition whitespace-nowrap">
+			<svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+				<path fill-rule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" />
+			</svg>
+			กลับ
+		</a>
+	</header>
+
+	{# ---------- Section 1: Line info ---------- #}
+	<form method="post" class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+		{% csrf_token %}
+		<input type="hidden" name="action" value="update_line" />
+
+		<div class="flex items-center justify-between mb-4">
+			<h2 class="text-lg font-extrabold text-slate-800">ข้อมูล Production line</h2>
+		</div>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Production line <span class="text-red-600">*</span></label>
+				<input name="line_name" type="text" required value="{{ line.line_name|default:'' }}"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div>
+				<label class="block text-sm font-semibold text-slate-700">Process type <span class="text-red-600">*</span></label>
+				<select name="process_type_id" required
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+					<option value="">เลือก Process</option>
+					{% for p in processes %}
+						<option value="{{ p.id }}" {% if line.line_process_id and p.id|stringformat:'s' == line.line_process_id|stringformat:'s' %}selected{% endif %}>{{ p.display_name|default:p.name }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="md:col-span-2">
+				<label class="block text-sm font-semibold text-slate-700">Description</label>
+				<input name="description" type="text" value="{{ line.description|default:'' }}"
+					class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+		</div>
+		<div class="mt-4 flex justify-end">
+			<button type="submit" class="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+				บันทึกข้อมูล Line
+			</button>
+		</div>
+	</form>
+
+	{# ---------- Section 2: Items in this line ---------- #}
+	<div class="rounded-2xl border border-slate-200 overflow-hidden">
+		<div class="bg-slate-100 px-4 py-3">
+			<div class="flex items-center justify-between">
+				<div class="font-extrabold text-slate-800">Item ที่ผลิตในไลน์นี้</div>
+				<div class="text-xs text-slate-600">ทั้งหมด {{ item_lines|length }} รายการ</div>
+			</div>
+		</div>
+
+		{# --- Add item form --- #}
+		<form id="addItemForm" method="post" class="px-4 py-4 border-b border-slate-200 bg-white">
+			{% csrf_token %}
+			<input type="hidden" name="action" value="add_item" />
+			<input type="hidden" name="item_id" id="addItemId" value="" />
+
+			<div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+				<div class="md:col-span-5 relative">
+					<label class="block text-sm font-semibold text-slate-700">Item</label>
+					<input id="itemSearchInput" type="text" autocomplete="off"
+						placeholder="ค้นหาด้วย SD Code / Part Number / Part Name / Item Code"
+						class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+					<div id="itemSearchResults" class="hidden absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-auto rounded-md border border-slate-300 bg-white shadow-lg"></div>
+					<p id="itemSearchHint" class="mt-1 text-xs text-slate-500">พิมพ์อย่างน้อย 1 ตัวอักษรเพื่อค้นหา</p>
+				</div>
+				<div class="md:col-span-5">
+					<label class="block text-sm font-semibold text-slate-700">Stage</label>
+					<select name="stage_id" id="addStageId" required
+						class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+						<option value="">เลือก Stage</option>
+						{% for s in stages %}
+							<option value="{{ s.id }}">{{ s.display_name|default:s.name }}</option>
+						{% endfor %}
+					</select>
+				</div>
+				<div class="md:col-span-2 flex items-end">
+					<button id="addItemSubmit" type="submit" disabled
+						class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+						เพิ่ม Item
+					</button>
+				</div>
+			</div>
+		</form>
+
+		{# --- Item list table --- #}
+		<div class="overflow-x-auto">
+			<table class="min-w-full text-sm">
+				<thead class="bg-white text-slate-800">
+					<tr>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">SD Code</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Number</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Part Name</th>
+						<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Stage</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-200">
+					{% for r in item_lines %}
+						<tr class="hover:bg-slate-50">
+							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
+							<td class="px-4 py-3 text-slate-700">{{ r.part_name|default:"-" }}</td>
+							<td class="px-4 py-3">
+								<form method="post" class="inline-flex items-center gap-2 stageEditForm" data-item-line-id="{{ r.id }}">
+									{% csrf_token %}
+									<input type="hidden" name="action" value="update_item_stage" />
+									<input type="hidden" name="item_line_id" value="{{ r.id }}" />
+									<select name="stage_id" data-original="{{ r.stage_id }}"
+										class="stageSelect rounded-md border border-slate-300 bg-white px-2 py-1 focus:outline-none focus:ring-2 focus:ring-red-500">
+										{% for s in stages %}
+											<option value="{{ s.id }}" {% if s.id|stringformat:'s' == r.stage_id|stringformat:'s' %}selected{% endif %}>{{ s.display_name|default:s.name }}</option>
+										{% endfor %}
+									</select>
+									<button type="submit"
+										class="stageSaveBtn hidden inline-flex items-center px-3 py-1 rounded-md font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition">
+										บันทึก
+									</button>
+								</form>
+							</td>
+							<td class="px-4 py-3">
+								<div class="flex items-center justify-center gap-2">
+									<button type="button"
+										class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
+										data-open-delete-item
+										data-id="{{ r.id }}"
+										data-label="{{ r.sd_code }} — {{ r.part_name }}">
+										ลบ
+									</button>
+								</div>
+							</td>
+						</tr>
+					{% empty %}
+						<tr><td class="px-4 py-8 text-center text-slate-600" colspan="5">ยังไม่มี Item ที่ผูกกับ Line นี้</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</section>
+
+{# Delete confirmation modal (item-line) #}
+<div id="deleteItemModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close aria-label="Close">
+			<span class="text-slate-700 text-xl leading-none">×</span>
+		</button>
+		<h2 class="text-lg sm:text-xl font-extrabold text-slate-900">ยืนยันการลบ</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบ Item นี้ออกจาก Line หรือไม่?</p>
+		<div class="mt-2 text-xs text-slate-500 break-words" id="deleteItemLabel"></div>
+		<form method="post" id="deleteItemForm" class="mt-5 flex items-center justify-end gap-2">
+			{% csrf_token %}
+			<input type="hidden" name="action" value="delete_item" />
+			<input type="hidden" name="item_line_id" id="deleteItemLineId" value="" />
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</form>
+	</div>
+</div>
+
+<script>
+	window.MANAGE_LINE_EDIT = {
+		lineId: "{{ line.id }}",
+		searchUrl: "{% url 'manage_line_item_search' %}"
+	};
+</script>
+<script src="{% static 'core/js/manage_line_edit.js' %}" defer></script>
+{% endblock %}

@@ -60,7 +60,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 class EmailReceiverView(TemplateView):
     """ตั้งค่าผู้รับอีเมลรายงานอัตโนมัติ (CRUD) + ปุ่มส่งทดสอบทันที."""
 
-    template_name = "email_receiver.html"
+    template_name = "core/email_receiver.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

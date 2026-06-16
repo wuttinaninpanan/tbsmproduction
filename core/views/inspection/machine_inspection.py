@@ -16,7 +16,7 @@ class MachineInspectionView(TemplateView):
     จัดกลุ่มตาม Line — คลิกผลิตภัณฑ์เพื่อเข้าไปจัดการ Inspection Item ของผลิตภัณฑ์นั้น.
     """
 
-    template_name = "inspection/machine_inspection.html"
+    template_name = "core/inspection/machine_inspection.html"
 
     def _get_machine(self):
         machine_id = self.kwargs.get("machine_id")

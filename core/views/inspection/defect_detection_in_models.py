@@ -44,7 +44,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 
 class DefectDetectionInModelsView(TemplateView):
-    template_name = "inspection/defect_detection_in_models.html"
+    template_name = "core/inspection/defect_detection_in_models.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)

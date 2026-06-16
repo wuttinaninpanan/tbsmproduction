@@ -66,7 +66,7 @@ class ManageProductionViews(TemplateView):
     Deleting a record cascades to its defects and scraps (FK on_delete=CASCADE).
     """
 
-    template_name = "manage_production.html"
+    template_name = "core/manage_production.html"
 
     TAB_PRODUCTION = "production"
     TAB_DEFECT = "defect"

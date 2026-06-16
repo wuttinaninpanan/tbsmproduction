@@ -76,7 +76,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
 
 class InspectionResultView(TemplateView):
 
-    template_name = "inspection/inspection_result.html"
+    template_name = "core/inspection/inspection_result.html"
 
     def get_context_data(self, **kwargs):
 

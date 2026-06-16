@@ -22,7 +22,7 @@ def _rate(defects, produced) -> float:
 
 @method_decorator(user_required, name="dispatch")
 class DashboardViews(TemplateView):
-    template_name = "dashboard.html"
+    template_name = "core/dashboard.html"
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
