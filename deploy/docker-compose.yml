@@ -1,0 +1,49 @@
+# =============================================================================
+# Production compose for Synology Container Manager.
+#
+# Lives in deploy/ on purpose: Container Manager auto-loads the ONE compose file
+# it finds in the project Path. If you point it at the repo root it grabs the dev
+# docker-compose.yaml (sleep infinity) by mistake. Pointing it at deploy/ gives it
+# exactly this file.
+#
+# The build context is the repo root (..), so the full source is available, and
+# env_file / dockerfile paths are written relative to that.
+#
+# Container Manager > Project > Create:
+#   Path   : /Inhouseapp/tbsmproduction/deploy   (auto-loads this file)
+#   then Next > Build.
+# =============================================================================
+services:
+  web:
+    build:
+      context: ..                      # repo root
+      dockerfile: docker/Dockerfile    # relative to context
+    restart: always
+    env_file:
+      - ../.env.production
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+    ports:
+      - "8003:8000"
+    volumes:
+      - media_data:/app/media          # persist uploaded files across rebuilds
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16
+    restart: always
+    env_file:
+      - ../.env.production
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data_prod:
+  media_data:

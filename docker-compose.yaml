@@ -1,29 +1,41 @@
+# Production stack (Linux + Docker).
+#   1. Create .env.production from .env.example (set SECRET_KEY, ALLOWED_HOSTS, DB creds).
+#   2. docker compose -f docker-compose.prod.yaml up -d --build
+#
+# The web container runs migrate + collectstatic on start (see entrypoint.prod.sh)
+# then serves via gunicorn + WhiteNoise on port 8000.
 services:
   web:
     build:
       context: .
-      dockerfile: docker/Dockerfile.local
-    # command: poetry run python manage.py runserver 0.0.0.0:8000
-    command: sleep infinity
+      dockerfile: docker/Dockerfile
     restart: always
-    volumes:
-      - .:/app
     env_file:
-      - .env.local
+      - .env.production
+    environment:
+      # Force production settings regardless of what the env file says.
+      DJANGO_SETTINGS_MODULE: config.settings.production
     ports:
       - "8003:8000"
+    volumes:
+      - media_data:/app/media        # persist uploaded files across rebuilds
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:16
     restart: always
     env_file:
-      - .env.local
-    ports:
-      - "5434:5432"
+      - .env.production
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
 volumes:
-  postgres_data:
+  postgres_data_prod:
+  media_data:

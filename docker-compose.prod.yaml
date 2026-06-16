@@ -16,7 +16,7 @@ services:
       # Force production settings regardless of what the env file says.
       DJANGO_SETTINGS_MODULE: config.settings.production
     ports:
-      - "8000:8000"
+      - "8003:8000"
     volumes:
       - media_data:/app/media        # persist uploaded files across rebuilds
     depends_on:
