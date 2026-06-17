@@ -9,6 +9,14 @@ poetry run python manage.py runserver 0.0.0.0:8000
 poetry run python manage.py tailwind start
 ```
 
+## Run ในNASS หากมีการเปลี่ยนแปลงแล้วค่าไม่เปลี่ยนตาม
+```
+ssh Monthon@172.29.66.228
+cd /volume1/Inhouseapp/tbsmproduction/deploy
+sudo docker compose -p production_report -f docker-compose.yml build web
+sudo docker compose -p production_report -f docker-compose.yml up -d
+```
+
 ## กรณีมีการเปลี่ยนแปลง
 ### เคส A — แก้แค่โค้ด + migration (ไม่มี library ใหม่):
 ```

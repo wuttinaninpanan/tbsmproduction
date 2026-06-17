@@ -209,7 +209,8 @@ class EmailReceiverView(TemplateView):
                 messages.error(request, "ไม่พบรายการ")
                 return redirect(request.get_full_path())
             try:
-                res = send_report_to_receiver(obj, ref_date=timezone.localdate())
+                # ปุ่ม "ส่งทดสอบ" — ไม่อัปเดต last_sent_at เพื่อไม่ให้บังรอบส่งอัตโนมัติของวันนั้น
+                res = send_report_to_receiver(obj, ref_date=timezone.localdate(), mark_sent=False)
                 messages.success(
                     request,
                     f"ส่งอีเมลให้ {res['email']} สำเร็จ ({', '.join(res['attachments'])})",

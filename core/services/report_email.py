@@ -294,3 +294,60 @@ def send_report_to_receiver(receiver: EmailReceiver, ref_date=None, mark_sent=Tr
         "date_from": date_from,
         "date_to": date_to,
     }
+
+
+def run_scheduled_reports(now=None, ref_date=None, dry_run=False) -> dict:
+    """ส่งรายงานให้ผู้รับทุกคนที่ "ถึงกำหนด" วันนี้ — เป็นตัวขับเคลื่อนการส่งอัตโนมัติ.
+
+    เรียกโดย management command ``send_scheduled_reports`` ที่ถูกตั้งเวลารันวันละครั้ง
+    (cron / Task Scheduler). ทำงานเป็น 2 ขั้น:
+
+    1. คัดเฉพาะผู้รับที่ ``is_active`` และเลือกข้อมูลส่งอย่างน้อย 1 อย่าง
+       แล้วกรองด้วย :func:`is_due` (อิง frequency + กันส่งซ้ำด้วย last_sent_at)
+    2. ส่งทีละราย **แยก error ออกจากกัน** — ผู้รับรายหนึ่งล้มเหลวจะไม่ทำให้
+       ทั้งรอบหยุด รายที่เหลือยังถูกส่งต่อ
+
+    Args:
+        now:      เวลาอ้างอิงสำหรับตัดสิน "ถึงกำหนด" (ดีฟอลต์ = ตอนนี้)
+        ref_date: วันที่อ้างอิงสำหรับคำนวณช่วงข้อมูล (ดีฟอลต์ = วันนี้)
+        dry_run:  ``True`` = แค่ประเมินว่าจะส่งให้ใคร ไม่ส่งจริง/ไม่อัปเดต last_sent_at
+
+    Returns:
+        dict สรุปผล: ``due`` (จำนวนที่ถึงกำหนด), ``sent``, ``failed``,
+        พร้อมรายละเอียด ``sent_detail`` / ``failed_detail``.
+    """
+    now = now or timezone.now()
+    receivers = (
+        EmailReceiver.objects
+        .filter(is_active=True)
+        .filter(Q(send_production_report=True) | Q(send_inspection_report=True))
+        .order_by("name")
+    )
+
+    due = [r for r in receivers if is_due(r, now=now)]
+    sent_detail: list[dict] = []
+    failed_detail: list[dict] = []
+
+    for receiver in due:
+        if dry_run:
+            sent_detail.append({"email": receiver.email, "dry_run": True})
+            continue
+        try:
+            sent_detail.append(send_report_to_receiver(receiver, ref_date=ref_date))
+        except Exception as exc:  # noqa: BLE001 — กันรายเดียวล้มแล้วลามทั้งรอบ
+            logger.exception("Failed to send scheduled report to %s", receiver.email)
+            failed_detail.append({"email": receiver.email, "error": str(exc)})
+
+    summary = {
+        "due": len(due),
+        "sent": len([d for d in sent_detail if not d.get("dry_run")]),
+        "failed": len(failed_detail),
+        "dry_run": dry_run,
+        "sent_detail": sent_detail,
+        "failed_detail": failed_detail,
+    }
+    logger.info(
+        "Scheduled reports run: due=%s sent=%s failed=%s dry_run=%s",
+        summary["due"], summary["sent"], summary["failed"], dry_run,
+    )
+    return summary
