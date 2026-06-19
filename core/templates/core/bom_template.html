@@ -106,6 +106,7 @@
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">SD Code</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Part No.</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Part Name</th>
+						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Quantity</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Category</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Stage</th>
 						<th class="px-3 py-2 text-center font-extrabold border border-pink-300 whitespace-nowrap">Line</th>
@@ -127,6 +128,7 @@
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ first.fg_sd_code|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ first.fg_part_number|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ first.fg_part_name|default:"-" }}</td>
+								<td class="px-3 py-2 text-center border border-slate-200 text-slate-700 whitespace-nowrap">-</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_category_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_stage_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ first.fg_line_name|default:"-" }}</td>
@@ -158,6 +160,7 @@
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ r.sd_code|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ r.part_number|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-800 whitespace-nowrap">{{ r.part_name|default:"-" }}</td>
+								<td class="px-3 py-2 text-center border border-slate-200 text-slate-800 font-semibold whitespace-nowrap">{{ r.quantity|floatformat:"-4" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.category_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.stage_name|default:"-" }}</td>
 								<td class="px-3 py-2 border border-slate-200 text-slate-700 whitespace-nowrap">{{ r.line_name|default:"-" }}</td>

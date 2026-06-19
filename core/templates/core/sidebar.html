@@ -41,7 +41,7 @@
 					<span class="sidebar-label">Dashboard</span>
 				</a>
 
-					{% if user.is_staff %}
+					{% if user.is_staff or user.is_superuser %}
 					<details class="group">
 						<summary class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
 							<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -63,6 +63,22 @@
 									<rect x="3" y="16" width="18" height="4" rx="1"></rect>
 								</svg>
 								<span class="sidebar-label">ข้อมูลการผลิต / ของเสีย</span>
+							</a>
+							<a href="/manage-line/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+								<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<path d="M20 7h-9"></path>
+									<path d="M14 17H5"></path>
+									<circle cx="17" cy="17" r="3"></circle>
+									<circle cx="7" cy="7" r="3"></circle>
+								</svg>
+								<span class="sidebar-label">ไลน์ผลิต</span>
+							</a>
+							<a href="/manage-settings/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+								<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+									<circle cx="12" cy="12" r="3"></circle>
+									<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+								</svg>
+								<span class="sidebar-label">ตั้งค่าทั่วไป</span>
 							</a>
 						</div>
 					</details>
@@ -100,24 +116,7 @@
 						</summary>
 
 						<div class="sidebar-submenu mt-1 space-y-1 pl-6 border-l border-slate-800 ml-4">
-							<a href="/manage-production/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
-					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<rect x="3" y="4" width="18" height="4" rx="1"></rect>
-						<rect x="3" y="10" width="18" height="4" rx="1"></rect>
-						<rect x="3" y="16" width="18" height="4" rx="1"></rect>
-					</svg>
-					<span class="sidebar-label">ข้อมูลการผลิต / ของเสีย</span>
-				</a>
-				<a href="/manage-line/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
-					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<path d="M20 7h-9"></path>
-						<path d="M14 17H5"></path>
-						<circle cx="17" cy="17" r="3"></circle>
-						<circle cx="7" cy="7" r="3"></circle>
-					</svg>
-					<span class="sidebar-label">ไลน์ผลิต</span>
-				</a>
-				<a href="/products/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
+							<a href="/products/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 						<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.73z"></path>
 						<path d="M12 22V12"></path>
@@ -143,13 +142,6 @@
 						<line x1="3" y1="18" x2="3.01" y2="18"></line>
 					</svg>
 					<span class="sidebar-label">Item list</span>
-				</a>
-				<a href="/manage-settings/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
-					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-						<circle cx="12" cy="12" r="3"></circle>
-						<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-					</svg>
-					<span class="sidebar-label">ตั้งค่าทั่วไป</span>
 				</a>
 				<a href="/inspection/scrap-dashboard/" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-slate-800/60 text-slate-200">
 					<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

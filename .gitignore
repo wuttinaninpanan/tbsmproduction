@@ -45,3 +45,6 @@ core/management/*.csv
 
 # Fixture backups / snapshots (not committed)
 core/fixtures/backup_*.json
+
+# DB dumps / one-off cleanup scripts (contain production data — never commit)
+backups/

@@ -18,7 +18,8 @@ from core.models.bill_of_material import BillOfMaterial
 from core.models.bill_of_material_item_master import BillOfMaterialItemMater
 from core.models.item_category import ItemCategory
 from core.models.item_line import ItemLine
-from core.models.item_list import Item_list, extract_item_number, format_item_code
+from core.models.item_list import Item_list, extract_item_number, format_item_code, is_spreadsheet_error
+from core.services.item_import import SimilarSdIndex, fill_only_update
 from core.models.item_stage import ItemStage
 from core.models.line import Line
 from core.models.portion import Portion
@@ -681,6 +682,7 @@ class BomTemplateView(TemplateView):
 				"sd_code": component_sd_code,
 				"part_number": getattr(component, "part_number", "") or "",
 				"part_name": getattr(component, "part_name", "") or "",
+				"quantity": obj.quantity,
 				"category_name": getattr(component_category, "name", "") or "",
 				"stage_name": getattr(component_stage, "display_name", "") or "",
 				"line_name": line_name_by_id.get(str(component_line_id), "") if component_line_id else "",
@@ -726,8 +728,8 @@ class BomTemplateView(TemplateView):
 		ctx["page_items"] = _page_items(paginator.num_pages, page_obj.number)
 		ctx["total_count"] = paginator.count
 		ctx["level_range"] = list(range(0, 11))
-		# columns after level: Item Code, M2M, SD Code, Part No., Part Name, Category, Stage, Line = 8
-		ctx["group_colspan"] = len(ctx["level_range"]) + 8
+		# columns after level: Item Code, M2M, SD Code, Part No., Part Name, Quantity, Category, Stage, Line = 9
+		ctx["group_colspan"] = len(ctx["level_range"]) + 9
 		ctx["categories"] = list(
 			ItemCategory.objects.order_by("name").values("id", "name")
 		)
@@ -1034,9 +1036,18 @@ class BomTemplateView(TemplateView):
 		bom_links_duplicate = 0
 		parent_not_found = 0
 		skipped = 0
+		bad_value_skipped = 0
+		bad_value_samples: set = set()
+		items_updated = 0
+		items_similar_skipped = 0
+		similar_samples: set = set()
 		bom_cache: dict = {}
 		seq_by_parent: dict = {}
 		line_assignments: list = []
+
+		# Seed similar-sd detection from the DB; new rows are added as created.
+		sim_index = SimilarSdIndex()
+		sim_index.seed(Item_list.objects.exclude(sd_code="").values_list("sd_code", flat=True))
 
 		# Master lookups keyed by the displayed value (lower-cased) — the same
 		# values the export writes, so a round-tripped file resolves cleanly.
@@ -1046,16 +1057,24 @@ class BomTemplateView(TemplateView):
 		inout_by_title = {(i.title or "").strip().lower(): i for i in InOut.objects.all() if i.title}
 		way_by_title = {(w.title or "").strip().lower(): w for w in Way.objects.all() if w.title}
 
-		def _lookup_or_create(sd_code, part_number, part_name):
-			"""Return (item, created_flag). Looks up by (sd_code, part_number);
-			creates a new Item_list if not found."""
-			nonlocal items_created, items_existing
-			item = Item_list.objects.filter(
-				sd_code__iexact=sd_code, part_number__iexact=part_number
-			).first()
+		def _resolve_item(sd_code, part_number, part_name):
+			"""Resolve the Item_list for a row, keyed on sd_code (rule 1).
+
+			Returns the existing item, a newly-created one, or ``None`` when the
+			sd_code is a near-duplicate of an existing one (caller skips the row).
+			"""
+			nonlocal items_created, items_existing, items_similar_skipped
+			item = Item_list.objects.filter(sd_code__iexact=sd_code).first()
 			if item is not None:
 				items_existing += 1
-				return item, False
+				return item
+			# Brand-new sd_code -> flag near-duplicates before creating.
+			sim = sim_index.similar_to(sd_code)
+			if sim is not None:
+				items_similar_skipped += 1
+				if len(similar_samples) < 5:
+					similar_samples.add(f'{sd_code}~{sim}')
+				return None
 			sku = _generate_unique_sku(part_number=part_number, sd_code=sd_code)
 			item = Item_list.objects.create(
 				sd_code=sd_code,
@@ -1065,52 +1084,46 @@ class BomTemplateView(TemplateView):
 				user=request.user,
 			)
 			items_created += 1
-			return item, True
+			sim_index.add(sd_code)
+			return item
 
 		def _apply_item_fields(item, row):
-			"""Write the editable Item_list columns (everything except Stage /
-			item_code, which the reclassify step owns). Blank cells are left
-			unchanged; FK columns that don't resolve are skipped, not wiped."""
-			changed: list = []
-			pname = _row_get_first(row, "part_name", "partname", "name")
-			if pname and item.part_name != pname:
-				item.part_name = pname
-				changed.append("part_name")
-			sku = _row_get_first(row, "sku")
-			if sku and item.sku != sku and not Item_list.objects.filter(sku__iexact=sku).exclude(pk=item.pk).exists():
-				item.sku = sku
-				changed.append("sku")
-			comment = _row_get_first(row, "comment")
-			if comment and item.comment != comment:
-				item.comment = comment
-				changed.append("comment")
-			for field, key in (("weight", "weight_kg"), ("purchased_price", "purchased_price"), ("cost", "cost")):
-				raw = _excel_to_str(row.get(key)).strip()
-				if raw != "":
-					val = _safe_decimal(raw)
-					if getattr(item, field) != val:
-						setattr(item, field, val)
-						changed.append(field)
+			"""Fill-only update of the editable Item_list columns (rules 4/5/6):
+			only columns that are EMPTY on the item are filled from the sheet; a
+			non-empty value is never overwritten and a blank cell never wipes it.
+			Stage / item_code are owned by the reclassify step and left alone."""
+			nonlocal items_updated
 			cat_name = _row_get_first(row, "category", "category_name")
+			category = None
 			if cat_name and cat_name.lower() != "(ไม่ระบุ)":
-				cat = cat_by_name.get(cat_name.lower())
-				if cat and item.category_id != cat.id:
-					item.category = cat
-					changed.append("category")
-			for field, key, lookup in (
-				("portion", "portion", portion_by_title),
-				("side", "side", side_by_title),
-				("inout", "inout", inout_by_title),
-				("way", "way", way_by_title),
-			):
-				title = _row_get_first(row, key)
-				if title:
-					obj = lookup.get(title.lower())
-					if obj and getattr(item, f"{field}_id") != obj.id:
-						setattr(item, field, obj)
-						changed.append(field)
+				category = cat_by_name.get(cat_name.lower())
+
+			def _num(key):
+				raw = _excel_to_str(row.get(key)).strip()
+				return _safe_decimal(raw) if raw != "" else None
+
+			sku = _row_get_first(row, "sku")
+			if sku and Item_list.objects.filter(sku__iexact=sku).exclude(pk=item.pk).exists():
+				sku = ""  # can't fill with a sku owned by another item
+
+			incoming = {
+				"part_number": _row_get_first(row, "part_no", "part_number", "partnumber", "pn") or None,
+				"part_name": _row_get_first(row, "part_name", "partname", "name") or None,
+				"sku": sku or None,
+				"comment": _row_get_first(row, "comment") or None,
+				"weight": _num("weight_kg"),
+				"purchased_price": _num("purchased_price"),
+				"cost": _num("cost"),
+				"category": category,
+				"portion": portion_by_title.get((_row_get_first(row, "portion") or "").lower()),
+				"side": side_by_title.get((_row_get_first(row, "side") or "").lower()),
+				"inout": inout_by_title.get((_row_get_first(row, "inout") or "").lower()),
+				"way": way_by_title.get((_row_get_first(row, "way") or "").lower()),
+			}
+			changed = fill_only_update(item, incoming)
 			if changed:
 				item.save(update_fields=changed + ["updated_at"])
+				items_updated += 1
 
 		def _apply_own_bom_header(item, row):
 			"""Set Revision / Latest ECI / Scrap % on the BOM owned by this item
@@ -1149,11 +1162,23 @@ class BomTemplateView(TemplateView):
 					m2m = _row_get_first(row, "m2m", "parent_item_code")
 					line_name = _row_get_first(row, "line", "line_name")
 
+					# Reject spreadsheet error literals (e.g. "#REF!") in the key
+					# fields so a broken export never lands as real master data.
+					if is_spreadsheet_error(sd_code) or is_spreadsheet_error(part_number):
+						if len(bad_value_samples) < 5:
+							bad_value_samples.add(sd_code if is_spreadsheet_error(sd_code) else part_number)
+						bad_value_skipped += 1
+						skipped += 1
+						continue
 					if not sd_code or not part_number:
 						skipped += 1
 						continue
 
-					item, _new = _lookup_or_create(sd_code, part_number, part_name)
+					item = _resolve_item(sd_code, part_number, part_name)
+					if item is None:
+						# Near-duplicate sd_code — skip the whole row.
+						skipped += 1
+						continue
 					_apply_item_fields(item, row)
 					# A sub-assembly / FG owns its own BOM header (Revision/Scrap%…).
 					_apply_own_bom_header(item, row)
@@ -1251,8 +1276,12 @@ class BomTemplateView(TemplateView):
 		parts = []
 		if items_created:
 			parts.append(f"สร้าง Item ใหม่ {items_created}")
+		if items_updated:
+			parts.append(f"เติมข้อมูล Item {items_updated}")
 		if items_existing:
 			parts.append(f"ใช้ Item เดิม {items_existing}")
+		if items_similar_skipped:
+			parts.append(f"ข้าม SD คล้ายซ้ำ {items_similar_skipped}")
 		if fg_count:
 			parts.append(f"FG {fg_count}")
 		if bom_links_created:
@@ -1266,4 +1295,18 @@ class BomTemplateView(TemplateView):
 		if skipped:
 			parts.append(f"ข้าม {skipped}")
 		messages.success(request, "นำเข้าสำเร็จ — " + ", ".join(parts))
+		if bad_value_skipped:
+			sample = ", ".join(sorted(bad_value_samples))
+			messages.warning(
+				request,
+				f"ข้าม {bad_value_skipped} แถวที่มีค่า error จากสเปรดชีต (เช่น {sample}) "
+				"ใน SD Code / Part No. — กรุณาแก้ไฟล์ต้นทางแล้วนำเข้าใหม่",
+			)
+		if items_similar_skipped:
+			sample = ", ".join(sorted(similar_samples))
+			messages.warning(
+				request,
+				f"ข้าม {items_similar_skipped} แถวที่ SD Code คล้ายของเดิม (เช่น {sample}) "
+				"— ตรวจว่าซ้ำหรือไม่ก่อนนำเข้าใหม่",
+			)
 		return redirect(request.get_full_path())

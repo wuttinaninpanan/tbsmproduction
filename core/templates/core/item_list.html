@@ -213,6 +213,7 @@
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Way</th>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Line</th>
 							<th class="text-left px-4 py-3 font-extrabold whitespace-nowrap">Comment</th>
+							<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">จัดการ</th>
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-slate-200">
@@ -245,9 +246,17 @@
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.way_name|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.line_names|default:"-" }}</td>
 								<td class="px-4 py-3 text-slate-700">{{ r.comment|default:"-" }}</td>
+								<td class="px-4 py-3 whitespace-nowrap">
+									<div class="flex items-center justify-center">
+										<button type="button" data-open-delete-item
+											data-id="{{ r.id }}"
+											data-label="{{ r.item_code|default:r.sd_code|default:r.part_name }}"
+											class="inline-flex items-center px-2.5 py-1 rounded-md font-semibold text-white bg-red-600 hover:bg-red-700 transition text-xs">ลบ</button>
+									</div>
+								</td>
 							</tr>
 						{% empty %}
-							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="17">ยังไม่มีข้อมูล Item</td></tr>
+							<tr><td class="px-4 py-8 text-center text-slate-600" colspan="18">ยังไม่มีข้อมูล Item</td></tr>
 						{% endfor %}
 					</tbody>
 				</table>
@@ -321,9 +330,54 @@
 	{% endif %}
 </section>
 
+<!-- DELETE ITEM (hidden form + confirm modal) -->
+<form id="deleteItemForm" method="post" class="hidden">
+	{% csrf_token %}
+	<input type="hidden" name="action" value="delete_item" />
+	<input type="hidden" name="id" id="deleteItemId" value="" />
+</form>
+
+<div id="deleteItemModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+	<div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-modal-backdrop></div>
+	<div class="relative w-full max-w-md rounded-2xl shadow-2xl bg-white p-6">
+		<button type="button" class="absolute right-3 top-3 h-9 w-9 inline-flex items-center justify-center rounded-full bg-white/90 hover:bg-white shadow" data-modal-close>×</button>
+		<h2 class="text-lg font-extrabold text-slate-900">ลบ Item</h2>
+		<p class="text-sm text-slate-700 mt-2">ต้องการลบ Item นี้ออกจาก Item List หรือไม่?</p>
+		<div class="mt-1 text-xs text-slate-500" id="deleteItemLabel"></div>
+		<p class="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">⚠ การลบเป็นการลบถาวร และจะลบข้อมูลที่ผูกกับ Item นี้ (BOM header, Line, ราคา, Routing, ผลตรวจ) ด้วย — หาก Item ถูกใช้เป็น component ใน BOM หรือมีข้อมูล Scrap/Defect จะลบไม่ได้</p>
+		<div class="mt-5 flex items-center justify-end gap-2">
+			<button type="button" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200" data-modal-close>ยกเลิก</button>
+			<button id="deleteItemSubmit" type="button" class="px-4 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700">ลบ</button>
+		</div>
+	</div>
+</div>
+
 <script>
 (() => {
 	const init = () => {
+		// --- Delete Item confirmation modal ---
+		const deleteModal = document.getElementById('deleteItemModal');
+		const deleteForm = document.getElementById('deleteItemForm');
+		const deleteIdField = document.getElementById('deleteItemId');
+		const deleteLabel = document.getElementById('deleteItemLabel');
+		const openModal = (el) => { if (el) { el.classList.remove('hidden'); el.classList.add('flex'); } };
+		const closeModal = (el) => { if (el) { el.classList.add('hidden'); el.classList.remove('flex'); } };
+
+		document.querySelectorAll('[data-open-delete-item]').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				if (deleteIdField) deleteIdField.value = btn.dataset.id || '';
+				if (deleteLabel) deleteLabel.textContent = btn.dataset.label || '';
+				openModal(deleteModal);
+			});
+		});
+		const deleteSubmit = document.getElementById('deleteItemSubmit');
+		if (deleteSubmit) deleteSubmit.addEventListener('click', () => {
+			if (deleteForm) deleteForm.submit();
+		});
+		document.querySelectorAll('[data-modal-close], [data-modal-backdrop]').forEach(el =>
+			el.addEventListener('click', () => closeModal(deleteModal)));
+
 		// Whole-row click navigates to the item editor. Clicks on real links
 		// (e.g. the Item Code anchor or the image) keep their own behaviour.
 		document.querySelectorAll('tr[data-detail-url]').forEach(tr => {

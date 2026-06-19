@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -16,7 +17,8 @@ from core.auth.decorators import staff_required
 from core.models.bill_of_material_item_master import BillOfMaterialItemMater
 from core.models.item_category import ItemCategory
 from core.models.item_line import ItemLine
-from core.models.item_list import Item_list
+from core.models.item_list import Item_list, is_spreadsheet_error
+from core.services.item_import import SimilarSdIndex, fill_only_update
 from core.models.item_stage import ItemStage
 
 # Tabs available on the Item List page. Each maps to a queryset filter.
@@ -229,7 +231,41 @@ class ItemListView(TemplateView):
             return self._handle_create_item(request)
         if action == "import_excel":
             return self._handle_import_excel(request)
+        if action == "delete_item":
+            return self._handle_delete_item(request)
         messages.error(request, "ไม่รองรับการทำงานนี้")
+        return redirect(request.get_full_path())
+
+    def _handle_delete_item(self, request):
+        item_id = (request.POST.get("id") or "").strip()
+        if not item_id or not _is_uuid(item_id):
+            messages.error(request, "ไม่พบรายการที่ต้องการลบ")
+            return redirect(request.get_full_path())
+
+        item = Item_list.objects.filter(pk=item_id).first()
+        if item is None:
+            messages.error(request, "ไม่พบรายการที่ต้องการลบ (อาจถูกลบไปแล้ว)")
+            return redirect(request.get_full_path())
+
+        label = item.item_code or item.sd_code or item.part_name or str(item.id)
+        try:
+            with transaction.atomic():
+                item.delete()
+        except ProtectedError:
+            # Item ถูกอ้างอิงแบบ PROTECT (เป็น component ใน BOM / มีข้อมูล Scrap /
+            # Defect) — ลบไม่ได้จนกว่าจะเอาการอ้างอิงเหล่านั้นออกก่อน
+            messages.error(
+                request,
+                f"ลบ \"{label}\" ไม่ได้ — Item นี้ถูกใช้งานอยู่ "
+                "(เป็น component ใน BOM หรือมีข้อมูล Scrap/Defect อ้างอิงอยู่) "
+                "กรุณาเอาการอ้างอิงออกก่อนจึงจะลบได้",
+            )
+            return redirect(request.get_full_path())
+        except Exception as e:
+            messages.error(request, f"ลบไม่สำเร็จ: {e}")
+            return redirect(request.get_full_path())
+
+        messages.success(request, f"ลบ Item \"{label}\" สำเร็จ")
         return redirect(request.get_full_path())
 
     def _resolve_fk(self, model, value):
@@ -396,34 +432,88 @@ class ItemListView(TemplateView):
                 return None
             return row[i]
 
-        created = skipped = errors = 0
+        created = updated = unchanged = errors = 0
+        bad_value_skipped = no_sd_skipped = similar_skipped = 0
         notes: list[str] = []
-        seen_sd: set[str] = set()
+
+        # Seed similar-sd detection with everything already in the DB; new rows
+        # are added as we go so two similar NEW rows in one file are caught too.
+        sim_index = SimilarSdIndex()
+        sim_index.seed(Item_list.objects.exclude(sd_code="").values_list("sd_code", flat=True))
+
+        def _num_or_none(v):
+            """Decimal for a present cell; None for a blank one (so fill-only skips)."""
+            return None if (v is None or str(v).strip() == "") else _safe_decimal(v)
 
         for ri, row in enumerate(row_iter, start=2):
             if row is None or all((c is None or str(c).strip() == "") for c in row):
                 continue  # blank line
+            sd_code = str(cell(row, "sd_code") or "").strip()
             part_number = str(cell(row, "part_number") or "").strip()
             part_name = str(cell(row, "part_name") or "").strip()
             sku = str(cell(row, "sku") or "").strip()
-            if not part_number or not part_name or not sku:
-                errors += 1
+
+            # Reject spreadsheet error literals (e.g. "#REF!") in any key field.
+            if any(is_spreadsheet_error(v) for v in (cell(row, "sd_code"), part_number, part_name, sku)):
+                bad_value_skipped += 1
                 if len(notes) < 8:
-                    notes.append(f"แถว {ri}: ขาด part_number/part_name/sku")
+                    notes.append(f"แถว {ri}: พบค่า error จากสเปรดชีต (#REF! ฯลฯ) — ข้าม")
                 continue
 
-            sd_code = str(cell(row, "sd_code") or "").strip()
-            if sd_code:
-                low = sd_code.lower()
-                if low in seen_sd or Item_list.objects.filter(sd_code=sd_code).exists():
-                    skipped += 1
-                    if len(notes) < 8:
-                        notes.append(f"แถว {ri}: SD Code \"{sd_code}\" ซ้ำ")
-                    continue
-                seen_sd.add(low)
+            # Rule 2: blank sd_code -> never insert or update.
+            if not sd_code:
+                no_sd_skipped += 1
+                if len(notes) < 8:
+                    notes.append(f"แถว {ri}: SD Code ว่าง — ข้าม")
+                continue
 
             category = cat_by_name.get(str(cell(row, "category") or "").strip().lower())
             stage = stage_by_name.get(str(cell(row, "stage") or "").strip().lower())
+            incoming = {
+                "part_number": part_number or None,
+                "part_name": part_name or None,
+                "sku": sku or None,
+                "comment": str(cell(row, "comment") or "").strip() or None,
+                "weight": _num_or_none(cell(row, "weight")),
+                "cost": _num_or_none(cell(row, "cost")),
+                "purchased_price": _num_or_none(cell(row, "purchased_price")),
+                "category": category,
+                "stage": stage,
+            }
+
+            existing = Item_list.objects.filter(sd_code__iexact=sd_code).first()
+            if existing is not None:
+                # Rules 3-6: fill empty fields only, never overwrite.
+                if incoming["sku"] and Item_list.objects.filter(
+                    sku__iexact=incoming["sku"]
+                ).exclude(pk=existing.pk).exists():
+                    incoming["sku"] = None  # can't fill with a sku owned by another item
+                try:
+                    with transaction.atomic():
+                        changed = fill_only_update(existing, incoming)
+                        if changed:
+                            existing.save(update_fields=changed + ["updated_at"])
+                            updated += 1
+                        else:
+                            unchanged += 1
+                except Exception as e:
+                    errors += 1
+                    if len(notes) < 8:
+                        notes.append(f"แถว {ri}: {e}")
+                continue
+
+            # Rule 1: brand-new sd_code -> flag near-duplicates before inserting.
+            sim = sim_index.similar_to(sd_code)
+            if sim is not None:
+                similar_skipped += 1
+                if len(notes) < 8:
+                    notes.append(f"แถว {ri}: SD Code \"{sd_code}\" คล้ายกับ \"{sim}\" ที่มีอยู่ — ข้าม (ตรวจซ้ำ)")
+                continue
+            if not part_number or not part_name or not sku:
+                errors += 1
+                if len(notes) < 8:
+                    notes.append(f"แถว {ri}: SD ใหม่แต่ขาด part_number/part_name/sku")
+                continue
             try:
                 # Each row in its own savepoint so one failure doesn't poison the
                 # rest, and the auto item_code sees prior rows' committed codes.
@@ -442,21 +532,28 @@ class ItemListView(TemplateView):
                         user=request.user,
                     ).save()
                 created += 1
+                sim_index.add(sd_code)
             except Exception as e:
                 errors += 1
                 if len(notes) < 8:
                     notes.append(f"แถว {ri}: {e}")
 
-        summary = [f"นำเข้าสำเร็จ {created} รายการ"]
-        if skipped:
-            summary.append(f"ข้ามซ้ำ {skipped}")
+        summary = [f"เพิ่มใหม่ {created}", f"อัปเดต(เติมช่องว่าง) {updated}"]
+        if unchanged:
+            summary.append(f"ไม่เปลี่ยน {unchanged}")
+        if similar_skipped:
+            summary.append(f"ข้ามคล้ายซ้ำ {similar_skipped}")
+        if no_sd_skipped:
+            summary.append(f"ข้าม SD ว่าง {no_sd_skipped}")
+        if bad_value_skipped:
+            summary.append(f"ข้ามค่า error {bad_value_skipped}")
         if errors:
             summary.append(f"ผิดพลาด {errors}")
         msg = " · ".join(summary)
         if notes:
             msg += " — " + " ; ".join(notes)
-        if created:
+        if created or updated:
             messages.success(request, msg)
         else:
-            messages.error(request, "ไม่ได้นำเข้ารายการใด — " + msg)
+            messages.error(request, "ไม่มีการเปลี่ยนแปลง — " + msg)
         return redirect(request.get_full_path())

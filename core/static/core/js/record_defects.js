@@ -34,8 +34,6 @@
 		const sectionTpl = document.getElementById('defect-section-template');
 		const scrapTpl = document.getElementById('scrap-row-template');
 		const summaryWrap = document.getElementById('summary');
-		const summaryList = summaryWrap?.querySelector('[data-summary-list]');
-		const summaryRowTpl = document.getElementById('summary-row-template');
 		const emptyState = document.getElementById('empty-state');
 		const recordForm = document.getElementById('record-form');
 		const saveBtn = document.getElementById('save');
@@ -85,9 +83,25 @@
 			}
 			return ok;
 		};
+		// A defect section with qty > 0 must pick at least one scrap mode
+		// (เสียทั้งชิ้น and/or ระบุพาร์ท), otherwise the user can't proceed.
+		const sectionModeValid = (sec) => {
+			const need = toInt(sec.defQtyInput.value) > 0 && !sec.modeFg.checked && !sec.modePart.checked;
+			if (sec.modeMsg) sec.modeMsg.classList.toggle('hidden', !need);
+			return !need;
+		};
+		const validateAllSectionModes = ({ report = false } = {}) => {
+			let ok = true;
+			let firstBad = null;
+			productBlocks.forEach((block) => (block.sections || []).forEach((sec) => {
+				if (!sectionModeValid(sec)) { ok = false; if (!firstBad) firstBad = sec; }
+			}));
+			if (!ok && report && firstBad) firstBad.modeFg.focus();
+			return ok;
+		};
 		const refreshSaveState = () => {
 			if (!saveBtn) return;
-			saveBtn.disabled = !validateAllDefectTotals();
+			saveBtn.disabled = !(validateAllDefectTotals() && validateAllSectionModes());
 		};
 
 		// ----------------------------------------------------------- data lookups
@@ -100,7 +114,6 @@
 			const p = getPart(lineId, partId);
 			return p ? (p.defects || []) : [];
 		};
-		const defectById = (lineId, partId, did) => defectsFor(lineId, partId).find((d) => d.id === did) || null;
 
 		// Scrap rows = FG (the product itself) first, then BOM children.
 		const normalizedScraps = (lineId, partId, did) => {
@@ -135,8 +148,10 @@
 					});
 				});
 			} else if (did) {
-				const d = defectById(lineId, partId, did);
-				components = (d ? (d.component_parts || []) : []).map((s) => ({ ...s, defect_id: did }));
+				// A specific defect is selected. The scrap candidates are the
+				// part's BOM components (the payload no longer duplicates this
+				// list per defect); stamp the chosen defect id onto each.
+				components = (part.component_parts || []).map((s) => ({ ...s, defect_id: did }));
 			} else {
 				components = (part.component_parts || []).map((s) => ({ ...s, defect_id: '' }));
 			}
@@ -255,15 +270,18 @@
 			const removeBtn = el.querySelector('[data-remove-defect]');
 
 			lineDisplay.value = entry.lineCode || '';
-			const partLabel = [entry.sdNumber, entry.partNumber, entry.partName].filter(Boolean).join(' — ');
-			partDisplay.value = partLabel || entry.partId;
+			// Org identifies parts by SD code; show only "SD — Part No." (no part_name).
+			const partLabel = [entry.sdNumber, entry.partNumber].filter(Boolean).join(' — ');
+			partDisplay.value = partLabel || entry.partName || entry.partId;
 			prodQtyDisplay.value = String(entry.prodQty || 0);
 
 			const block = { el, entry, sections: [] };
 
-			// "เลือกทั้งหมด" covers components only — FG is exclusive of them.
-			const fgEnable = (sec) => sec.scrapsWrap.querySelector('[data-enable][data-fg]');
+			// "เลือกทั้งหมด" covers components only.
 			const componentEnables = (sec) => Array.from(sec.scrapsWrap.querySelectorAll('[data-enable]:not([data-fg])'));
+			const fgRow = (sec) => sec.scrapsWrap.querySelector('.scrap-row[data-row-type="fg"]');
+			const compRows = (sec) => Array.from(sec.scrapsWrap.querySelectorAll('.scrap-row[data-row-type="comp"]'));
+			const showEl = (el, on) => { if (el) el.style.display = on ? '' : 'none'; };
 			const syncSelectAll = (sec) => {
 				const boxes = componentEnables(sec);
 				if (!boxes.length) { sec.selectAll.checked = false; sec.selectAll.indeterminate = false; return; }
@@ -290,23 +308,46 @@
 				if (rowEl) rowAutoQty(sec, rowEl);
 			};
 			const handleEnableToggle = (sec, enableEl, rowEl) => {
-				if (enableEl.checked) {
-					if (enableEl.dataset.fg) {
-						componentEnables(sec).forEach((c) => { if (c.checked) setRowEnabled(sec, c, false); });
-					} else {
-						const fg = fgEnable(sec);
-						if (fg && fg.checked) setRowEnabled(sec, fg, false);
-					}
-				}
+				// FG and components are independent now (both modes may be on).
 				rowAutoQty(sec, rowEl);
 				syncSelectAll(sec);
+			};
+			// Show/hide the FG row and component rows from the two mode checkboxes:
+			// เสียทั้งชิ้น -> FG row, ระบุพาร์ท -> sub-part rows. Hidden rows are
+			// disabled so they aren't submitted.
+			const applyScrapMode = (sec) => {
+				const fgOn = sec.modeFg.checked;
+				const partOn = sec.modePart.checked;
+				const fg = fgRow(sec);
+				if (fg) {
+					showEl(fg, fgOn);
+					const en = fg.querySelector('[data-enable]');
+					if (en) setRowEnabled(sec, en, fgOn);  // FG enable follows "เสียทั้งชิ้น"
+				}
+				const comps = compRows(sec);
+				comps.forEach((rowEl) => {
+					showEl(rowEl, partOn);
+					if (!partOn) {
+						const en = rowEl.querySelector('[data-enable]');
+						if (en && en.checked) setRowEnabled(sec, en, false);
+					}
+				});
+				showEl(sec.scrapsHeader, partOn && comps.length > 0);
+				showEl(sec.scrapsEmpty, partOn && comps.length === 0);
+				syncSelectAll(sec);
+				validateBlockDefectLimit(block);
+				refreshSaveState();
 			};
 
 			const buildScrapRow = (sec, ri, scrap) => {
 				const row = scrapTpl.content.firstElementChild.cloneNode(true);
+				row.dataset.rowType = scrap?.is_fg ? 'fg' : 'comp';
 				const enable = row.querySelector('[data-enable]');
 				enable.name = `blocks[${sec.gi}][rows][${ri}][enabled]`;
-				if (scrap?.is_fg) enable.dataset.fg = '1';
+				if (scrap?.is_fg) {
+					enable.dataset.fg = '1';
+					enable.classList.add('hidden');  // FG toggled by the "เสียทั้งชิ้น" checkbox, not per-row
+				}
 				enable.addEventListener('change', () => handleEnableToggle(sec, enable, row));
 
 				const photo = row.querySelector('[data-photo]');
@@ -321,9 +362,10 @@
 				}
 
 				const nameInput = row.querySelector('[data-name]');
-				let disp = [scrap?.sd_code, scrap?.name].filter(Boolean).join(' — ') || (scrap?.name || '');
+				// Show "SD — Part No." (no part_name); fall back to name if both blank.
+				let disp = [scrap?.sd_code, scrap?.part_number].filter(Boolean).join(' — ') || (scrap?.name || '');
 				if (scrap?.is_fg) {
-					disp = `FG · ${disp}`.trim();
+					disp = `เสียทั้งชิ้น · ${disp}`.trim();
 					nameInput.classList.add('font-semibold');
 					nameInput.style.backgroundColor = '#ecfdf5';
 				}
@@ -353,8 +395,7 @@
 				sec.scrapsWrap.innerHTML = '';
 				const rows = normalizedScraps(entry.lineCode, entry.partId, sec.defectSelect.value || '');
 				rows.forEach((s, ri) => sec.scrapsWrap.appendChild(buildScrapRow(sec, ri, s)));
-				sec.scrapsEmpty.classList.toggle('hidden', rows.length > 0);
-				syncSelectAll(sec);
+				applyScrapMode(sec);
 			};
 
 			const updateDefectIds = (sec) => {
@@ -390,8 +431,12 @@
 				commentInput.name = `blocks[${gi}][rows][0][comment]`;
 				const scrapsWrap = secEl.querySelector('[data-scraps]');
 				const scrapsEmpty = secEl.querySelector('[data-scraps-empty]');
+				const scrapsHeader = secEl.querySelector('[data-scraps-header]');
 				const selectAll = secEl.querySelector('[data-select-all]');
 				const defectHint = secEl.querySelector('[data-defect-hint]');
+				const modeFg = secEl.querySelector('[data-mode-fg]');
+				const modePart = secEl.querySelector('[data-mode-part]');
+				const modeMsg = secEl.querySelector('[data-mode-msg]');
 
 				// Per-block hidden fields — read by RecordDefectsView.post.
 				secEl.appendChild(mkHidden(`blocks[${gi}][production_line]`, entry.lineCode || ''));
@@ -402,7 +447,8 @@
 
 				const sec = {
 					gi, el: secEl, defectSelect, defQtyInput, commentInput,
-					scrapsWrap, scrapsEmpty, selectAll, defectHint, limitMsg,
+					scrapsWrap, scrapsEmpty, scrapsHeader, selectAll, defectHint, limitMsg,
+					modeFg, modePart, modeMsg,
 				};
 
 				setDefectOptions(defectSelect, []);
@@ -416,12 +462,13 @@
 					validateBlockDefectLimit(block);
 					refreshSaveState();
 				});
+				modeFg.addEventListener('change', () => applyScrapMode(sec));
+				modePart.addEventListener('change', () => applyScrapMode(sec));
 				selectAll.addEventListener('change', () => {
 					const on = selectAll.checked;
-					const fg = fgEnable(sec);
-					if (fg) setRowEnabled(sec, fg, false);
 					componentEnables(sec).forEach((c) => setRowEnabled(sec, c, on));
 					syncSelectAll(sec);
+					refreshSaveState();
 				});
 
 				block.sections.push(sec);
@@ -503,7 +550,8 @@
 				}
 
 				const nameInput = row.querySelector('[data-name]');
-				nameInput.value = [s.sd_code, s.name].filter(Boolean).join(' — ') || s.name || '';
+				// Show "SD — Part No." (no part_name); fall back to name if both blank.
+				nameInput.value = [s.sd_code, s.part_number].filter(Boolean).join(' — ') || s.name || '';
 
 				const cpid = row.querySelector('[data-cpid]');
 				cpid.name = `blocks[${gi}][rows][${ri}][component_part_id]`;
@@ -563,24 +611,12 @@
 		}
 
 		// ----------------------------------------------------------- summary
-		function renderSummary(entries) {
-			if (!summaryList || !summaryRowTpl) return;
-			summaryList.innerHTML = '';
-			entries.forEach((e) => {
-				const row = summaryRowTpl.content.firstElementChild.cloneNode(true);
-				const part = getPart(e.lineCode, e.partId);
-				const img = row.querySelector('[data-img]');
-				if (part?.image_url) img.src = part.image_url; else img.removeAttribute('src');
-				row.querySelector('[data-name]').textContent = e.partName || (part?.part_name || part?.part_number || '');
-				row.querySelector('[data-meta]').textContent = [e.lineCode, e.sdNumber, e.partNumber].filter(Boolean).join(' · ');
-				row.querySelector('[data-qty]').textContent = String(e.prodQty || 0);
-				const timeBits = [];
-				if (e.startTime) timeBits.push(`เริ่ม: ${e.startTime.replace('T', ' ')}`);
-				if (e.endTime) timeBits.push(`จบ: ${e.endTime.replace('T', ' ')}`);
-				row.querySelector('[data-time]').textContent = timeBits.join('  •  ') || '—';
-				summaryList.appendChild(row);
-			});
-			summaryWrap.classList.remove('hidden');
+		// The read-only Step 1 list (incl. start/end time display) was removed;
+		// the same data appears in the blocks below. start/end times stay in the
+		// `entries` array and are submitted via hidden inputs. Here we only reveal
+		// the "← แก้ไข Step 1" shortcut.
+		function renderSummary(/* entries */) {
+			summaryWrap?.classList.remove('hidden');
 		}
 
 		// ----------------------------------------------------------- bootstrap
@@ -626,7 +662,7 @@
 
 		// Clear draft after a successful submit so coming back doesn't re-populate stale data.
 		recordForm.addEventListener('submit', (e) => {
-			if (!validateAllDefectTotals({ report: true })) {
+			if (!validateAllDefectTotals({ report: true }) || !validateAllSectionModes({ report: true })) {
 				e.preventDefault();
 				refreshSaveState();
 				return;

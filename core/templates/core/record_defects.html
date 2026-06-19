@@ -13,6 +13,8 @@
 		@media (min-width:1024px){.ds-grid{flex-direction:row}.ds-left,.ds-right{flex:1 1 0}}
 		.ds-head{min-height:2rem;margin-bottom:.4rem}
 		.scrap-grid{display:grid;grid-template-columns:5.5rem 3rem 1fr 4.5rem;gap:.5rem;align-items:center}
+		.scraps-2col{display:grid;grid-template-columns:1fr;gap:.5rem}
+		@media (min-width:768px){.scraps-2col{grid-template-columns:1fr 1fr;column-gap:1rem}}
 		.summary-grid{display:grid;grid-template-columns:3rem minmax(0,1fr) 6rem 12rem;gap:.5rem;align-items:center}
 		@media (max-width:768px){
 			.summary-grid{grid-template-columns:3rem 1fr 5rem;grid-row-gap:.5rem}
@@ -41,13 +43,9 @@
 		<a href="/record/" class="inline-flex items-center justify-center px-5 py-2 rounded-lg font-semibold bg-amber-500 hover:bg-amber-600 text-white transition">← กลับ Step 1</a>
 	</div>
 
-	{# Read-only summary of what Step 1 captured #}
-	<div id="summary" class="hidden rounded-2xl bg-emerald-50 border border-emerald-200 p-4 sm:p-5 space-y-3">
-		<div class="flex items-center justify-between gap-3 flex-wrap">
-			<h2 class="text-base font-bold text-emerald-900">สรุปการผลิตจาก Step 1</h2>
-			<a href="/record/" class="text-xs font-semibold text-emerald-800 hover:underline">← แก้ไข Step 1</a>
-		</div>
-		<div data-summary-list class="space-y-3"></div>
+	{# Full read-only Step 1 summary removed (same data shows in blocks below); keep only the Step 1 shortcut. #}
+	<div id="summary" class="hidden flex justify-end">
+		<a href="/record/" class="text-xs font-semibold text-emerald-800 hover:underline">← แก้ไข Step 1</a>
 	</div>
 
 	<form id="record-form" action="/record/defects/" method="post" class="space-y-6">
@@ -84,21 +82,6 @@
 	{{ record_data|json_script:"record-data" }}
 {% endif %}
 
-{# ---- Summary row template (read-only) ---- #}
-<template id="summary-row-template">
-	<div class="summary-grid rounded-lg bg-white border border-emerald-200 px-2 py-2">
-		<div class="flex justify-center">
-			<img data-img class="w-10 h-10 rounded-lg object-cover border border-slate-300 bg-slate-100" alt="" />
-		</div>
-		<div class="min-w-0">
-			<div class="text-sm font-semibold text-slate-900 truncate" data-name></div>
-			<div class="text-xs text-slate-500 truncate" data-meta></div>
-		</div>
-		<div class="text-right text-sm font-bold text-emerald-700"><span data-qty></span> <span class="text-xs font-normal text-slate-500">ชิ้น</span></div>
-		<div class="text-xs text-slate-600 col-time"><span data-time></span></div>
-	</div>
-</template>
-
 {# ---- One product block (pre-filled from Step 1) ---- #}
 <template id="block-template">
 	<div class="product-block rounded-2xl bg-orange-50 p-4 sm:p-6 space-y-4">
@@ -133,41 +116,44 @@
 
 {# ---- One defect section = one ProcessDefect ---- #}
 <template id="defect-section-template">
-	<div class="defect-section rounded-xl border border-orange-200 p-4">
-		<div class="ds-grid">
-			<div class="ds-left">
-				<div class="ds-head flex items-end gap-3">
-					<div class="flex-1 min-w-0 text-sm font-extrabold text-slate-900">Defect mode</div>
-					<div class="w-28 shrink-0 text-sm font-extrabold text-slate-900">จำนวนของเสีย</div>
-				</div>
-				<div class="flex items-start gap-3">
-					<div class="flex-1 min-w-0">
-						<select data-defect class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
-						<input data-comment type="text" placeholder="ระบุ defect อื่นๆ"
-							class="hidden mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
-						<p class="text-xs text-slate-600 mt-1" data-defect-hint>เลือก Defect mode</p>
-					</div>
-					<div class="w-28 shrink-0">
-						<input data-defqty type="number" min="0" step="1" value="0" inputmode="none" data-keypad="int" data-keypad-label="กรอกจำนวนของเสีย"
-							class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
-					</div>
-				</div>
+	<div class="defect-section rounded-xl border border-orange-200 p-4 space-y-3">
+		{# Row 1: defect mode, qty, and the two scrap-mode checkboxes (both can be ticked) #}
+		<div class="flex flex-wrap items-start gap-x-6 gap-y-3">
+			<div class="flex-1 min-w-[220px]">
+				<div class="text-sm font-extrabold text-slate-900 mb-1">Defect mode</div>
+				<select data-defect class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500"></select>
+				<input data-comment type="text" placeholder="ระบุ defect อื่นๆ"
+					class="hidden mt-2 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+				<p class="text-xs text-slate-600 mt-1" data-defect-hint>เลือก Defect mode</p>
 			</div>
-
-			<div class="ds-right">
-				<div class="ds-head scrap-grid items-end text-[10px] font-bold text-slate-700">
-					<label class="flex items-center justify-center gap-1 leading-tight text-center select-none cursor-pointer">
-						<input type="checkbox" data-select-all class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
-						เลือกทั้งหมด
-					</label>
-					<div class="text-center">รูปภาพ</div>
-					<div>รายละเอียดพาร์ทที่เสีย</div>
-					<div class="text-center">Qtty</div>
-				</div>
-				<div data-scraps class="space-y-2"></div>
-				<div data-scraps-empty class="hidden text-sm text-slate-500 italic py-3">ไม่มีชิ้นส่วนใน BoM</div>
+			<div class="w-28 shrink-0">
+				<div class="text-sm font-extrabold text-slate-900 mb-1">จำนวนของเสีย</div>
+				<input data-defqty type="number" min="0" step="1" value="0" inputmode="none" data-keypad="int" data-keypad-label="กรอกจำนวนของเสีย"
+					class="w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500" />
+			</div>
+			<div class="shrink-0 flex items-center gap-5 self-start pt-7">
+				<label class="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold text-slate-800">
+					<input type="checkbox" data-mode-fg class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+					เสียทั้งชิ้น
+				</label>
+				<label class="flex items-center gap-2 cursor-pointer select-none text-sm font-semibold text-slate-800">
+					<input type="checkbox" data-mode-part class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+					ระบุพาร์ท
+				</label>
 			</div>
 		</div>
+		<p class="hidden text-xs font-semibold text-red-600" data-mode-msg>กรุณาเลือก "เสียทั้งชิ้น" หรือ "ระบุพาร์ท" อย่างน้อยหนึ่งอย่าง</p>
+
+		{# Scrap rows in a 2-column grid — FG ("เสียทั้งชิ้น") and/or BOM sub-parts, toggled above #}
+		<div data-scraps-header class="flex items-center gap-2 text-xs font-bold text-slate-700">
+			<label class="flex items-center gap-1 select-none cursor-pointer">
+				<input type="checkbox" data-select-all class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+				เลือกทั้งหมด
+			</label>
+			<span class="text-slate-400 font-normal">(รายละเอียดพาร์ทที่เสีย · จำนวนที่ทิ้ง)</span>
+		</div>
+		<div data-scraps class="scraps-2col"></div>
+		<div data-scraps-empty class="text-sm text-slate-500 italic py-3">ไม่มีชิ้นส่วนใน BoM</div>
 	</div>
 </template>
 

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models  # type:ignore
 from core.models.base import BaseModel
 from .item_list import Item_list
@@ -28,6 +29,13 @@ class BillOfMaterialItemMater(BaseModel):
         related_name="used_in_boms"
     )
 
+
+    def save(self, *args, **kwargs):
+        # พาร์ทลูก (component) ต้องใช้อย่างน้อย 1 ชิ้นเสมอ
+        # หากจำนวนเป็นศูนย์ (หรือว่าง) ให้ใช้ค่า default = 1
+        if self.quantity is None or self.quantity <= 0:
+            self.quantity = Decimal("1")
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ["sequence"]

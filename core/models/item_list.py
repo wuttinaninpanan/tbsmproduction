@@ -31,6 +31,46 @@ def format_item_code(prefix: str, number: int) -> str:
     return f"{prefix}{number:0{ITEM_CODE_PADDING}d}"
 
 
+# Excel/Sheets error literals. When a spreadsheet formula breaks (e.g. a deleted
+# referenced cell), openpyxl with data_only=True reads the cached value as one of
+# these strings. They must never be imported as real data — a bad import on
+# 2026-06-09 created 379 duplicate items with sd_code "#REF!" exactly this way.
+SPREADSHEET_ERROR_VALUES = frozenset(
+    {"#REF!", "#N/A", "#VALUE!", "#DIV/0!", "#NAME?", "#NULL!", "#NUM!", "#GETTING_DATA"}
+)
+
+
+def is_spreadsheet_error(value) -> bool:
+    """True if ``value`` is a spreadsheet error literal (e.g. ``#REF!``)."""
+    if value is None:
+        return False
+    return str(value).strip().upper() in SPREADSHEET_ERROR_VALUES
+
+
+# Characters that are visually/typographically confusable and have caused
+# duplicate sd_codes in real data (e.g. "A0Y006" vs "AOY006", "MIT-186" vs
+# "MIT186"). Map each to a single canonical form for *comparison only* — the
+# stored sd_code is never altered.
+_SD_CONFUSABLES = str.maketrans({"O": "0", "I": "1"})
+
+
+def normalize_sd_code(value) -> str:
+    """Comparison key for detecting near-duplicate sd_codes.
+
+    Upper-cases, drops separators/punctuation and whitespace, then folds the
+    confusable characters above. Two sd_codes with the same normalized key are
+    "similar" (likely the same part entered two ways) even if their raw text
+    differs. Used only to warn/skip on import — never written back.
+
+    Examples (all collapse together): ``BTS-141`` / ``BTS141`` -> ``BTS141``;
+    ``A0Y006`` / ``AOY006`` -> ``A0Y006``.
+    """
+    if not value:
+        return ""
+    s = "".join(ch for ch in str(value).upper() if ch.isalnum())
+    return s.translate(_SD_CONFUSABLES)
+
+
 def next_global_item_number() -> int:
     """Compute the next number to use across ALL prefixes.
 

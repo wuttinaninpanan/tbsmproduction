@@ -224,8 +224,13 @@
 					const img = row.querySelector('[data-part-img]');
 					if (p.image_url) img.src = p.image_url;
 					else img.removeAttribute('src');
-					row.querySelector('[data-part-name]').textContent = p.part_name || p.part_number || p.sd_number || '(ไม่มีชื่อ)';
-					row.querySelector('[data-part-meta]').textContent = [p.sd_number, p.part_number].filter(Boolean).join(' · ');
+					// Org identifies parts by SD code first; part_name is often blank,
+					// so show "SD - Part No." as the primary label.
+					const sd = (p.sd_number || '').trim();
+					const pn = (p.part_number || '').trim();
+					row.querySelector('[data-part-name]').textContent =
+						[sd, pn].filter(Boolean).join(' - ') || p.part_name || '(ไม่มีข้อมูล)';
+					row.querySelector('[data-part-meta]').textContent = p.part_name || '';
 					const prodQty = row.querySelector('[data-prodqty]');
 					partsList.appendChild(row);
 					sec.partRows.push({ part: p, prodQty });

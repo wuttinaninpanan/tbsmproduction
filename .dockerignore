@@ -12,6 +12,7 @@ node_modules/
 **/node_modules/
 media/
 staticfiles/
+backups/
 
 # Secrets — provided at runtime via compose env_file, never baked into the image
 .env

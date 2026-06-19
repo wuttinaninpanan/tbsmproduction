@@ -50,12 +50,19 @@ def _is_uuid(value: str) -> bool:
     return True
 
 
-def _build_record_payload() -> dict:
+def _build_record_payload(with_defects: bool = True) -> dict:
     """Shape used by both pages: lines → parts → defects → component scraps.
 
     Page 1 only needs ``id``, ``parts[].{id,sd_number,part_number,part_name,image_url}``
-    but we keep the same structure as Page 2 so a single payload feeds both
-    JS files without duplicating queries.
+    so it calls with ``with_defects=False``: the defect-category and BOM
+    queries are skipped entirely and ``defects`` / ``component_parts`` are
+    left empty. Page 2 calls with ``with_defects=True`` to get the full tree.
+
+    The per-defect ``component_parts`` copy that older payloads carried was
+    redundant (it equals the part's ``component_parts``; the JS re-stamps
+    ``defect_id`` itself), so each defect now only carries ``{id, name}``.
+    Dropping that copy removes a line×part×defect×component blow-up that made
+    the embedded JSON grow into the tens of MB.
     """
     lines = list(Line.objects.all().order_by("line_name"))
     line_names = [l.code for l in lines]
@@ -78,7 +85,7 @@ def _build_record_payload() -> dict:
     # whose `is_inlist=True`, scoped to the part's ItemCategory.
     category_ids = {str(p.category_id) for p in parts if getattr(p, "category_id", None)}
     cat_to_defects: dict[str, list[DefectMode]] = {}
-    if category_ids:
+    if with_defects and category_ids:
         dbc_qs = (
             DefectByCategory.objects.filter(
                 category_id__in=list(category_ids),
@@ -101,16 +108,20 @@ def _build_record_payload() -> dict:
                 uniq.append(dm)
             cat_to_defects[cat_key] = uniq
 
-    boms = list(
-        BillOfMaterial.objects.filter(item__in=parts)
-        .select_related("item")
-        .prefetch_related(
-            Prefetch(
-                "items_master",
-                queryset=BillOfMaterialItemMater.objects.select_related("component").order_by("sequence"),
+    boms = (
+        list(
+            BillOfMaterial.objects.filter(item__in=parts)
+            .select_related("item")
+            .prefetch_related(
+                Prefetch(
+                    "items_master",
+                    queryset=BillOfMaterialItemMater.objects.select_related("component").order_by("sequence"),
+                )
             )
+            .order_by("-updated_at")
         )
-        .order_by("-updated_at")
+        if with_defects
+        else []
     )
     components_by_item_id: dict[str, list[dict]] = {}
     for bom in boms:
@@ -155,22 +166,13 @@ def _build_record_payload() -> dict:
             except Exception:
                 part_image = ""
 
-            defects_payload = []
-            for defect in defect_list:
-                defects_payload.append(
-                    {
-                        "id": str(defect.id),
-                        "name": defect.name,
-                        "component_parts": [
-                            {
-                                **s,
-                                "defect_id": str(defect.id),
-                                "defect_name": defect.name,
-                            }
-                            for s in component_parts_payload
-                        ],
-                    }
-                )
+            # Each defect carries only {id, name}; the scrap candidate list is
+            # the part's `component_parts` (the JS stamps `defect_id` itself),
+            # so we no longer duplicate that list per defect.
+            defects_payload = [
+                {"id": str(defect.id), "name": defect.name}
+                for defect in defect_list
+            ]
 
             parts_payload.append(
                 {
@@ -201,7 +203,10 @@ class RecordProductionView(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["record_data"] = _build_record_payload()
+        # Page 1 only renders the line/part picker — it never reads defects or
+        # component_parts, so skip building them (avoids the heavy defect/BOM
+        # queries and a large unused JSON blob).
+        ctx["record_data"] = _build_record_payload(with_defects=False)
         # Shift options for the checkbox selector at the top of the page.
         shifts = list(Shift.objects.all().order_by("display_number", "name"))
         ctx["shifts"] = shifts
