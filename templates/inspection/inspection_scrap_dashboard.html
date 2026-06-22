@@ -110,8 +110,7 @@
 				<thead class="bg-white text-slate-800">
 					<tr>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">วันที่/เวลา</th>
-						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">ผู้ใช้งาน</th>
-						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">กะ</th>
+						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">เครื่อง</th>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Production line</th>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">SD number</th>
 						<th class="text-center px-4 py-3 font-extrabold whitespace-nowrap">Part name</th>
@@ -125,20 +124,7 @@
 					{% for r in records %}
 						<tr class="hover:bg-slate-50">
 							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_at|localtime|date:"d M Y H:i"|default:"-" }}</td>
-							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.created_by.get_short_name|default:"-" }}</td>
-							<td class="px-4 py-3 whitespace-nowrap">
-								{% if r.created_by.profile %}
-									{% if r.created_by.profile.shift == 'shift_a' %}
-										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">กะ A</span>
-									{% elif r.created_by.profile.shift == 'shift_b' %}
-										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">กะ B</span>
-									{% else %}
-										<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-200">กะ Day</span>
-									{% endif %}
-								{% else %}
-									<span class="text-slate-400">—</span>
-								{% endif %}
-							</td>
+							<td class="px-4 py-3 whitespace-nowrap text-slate-700">{{ r.machine.machine_no|default:"-" }}</td>
 							<td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.production_line|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.part_number.sd_code|default:"-" }}</td>
 							<td class="px-4 py-3 text-slate-700">{{ r.component_part.part_name|default:"-" }}</td>
