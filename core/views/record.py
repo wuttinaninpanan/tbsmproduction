@@ -370,6 +370,11 @@ class RecordDefectsView(TemplateView):
             return item_cache.get(item_id)
 
         # ---- Parse each block into a normalized structure ----
+        # Backstop for the whole-piece ("เสียทั้งชิ้น") vs ระบุพาร์ท double count:
+        # if every defective unit was scrapped whole, recording its sub-parts too
+        # would count the same loss twice. The JS blocks this, but enforce it here
+        # so a bypassed client can't write the abnormal data.
+        invalid_balance = False
         parsed_blocks: list[dict] = []
         for gi in sorted(block_indices):
             line_code = block_field(gi, "production_line")
@@ -431,6 +436,17 @@ class RecordDefectsView(TemplateView):
                     defect = None
                 defect_qty = self._parse_int(block_field(gi, "defect_quantity"), 0)
 
+                # Whole-piece scrap is submitted as a scrap row whose component is
+                # the product itself; everything else is a sub-part. If the
+                # whole-piece qty already covers the full defect qty, there are no
+                # units left to scrap parts from, so any sub-part row double-counts.
+                if defect_qty > 0 and scraps:
+                    part_id = str(part.id)
+                    fg_qty = sum(q for comp, q in scraps if str(comp.id) == part_id)
+                    has_component = any(str(comp.id) != part_id and q >= 1 for comp, q in scraps)
+                    if has_component and fg_qty >= defect_qty:
+                        invalid_balance = True
+
             parsed_blocks.append(
                 {
                     "line": line,
@@ -446,6 +462,14 @@ class RecordDefectsView(TemplateView):
                     "scraps": scraps,
                 }
             )
+
+        if invalid_balance:
+            messages.error(
+                request,
+                'บันทึกไม่สำเร็จ: ของเสียถูกนับเป็น "เสียทั้งชิ้น" ครบจำนวนแล้ว '
+                "จึงระบุพาร์ท (ทิ้งชิ้นส่วน) เพิ่มไม่ได้ เพราะข้อมูลจะซ้ำ",
+            )
+            return redirect("record")
 
         # ---- Group by (line, part) → ProductionRecord ----
         groups: dict[tuple[str, str], dict] = {}
@@ -474,6 +498,11 @@ class RecordDefectsView(TemplateView):
             g["blocks"].append(b)
 
         production_created = defect_created = scrap_created = skipped = 0
+        # ของเสียซ้ำ: lots whose lot_number is already in the DB (a resubmit of
+        # the same line/part/working-day/time window — e.g. the operator hit save
+        # twice, refreshed, or used the back button). These are skipped, never
+        # re-inserted, so the same defect data can't be recorded twice.
+        duplicate_skipped = 0
         user = request.user if getattr(request, "user", None) is not None and request.user.is_authenticated else None
 
         missing_lot_time = False
@@ -509,6 +538,32 @@ class RecordDefectsView(TemplateView):
                     g["start_time"],
                     g["end_time"],
                 )
+
+                # ป้องกันการบันทึกของเสีย (defect + scrap) ซ้ำ.
+                # The same line/part/working-day/time window must not be saved
+                # twice (double-click, refresh, back-button, or re-entering the
+                # same lot). For products the lot_number is the natural key; for
+                # single-part scraps (no product → lot_number is NULL) we match
+                # on line + working day + time window instead. A hit means this
+                # exact lot's ของเสีย is already on record, so skip it entirely
+                # rather than inserting duplicate ProcessDefect/ProcessDefectScrap
+                # rows.
+                if lot_number:
+                    already_recorded = ProductionRecord.objects.filter(lot_number=lot_number).exists()
+                elif g["part"] is None and g["start_time"] is not None and g["end_time"] is not None:
+                    already_recorded = ProductionRecord.objects.filter(
+                        item__isnull=True,
+                        line=g["line"],
+                        production_date=production_date,
+                        start_time=g["start_time"],
+                        end_time=g["end_time"],
+                    ).exists()
+                else:
+                    already_recorded = False
+                if already_recorded:
+                    duplicate_skipped += 1
+                    continue
+
                 pr = ProductionRecord.objects.create(
                     line=g["line"],
                     item=g["part"],
@@ -548,6 +603,7 @@ class RecordDefectsView(TemplateView):
                         "defect_created": defect_created,
                         "scrap_created": scrap_created,
                         "skipped": skipped,
+                        "duplicate_skipped": duplicate_skipped,
                     },
                 )
             )
@@ -559,7 +615,14 @@ class RecordDefectsView(TemplateView):
             )
             if skipped:
                 msg += f" (ข้าม {skipped} รายการ)"
+            if duplicate_skipped:
+                msg += f" (ข้ามของเสียซ้ำ {duplicate_skipped} ล็อต)"
             messages.success(request, msg)
+        elif duplicate_skipped:
+            messages.warning(
+                request,
+                f"ไม่ได้บันทึก: ข้อมูลของเสียล็อตนี้ถูกบันทึกไว้แล้ว (ข้ามรายการซ้ำ {duplicate_skipped} ล็อต)",
+            )
         else:
             messages.error(
                 request,

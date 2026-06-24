@@ -11,7 +11,6 @@
 | Port ที่ใช้ | **8003** → เข้าใช้งานที่ http://172.29.66.228:8003 |
 | Web server | gunicorn + WhiteNoise (ไม่ต้องมี nginx แยก) |
 | Database | PostgreSQL 16 (รันเป็น container `db` ในโปรเจกต์เดียวกัน) |
-
 ---
 
 ## สถาปัตยกรรม

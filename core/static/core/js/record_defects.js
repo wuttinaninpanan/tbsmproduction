@@ -99,9 +99,56 @@
 			if (!ok && report && firstBad) firstBad.modeFg.focus();
 			return ok;
 		};
+		// Whole-piece ("เสียทั้งชิ้น") vs component ("ระบุพาร์ท") double-count guard.
+		// If the whole product is scrapped for every defective unit, its sub-parts
+		// are already gone with it — so the units left to scrap parts from is
+		// `defectQty − wholePieceQty`. When that is 0 (เสียทั้งชิ้น already covers
+		// all defective units), any ระบุพาร์ท entry would double-count (e.g. ของเสีย 3
+		// + เสียทั้งชิ้น 3 + AOY012 3 → 6 thrown for 3 defective), so it's rejected.
+		const validateSectionScrapBalance = (sec) => {
+			const defQty = toInt(sec.defQtyInput.value);
+			const fgRowEl = sec.scrapsWrap.querySelector('.scrap-row[data-row-type="fg"]');
+			const fgQty = (sec.modeFg.checked && fgRowEl) ? toInt(fgRowEl.querySelector('[data-qty]')?.value) : 0;
+			const remaining = defQty - fgQty;
+			let invalid = false;
+			sec.scrapsWrap.querySelectorAll('.scrap-row[data-row-type="comp"]').forEach((rowEl) => {
+				const en = rowEl.querySelector('[data-enable]');
+				const qtyEl = rowEl.querySelector('[data-qty]');
+				if (!qtyEl) return;
+				const active = sec.modePart.checked && en && en.checked;
+				const over = active && toInt(qtyEl.value) > 0 && remaining <= 0;
+				setInvalid(qtyEl, over ? 'เสียทั้งชิ้นครบจำนวนแล้ว ระบุพาร์ทไม่ได้' : '');
+				if (over) invalid = true;
+			});
+			if (sec.balanceMsg) {
+				const msg = invalid
+					? `ของเสีย ${defQty} ชิ้นถูกนับเป็น "เสียทั้งชิ้น" ครบแล้ว — ระบุพาร์ทเพิ่มไม่ได้ (ข้อมูลจะซ้ำ)`
+					: '';
+				sec.balanceMsg.textContent = msg;
+				sec.balanceMsg.classList.toggle('hidden', !msg);
+			}
+			return !invalid;
+		};
+		const validateAllScrapBalance = ({ report = false } = {}) => {
+			let ok = true;
+			let firstBad = null;
+			productBlocks.forEach((block) => (block.sections || []).forEach((sec) => {
+				if (!validateSectionScrapBalance(sec)) { ok = false; if (!firstBad) firstBad = sec; }
+			}));
+			if (!ok && report && firstBad) {
+				const overInput = firstBad.scrapsWrap.querySelector('.scrap-row[data-row-type="comp"] [data-qty].border-red-500');
+				if (overInput) { overInput.focus(); overInput.reportValidity(); }
+			}
+			return ok;
+		};
 		const refreshSaveState = () => {
 			if (!saveBtn) return;
-			saveBtn.disabled = !(validateAllDefectTotals() && validateAllSectionModes());
+			// Run every validator (no short-circuit) so each keeps its own inline
+			// messages/highlights current, then disable save if any failed.
+			const totalsOk = validateAllDefectTotals();
+			const modesOk = validateAllSectionModes();
+			const balanceOk = validateAllScrapBalance();
+			saveBtn.disabled = !(totalsOk && modesOk && balanceOk);
 		};
 
 		// ----------------------------------------------------------- data lookups
@@ -311,6 +358,7 @@
 				// FG and components are independent now (both modes may be on).
 				rowAutoQty(sec, rowEl);
 				syncSelectAll(sec);
+				refreshSaveState();
 			};
 			// Show/hide the FG row and component rows from the two mode checkboxes:
 			// เสียทั้งชิ้น -> FG row, ระบุพาร์ท -> sub-part rows. Hidden rows are
@@ -387,6 +435,8 @@
 				const enableOnInteract = () => { if (!enable.checked) { enable.checked = true; handleEnableToggle(sec, enable, row); } };
 				qty.addEventListener('focus', enableOnInteract);
 				qty.addEventListener('change', enableOnInteract);
+				// Typing a component qty must re-check the whole-piece double-count guard.
+				qty.addEventListener('input', refreshSaveState);
 
 				return row;
 			};
@@ -427,6 +477,9 @@
 				const limitMsg = document.createElement('p');
 				limitMsg.className = 'hidden mt-1 text-xs font-semibold text-red-600';
 				defQtyInput.insertAdjacentElement('afterend', limitMsg);
+				// Whole-piece vs ระบุพาร์ท double-count message (shown under the scrap rows).
+				const balanceMsg = document.createElement('p');
+				balanceMsg.className = 'hidden mt-1 text-xs font-semibold text-red-600';
 				const commentInput = secEl.querySelector('[data-comment]');
 				commentInput.name = `blocks[${gi}][rows][0][comment]`;
 				const scrapsWrap = secEl.querySelector('[data-scraps]');
@@ -447,9 +500,10 @@
 
 				const sec = {
 					gi, el: secEl, defectSelect, defQtyInput, commentInput,
-					scrapsWrap, scrapsEmpty, scrapsHeader, selectAll, defectHint, limitMsg,
+					scrapsWrap, scrapsEmpty, scrapsHeader, selectAll, defectHint, limitMsg, balanceMsg,
 					modeFg, modePart, modeMsg,
 				};
+				scrapsWrap.insertAdjacentElement('afterend', balanceMsg);
 
 				setDefectOptions(defectSelect, []);
 				defectSelect.addEventListener('change', () => {
@@ -662,7 +716,7 @@
 
 		// Clear draft after a successful submit so coming back doesn't re-populate stale data.
 		recordForm.addEventListener('submit', (e) => {
-			if (!validateAllDefectTotals({ report: true }) || !validateAllSectionModes({ report: true })) {
+			if (!validateAllDefectTotals({ report: true }) || !validateAllSectionModes({ report: true }) || !validateAllScrapBalance({ report: true })) {
 				e.preventDefault();
 				refreshSaveState();
 				return;
