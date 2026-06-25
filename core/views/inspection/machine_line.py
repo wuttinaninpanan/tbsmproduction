@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 
+from datetime import timezone as _utc
 from zoneinfo import ZoneInfo
 
 from django.contrib import messages
@@ -19,9 +20,9 @@ _BANGKOK = ZoneInfo("Asia/Bangkok")
 def _fmt_dt(dt) -> str:
     if dt is None:
         return ""
-    if dt.tzinfo is not None:
-        dt = dt.astimezone(_BANGKOK)
-    return dt.strftime("%Y-%m-%d %H:%M:%S")
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_utc.utc)
+    return dt.astimezone(_BANGKOK).strftime("%Y-%m-%d %H:%M:%S")
 
 from core.models import User
 from core.models.department import Department
