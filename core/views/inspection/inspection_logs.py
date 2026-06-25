@@ -1,8 +1,20 @@
 from __future__ import annotations
 
+from zoneinfo import ZoneInfo
+
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
 from django.views.generic import TemplateView
+
+_BANGKOK = ZoneInfo("Asia/Bangkok")
+
+
+def _fmt_dt(dt) -> str:
+    if dt is None:
+        return ""
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(_BANGKOK)
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 from core.models.inspection.inspection_log import (
     InspectionOKLog, InspectionOKLogDetail,
@@ -101,7 +113,7 @@ class InspectionLogsView(TemplateView):
             for log in page_obj.object_list:
                 rows.append({
                     "id": str(log.id),
-                    "inspected_at": log.inspected_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "inspected_at": _fmt_dt(log.inspected_at),
                     "machine_no": log.machine.machine_no,
                     "machine_name": log.machine.machine_name,
                     "sd_code": log.item.sd_code or "",
@@ -158,7 +170,7 @@ class InspectionLogsView(TemplateView):
             for log in page_obj.object_list:
                 rows.append({
                     "id": str(log.id),
-                    "inspected_at": log.inspected_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "inspected_at": _fmt_dt(log.inspected_at),
                     "machine_no": log.machine.machine_no,
                     "machine_name": log.machine.machine_name,
                     "sd_code": log.item.sd_code or "",

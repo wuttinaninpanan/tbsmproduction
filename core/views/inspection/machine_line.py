@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import uuid
 
+from zoneinfo import ZoneInfo
+
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -10,6 +12,16 @@ from django.db.models import Prefetch, Q
 from django.db.models.deletion import ProtectedError
 from django.views.generic import TemplateView
 from django.shortcuts import redirect
+
+_BANGKOK = ZoneInfo("Asia/Bangkok")
+
+
+def _fmt_dt(dt) -> str:
+    if dt is None:
+        return ""
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(_BANGKOK)
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 from core.models import User
 from core.models.department import Department
@@ -394,7 +406,7 @@ class MachineLineView(TemplateView):
                     })
                 rows.append({
                     "id": str(log.id),
-                    "inspected_at": log.inspected_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "inspected_at": _fmt_dt(log.inspected_at),
                     "machine_no": log.machine.machine_no,
                     "machine_name": log.machine.machine_name,
                     "sd_code": log.item.sd_code or "",
@@ -458,7 +470,7 @@ class MachineLineView(TemplateView):
                     })
                 rows.append({
                     "id": str(log.id),
-                    "inspected_at": log.inspected_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "inspected_at": _fmt_dt(log.inspected_at),
                     "machine_no": log.machine.machine_no,
                     "machine_name": log.machine.machine_name,
                     "sd_code": log.item.sd_code or "",
