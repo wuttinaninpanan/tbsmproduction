@@ -75,8 +75,7 @@ class InspectionScrapDashboardView(TemplateView):
             "part_number",
             "defect_mode",
             "component_part",
-            "created_by",
-            "created_by__profile",
+            "machine",
         ).all()
 
         if date_from:
@@ -93,9 +92,8 @@ class InspectionScrapDashboardView(TemplateView):
                 | Q(defect_mode__name_en__icontains=q)
                 | Q(component_part__part_name__icontains=q)
                 | Q(component_part__part_number__icontains=q)
-                | Q(created_by__username__icontains=q)
-                | Q(created_by__first_name__icontains=q)
-                | Q(created_by__profile__shift__icontains=q)
+                | Q(machine__machine_no__icontains=q)
+                | Q(machine__machine_name__icontains=q)
             )
         return qs.order_by("-created_at")
 
@@ -176,13 +174,6 @@ class InspectionScrapDashboardView(TemplateView):
         }
 
     # ------------------------------------------------------------------ export
-    @staticmethod
-    def _shift_display(user) -> str:
-        profile = getattr(user, "profile", None) if user is not None else None
-        if profile is None:
-            return "-"
-        return profile.get_shift_display()
-
     def _export_excel(self, request):
         """Export the filtered ScrapRecord rows to the same 4-sheet workbook as
         Manage Production (Production Record / Scrap / สรุปตาม Line / สรุปตาม
@@ -199,8 +190,7 @@ class InspectionScrapDashboardView(TemplateView):
         for r in qs:
             created = timezone.localtime(r.created_at) if r.created_at else None
             created_str = created.strftime("%d/%m/%Y %H:%M") if created else "-"
-            user_str = r.created_by.get_short_name() if r.created_by else "-"
-            shift_str = self._shift_display(r.created_by)
+            machine_str = r.machine.machine_no if r.machine else "-"
             line_name = getattr(r.production_line, "line_name", "-") or "-"
             qty = r.quantity or 0
 
@@ -210,8 +200,8 @@ class InspectionScrapDashboardView(TemplateView):
                 [
                     created_str,
                     "-",
-                    user_str,
-                    shift_str,
+                    machine_str,
+                    "-",
                     line_name,
                     "-",
                     getattr(r.part_number, "sd_code", "") or "-",
@@ -227,8 +217,8 @@ class InspectionScrapDashboardView(TemplateView):
                 [
                     created_str,
                     "-",
-                    user_str,
-                    shift_str,
+                    machine_str,
+                    "-",
                     line_name,
                     "-",
                     getattr(comp, "sd_code", "") or "-",

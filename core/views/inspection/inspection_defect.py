@@ -1,13 +1,23 @@
 from __future__ import annotations
 
-from datetime import datetime, time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.utils import timezone
 from django.views.generic import TemplateView
 
 from core.models.inspection.inspection_defect import InspectionDefect
+
+_BANGKOK = ZoneInfo("Asia/Bangkok")
+
+
+def _fmt_dt(dt, fmt="%Y-%m-%d %H:%M") -> str:
+    if dt is None:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_BANGKOK)
+    return dt.astimezone(_BANGKOK).strftime(fmt)
 
 
 def _parse_date(value: str):
@@ -64,7 +74,7 @@ def _scrap_label(sr) -> str:
             or getattr(defect, "name_jp", "")
             or ""
         )
-    created = sr.created_at.strftime("%Y-%m-%d") if sr.created_at else ""
+    created = _fmt_dt(sr.created_at, "%Y-%m-%d")
     bits = [b for b in [sd, pn, defect_name, created] if b]
     return " / ".join(bits) or str(sr.id)
 
@@ -109,11 +119,9 @@ class InspectionDefectView(TemplateView):
         date_from = _parse_date(q_from_raw)
         date_to = _parse_date(q_to_raw)
         if date_from is not None:
-            dt_from = timezone.make_aware(datetime.combine(date_from, time.min))
-            qs = qs.filter(created_at__gte=dt_from)
+            qs = qs.filter(created_at__date__gte=date_from)
         if date_to is not None:
-            dt_to = timezone.make_aware(datetime.combine(date_to, time.max))
-            qs = qs.filter(created_at__lte=dt_to)
+            qs = qs.filter(created_at__date__lte=date_to)
 
         qs = qs.order_by("-created_at")
 
@@ -146,7 +154,7 @@ class InspectionDefectView(TemplateView):
                 "qr_work": obj.qr_work or "",
                 "result": obj.result or "",
                 "photo_url": photo_url,
-                "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M") if obj.created_at else "",
+                "created_at": _fmt_dt(obj.created_at),
             })
 
         ctx["rows"] = rows

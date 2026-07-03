@@ -50,6 +50,7 @@ from core.models.inspection.inspection_log import (
 	InspectionNGLogDetail,
 	InspectionNGLogDetailPhoto,
 )
+from core.models.inspection.inspection_report import InspectionReport
 from core.models.department import Department
 from core.models.shift import Shift
 from core.models.inspection.machine import Machine
@@ -128,4 +129,5 @@ __all__ = [
     "InspectionNGLog",
     "InspectionNGLogDetail",
     "InspectionNGLogDetailPhoto",
+    "InspectionReport",
 ]

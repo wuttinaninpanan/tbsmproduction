@@ -1,5 +1,6 @@
 from django.db import models
 from core.models.base import BaseModel
+from core.models.line import Line
 
 
 class KanbanItemMapping(BaseModel):
@@ -30,6 +31,13 @@ class DetectionObject(BaseModel):
 
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
+    line = models.ForeignKey(
+        Line,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="detection_objects",
+    )
 
     def __str__(self):
         return self.name

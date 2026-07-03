@@ -1,10 +1,10 @@
-from django.conf import settings  # type: ignore
 from django.db import models  # type: ignore
 
 from core.models.base import BaseModel
 from core.models.defect_mode import DefectMode
 from core.models.item_list import Item_list
 from core.models.line import Line
+from core.models.inspection.machine import Machine
 
 
 class ScrapRecord(BaseModel):
@@ -34,12 +34,12 @@ class ScrapRecord(BaseModel):
 
     photo = models.FileField(upload_to="scrap_photos/", blank=True, null=True)
 
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    machine = models.ForeignKey(
+        Machine,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="scrap_records_created",
+        related_name="scrap_records",
     )
 
     class Meta:

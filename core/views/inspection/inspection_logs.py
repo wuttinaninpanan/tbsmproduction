@@ -14,7 +14,7 @@ def _fmt_dt(dt) -> str:
     if dt is None:
         return ""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=_utc.utc)
+        dt = dt.replace(tzinfo=_BANGKOK)
     return dt.astimezone(_BANGKOK).strftime("%Y-%m-%d %H:%M:%S")
 
 from core.models.inspection.inspection_log import (

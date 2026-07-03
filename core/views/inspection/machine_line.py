@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import json
+import os
+import pathlib
 import uuid
 
 from datetime import timezone as _utc
 from zoneinfo import ZoneInfo
 
+from django.conf import settings as _django_settings
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.db.models.deletion import ProtectedError
+from django.utils import timezone as _django_timezone
+from django.utils.dateparse import parse_date
 from django.views.generic import TemplateView
 from django.shortcuts import redirect
 
@@ -21,8 +26,9 @@ def _fmt_dt(dt) -> str:
     if dt is None:
         return ""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=_utc.utc)
+        dt = dt.replace(tzinfo=_BANGKOK)
     return dt.astimezone(_BANGKOK).strftime("%Y-%m-%d %H:%M:%S")
+
 
 from core.models import User
 from core.models.department import Department
@@ -40,6 +46,7 @@ from core.models.inspection.inspection_log import (
     InspectionOKLog, InspectionOKLogDetail, InspectionOKLogDetailPhoto,
     InspectionNGLog, InspectionNGLogDetail, InspectionNGLogDetailPhoto,
 )
+from core.models.inspection.inspection_report import InspectionReport
 
 
 INSPECTION_TABS = (
@@ -47,9 +54,11 @@ INSPECTION_TABS = (
     "detection_object",
     "item_object",
     "machine_object",
+    "inspection_modelss",
     "object_detection_model",
     "defect_detection_models",
     "defect_mode",
+    "inspection_report",
     "kanban_mapping",
     "ok_log",
     "ng_log",
@@ -194,41 +203,112 @@ class MachineLineView(TemplateView):
 
         # ------------------------------------------------------------------ detection_object
         elif tab == "detection_object":
-            qs = DetectionObject.objects.all()
+            qs = DetectionObject.objects.select_related("line").all()
             if q:
                 qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
-            qs = qs.order_by("name")
-            paginator = Paginator(qs, per_page)
-            page_obj = paginator.get_page(page)
-            rows = [
-                {"id": str(o.id), "name": o.name, "description": o.description or ""}
-                for o in page_obj.object_list
-            ]
+            qs = qs.order_by("line__line_name", "name")
+            all_objs = list(qs)
+            groups = []
+            group_map: dict = {}
+            for o in all_objs:
+                key = str(o.line_id) if o.line_id else "__none__"
+                if key not in group_map:
+                    entry: dict = {
+                        "line_id": str(o.line_id) if o.line_id else "",
+                        "line_name": o.line.line_name if o.line_id else "ไม่ระบุ Line",
+                        "objects": [],
+                    }
+                    group_map[key] = entry
+                    groups.append(entry)
+                group_map[key]["objects"].append({
+                    "id": str(o.id),
+                    "name": o.name,
+                    "description": o.description or "",
+                    "line_id": str(o.line_id) if o.line_id else "",
+                    "line_name": o.line.line_name if o.line_id else "",
+                })
+            paginator = Paginator(all_objs, max(len(all_objs), 1))
+            page_obj = paginator.get_page(1)
+            rows = []
+            ctx["groups"] = groups
+            ctx["lines_list"] = list(
+                Line.objects.order_by("line_name").values("id", "line_name")
+            )
 
         # ------------------------------------------------------------------ item_object
         elif tab == "item_object":
-            qs = ItemObject.objects.select_related("item", "object")
+            from core.models.item_line import ItemLine as _ItemLine
+            base_qs = ItemObject.objects.select_related("item", "object")
             if q:
-                qs = qs.filter(
+                base_qs = base_qs.filter(
                     Q(item__part_name__icontains=q)
                     | Q(item__sd_code__icontains=q)
                     | Q(item__sku__icontains=q)
                     | Q(object__name__icontains=q)
                 )
-            qs = qs.order_by("object__name", "item__sd_code")
-            paginator = Paginator(qs, per_page)
-            page_obj = paginator.get_page(page)
-            rows = [
-                {
+            all_io = list(base_qs.order_by("item__sd_code", "item__sku", "object__name"))
+
+            # Build item_id → {label, objects} map
+            item_io_map: dict = {}
+            for o in all_io:
+                key = str(o.item_id)
+                if key not in item_io_map:
+                    item_io_map[key] = {
+                        "item_id": key,
+                        "item_label": f"{o.item.sd_code or o.item.sku} — {o.item.part_name}",
+                        "objects": [],
+                    }
+                item_io_map[key]["objects"].append({
                     "id": str(o.id),
                     "object_id": str(o.object_id),
                     "object_name": o.object.name,
-                    "item_id": str(o.item_id),
-                    "item_label": f"{o.item.sd_code or o.item.sku} — {o.item.part_name}",
+                    "item_id": key,
+                    "item_label": item_io_map[key]["item_label"],
                     "quantity": o.quantity,
-                }
-                for o in page_obj.object_list
-            ]
+                })
+
+            # Build line → items map via ItemLine
+            item_lines = (
+                _ItemLine.objects
+                .filter(item_id__in=set(item_io_map.keys()))
+                .select_related("line")
+                .order_by("line__line_name", "item__sd_code")
+            )
+            line_map: dict = {}
+            line_order: list = []
+            assigned_items: set = set()
+            for il in item_lines:
+                lk = str(il.line_id)
+                ik = str(il.item_id)
+                if ik not in item_io_map:
+                    continue
+                if lk not in line_map:
+                    line_map[lk] = {
+                        "line_id": lk,
+                        "line_name": il.line.line_name,
+                        "items": [],
+                        "_seen": set(),
+                    }
+                    line_order.append(lk)
+                if ik not in line_map[lk]["_seen"]:
+                    line_map[lk]["items"].append(item_io_map[ik])
+                    line_map[lk]["_seen"].add(ik)
+                assigned_items.add(ik)
+
+            line_groups: list = []
+            for lk in line_order:
+                g = line_map[lk]
+                del g["_seen"]
+                line_groups.append(g)
+
+            unassigned = [v for k, v in item_io_map.items() if k not in assigned_items]
+            if unassigned:
+                line_groups.append({"line_id": "", "line_name": "ไม่ระบุ Line", "items": unassigned})
+
+            paginator = Paginator(all_io, max(len(all_io), 1))
+            page_obj = paginator.get_page(1)
+            rows = []
+            ctx["line_groups"] = line_groups
             ctx["objects_list"] = list(DetectionObject.objects.order_by("name").values("id", "name"))
             ctx["items_list"] = list(
                 Item_list.objects.exclude(part_name="")
@@ -245,47 +325,95 @@ class MachineLineView(TemplateView):
                     | Q(machine__machine_name__icontains=q)
                     | Q(object__name__icontains=q)
                 )
-            qs = qs.order_by("machine__machine_no", "object__name")
-            paginator = Paginator(qs, per_page)
-            page_obj = paginator.get_page(page)
-            rows = [
-                {
+            all_mo = list(qs.order_by("machine__machine_no", "object__name"))
+            mo_groups: list = []
+            mo_group_map: dict = {}
+            for o in all_mo:
+                key = str(o.machine_id)
+                if key not in mo_group_map:
+                    entry: dict = {
+                        "machine_id": key,
+                        "machine_label": f"{o.machine.machine_no} — {o.machine.machine_name}",
+                        "objects": [],
+                    }
+                    mo_group_map[key] = entry
+                    mo_groups.append(entry)
+                mo_group_map[key]["objects"].append({
                     "id": str(o.id),
-                    "machine_id": str(o.machine_id),
-                    "machine_label": f"{o.machine.machine_no} — {o.machine.machine_name}",
+                    "machine_id": key,
+                    "machine_label": mo_group_map[key]["machine_label"],
                     "object_id": str(o.object_id),
                     "object_name": o.object.name,
                     "camera_number": o.camera_number,
-                }
-                for o in page_obj.object_list
-            ]
+                })
+            paginator = Paginator(all_mo, max(len(all_mo), 1))
+            page_obj = paginator.get_page(1)
+            rows = []
+            ctx["mo_groups"] = mo_groups
             ctx["machines_list"] = list(
                 Machine.objects.order_by("machine_no").values("id", "machine_no", "machine_name")
             )
             ctx["objects_list"] = list(DetectionObject.objects.order_by("name").values("id", "name"))
 
+        # ------------------------------------------------------------------ inspection_modelss
+        elif tab == "inspection_modelss":
+            qs = InspectionModels.objects.all()
+            if q:
+                qs = qs.filter(
+                    Q(class_name__icontains=q)
+                    | Q(description_en__icontains=q)
+                    | Q(description_th__icontains=q)
+                )
+            qs = qs.order_by("class_name")
+            paginator = Paginator(qs, per_page)
+            page_obj = paginator.get_page(page)
+            rows = []
+            for obj in page_obj.object_list:
+                rows.append({
+                    "id": str(obj.id),
+                    "class_name": obj.class_name,
+                    "description_en": obj.description_en or "",
+                    "description_th": obj.description_th or "",
+                    "model_path": obj.model_path or "",
+                    "model_type": obj.model_type or "OBJECT",
+                    "count_detect": obj.count_detect,
+                })
+            ctx["windows_app_base"] = _django_settings.WINDOWS_APP_BASE
+
         # ------------------------------------------------------------------ object_detection_model
         elif tab == "object_detection_model":
-            qs = ObjectDetectionModel.objects.select_related("object", "inspection_model")
+            qs = ObjectDetectionModel.objects.select_related("object", "object__line", "inspection_model")
             if q:
                 qs = qs.filter(
                     Q(object__name__icontains=q)
                     | Q(inspection_model__class_name__icontains=q)
                 )
-            qs = qs.order_by("object__name", "inspection_model__class_name")
-            paginator = Paginator(qs, per_page)
-            page_obj = paginator.get_page(page)
-            rows = [
-                {
+            all_odm = list(qs.order_by("object__line__line_name", "object__name", "inspection_model__class_name"))
+            odm_groups: list = []
+            odm_group_map: dict = {}
+            for o in all_odm:
+                ln = o.object.line
+                key = str(ln.id) if ln else "__none__"
+                if key not in odm_group_map:
+                    entry: dict = {
+                        "line_id": str(ln.id) if ln else "",
+                        "line_name": ln.line_name if ln else "ไม่ระบุ Line",
+                        "items": [],
+                    }
+                    odm_group_map[key] = entry
+                    odm_groups.append(entry)
+                odm_group_map[key]["items"].append({
                     "id": str(o.id),
                     "object_id": str(o.object_id),
                     "object_name": o.object.name,
                     "model_id": str(o.inspection_model_id),
                     "model_class": o.inspection_model.class_name,
-                }
-                for o in page_obj.object_list
-            ]
-            ctx["objects_list"] = list(DetectionObject.objects.order_by("name").values("id", "name"))
+                })
+            paginator = Paginator(all_odm, max(len(all_odm), 1))
+            page_obj = paginator.get_page(1)
+            rows = []
+            ctx["odm_groups"] = odm_groups
+            ctx["objects_list"] = list(DetectionObject.objects.select_related("line").order_by("line__line_name", "name").values("id", "name"))
             ctx["models_list"] = list(
                 InspectionModels.objects.filter(model_type="OBJECT")
                 .order_by("class_name")
@@ -294,7 +422,7 @@ class MachineLineView(TemplateView):
 
         # ------------------------------------------------------------------ defect_detection_models
         elif tab == "defect_detection_models":
-            qs = DefectDetectionInModels.objects.select_related("object", "defect_mode", "inspection_model")
+            qs = DefectDetectionInModels.objects.select_related("object", "object__line", "defect_mode", "inspection_model")
             if q:
                 qs = qs.filter(
                     Q(object__name__icontains=q)
@@ -302,11 +430,21 @@ class MachineLineView(TemplateView):
                     | Q(defect_mode__name_en__icontains=q)
                     | Q(inspection_model__class_name__icontains=q)
                 )
-            qs = qs.order_by("object__name", "defect_mode__name_en")
-            paginator = Paginator(qs, per_page)
-            page_obj = paginator.get_page(page)
-            rows = [
-                {
+            all_ddm = list(qs.order_by("object__line__line_name", "object__name", "defect_mode__name_en"))
+            ddm_groups: list = []
+            ddm_group_map: dict = {}
+            for o in all_ddm:
+                ln = o.object.line
+                key = str(ln.id) if ln else "__none__"
+                if key not in ddm_group_map:
+                    entry: dict = {
+                        "line_id": str(ln.id) if ln else "",
+                        "line_name": ln.line_name if ln else "ไม่ระบุ Line",
+                        "items": [],
+                    }
+                    ddm_group_map[key] = entry
+                    ddm_groups.append(entry)
+                ddm_group_map[key]["items"].append({
                     "id": str(o.id),
                     "object_id": str(o.object_id),
                     "object_name": o.object.name,
@@ -314,10 +452,12 @@ class MachineLineView(TemplateView):
                     "defect_mode_label": f"{o.defect_mode.name_th} / {o.defect_mode.name_en}",
                     "model_id": str(o.inspection_model_id),
                     "model_class": o.inspection_model.class_name,
-                }
-                for o in page_obj.object_list
-            ]
-            ctx["objects_list"] = list(DetectionObject.objects.order_by("name").values("id", "name"))
+                })
+            paginator = Paginator(all_ddm, max(len(all_ddm), 1))
+            page_obj = paginator.get_page(1)
+            rows = []
+            ctx["ddm_groups"] = ddm_groups
+            ctx["objects_list"] = list(DetectionObject.objects.select_related("line").order_by("line__line_name", "name").values("id", "name"))
             ctx["defect_modes_list"] = list(
                 DefectMode.objects.order_by("name_th").values("id", "name_th", "name_en")
             )
@@ -360,6 +500,76 @@ class MachineLineView(TemplateView):
             )
             ctx["defect_type_choices"] = DefectMode.DefectType.choices
 
+        # ------------------------------------------------------------------ inspection_report
+        elif tab == "inspection_report":
+            qs = InspectionReport.objects.select_related("line", "object", "defect_mode")
+            if q:
+                qs = qs.filter(
+                    Q(line__line_name__icontains=q)
+                    | Q(object__name__icontains=q)
+                    | Q(defect_mode__name_th__icontains=q)
+                    | Q(defect_mode__name_en__icontains=q)
+                )
+            all_ir = list(qs.order_by("line__line_name", "-report_date", "object__name"))
+            ir_groups: list = []
+            ir_group_map: dict = {}
+            for o in all_ir:
+                key = str(o.line_id) if o.line_id else "__none__"
+                if key not in ir_group_map:
+                    entry: dict = {
+                        "line_id": str(o.line_id) if o.line_id else "",
+                        "line_name": o.line.line_name if o.line_id else "ไม่ระบุ Line",
+                        "items": [],
+                    }
+                    ir_group_map[key] = entry
+                    ir_groups.append(entry)
+                ir_group_map[key]["items"].append({
+                    "id": str(o.id),
+                    "line_id": str(o.line_id) if o.line_id else "",
+                    "object_id": str(o.object_id),
+                    "object_name": o.object.name,
+                    "defect_mode_id": str(o.defect_mode_id),
+                    "defect_mode_label": f"{o.defect_mode.name_th} / {o.defect_mode.name_en}",
+                    "report_type": o.report_type,
+                    "report_type_display": o.get_report_type_display(),
+                    "count": o.count,
+                    "target_count": o.target_count,
+                    "count_display": f"{o.count}/{o.target_count}",
+                    "report_date": o.report_date.strftime("%Y-%m-%d") if o.report_date else "",
+                    "note": o.note or "",
+                })
+            paginator = Paginator(all_ir, max(len(all_ir), 1))
+            page_obj = paginator.get_page(1)
+            rows = []
+            ctx["ir_groups"] = ir_groups
+            ctx["lines_list"] = list(
+                Line.objects.order_by("line_name").values("id", "line_name")
+            )
+            ctx["objects_list"] = list(
+                DetectionObject.objects.select_related("line")
+                .order_by("line__line_name", "name")
+                .values("id", "name", "line_id")
+            )
+            ctx["defect_modes_list"] = list(
+                DefectMode.objects.order_by("name_th").values("id", "name_th", "name_en")
+            )
+            _seen_types = set()
+            report_type_options = []
+            for val, label in InspectionReport.ReportType.choices:
+                _seen_types.add(val)
+                report_type_options.append({"value": val, "label": label})
+            _existing_types = (
+                InspectionReport.objects.exclude(report_type="")
+                .order_by("report_type")
+                .values_list("report_type", flat=True)
+                .distinct()
+            )
+            for t in _existing_types:
+                if t not in _seen_types:
+                    _seen_types.add(t)
+                    report_type_options.append({"value": t, "label": t})
+            ctx["report_type_options"] = report_type_options
+
         # ------------------------------------------------------------------ ok_log
         elif tab == "ok_log":
             machine_id_filter = (request.GET.get("machine_id") or "").strip()
@@ -390,6 +600,7 @@ class MachineLineView(TemplateView):
             qs = qs.order_by("-inspected_at")
             paginator = Paginator(qs, per_page)
             page_obj = paginator.get_page(page)
+            _ok_media = _django_settings.MEDIA_URL.rstrip("/")
             rows = []
             for log in page_obj.object_list:
                 details_list = []
@@ -402,7 +613,7 @@ class MachineLineView(TemplateView):
                         "object_count": d.object_count,
                         "expected_count": d.expected_count,
                         "confidence": f"{d.confidence:.2f}" if d.confidence is not None else "-",
-                        "photos_json": json.dumps([{"path": p.image_path, "caption": p.caption} for p in photos]),
+                        "photos_json": json.dumps([{"path": f"{_ok_media}/image_inspection/{pathlib.Path(p.image_path).name}", "caption": p.caption} for p in photos]),
                         "photo_count": len(photos),
                     })
                 rows.append({
@@ -453,6 +664,17 @@ class MachineLineView(TemplateView):
             qs = qs.order_by("-inspected_at")
             paginator = Paginator(qs, per_page)
             page_obj = paginator.get_page(page)
+
+            # Scan image_inspection folder once, then match by QR code per row
+            _img_dir = pathlib.Path(_django_settings.MEDIA_ROOT) / "image_inspection"
+            _all_img_files: list[str] = []
+            if _img_dir.is_dir():
+                try:
+                    _all_img_files = sorted(f.name for f in _img_dir.iterdir() if f.is_file())
+                except OSError:
+                    pass
+            _media_url = _django_settings.MEDIA_URL.rstrip("/")
+
             rows = []
             for log in page_obj.object_list:
                 details_list = []
@@ -466,9 +688,24 @@ class MachineLineView(TemplateView):
                         "expected_count": d.expected_count,
                         "defect_mode": d.defect_mode.name_th if d.defect_mode else "-",
                         "confidence": f"{d.confidence:.2f}" if d.confidence is not None else "-",
-                        "photos_json": json.dumps([{"path": p.image_path, "caption": p.caption} for p in photos]),
+                        "photos_json": json.dumps([{"path": f"{_media_url}/image_inspection/{pathlib.Path(p.image_path).name}", "caption": p.caption} for p in photos]),
                         "photo_count": len(photos),
                     })
+
+                # Match images by item_qr (unique per piece) to isolate per scan session.
+                # Fall back to kanban_qr only when item_qr is absent (older records).
+                qr_images: list[dict] = []
+                seen_fnames: set[str] = set()
+                match_qr = log.item_qr or log.kanban_qr
+                if match_qr:
+                    for fname in _all_img_files:
+                        if match_qr in fname and fname not in seen_fnames:
+                            seen_fnames.add(fname)
+                            qr_images.append({
+                                "path": f"{_media_url}/image_inspection/{fname}",
+                                "caption": fname,
+                            })
+
                 rows.append({
                     "id": str(log.id),
                     "inspected_at": _fmt_dt(log.inspected_at),
@@ -479,6 +716,9 @@ class MachineLineView(TemplateView):
                     "kanban_qr": log.kanban_qr,
                     "item_qr": log.item_qr,
                     "details": details_list,
+                    "qr_images_json": json.dumps(qr_images),
+                    "qr_image_count": len(qr_images),
+                    "qr_first_image": qr_images[0]["path"] if qr_images else "",
                 })
             ctx["log_machine_id"] = machine_id_filter
             ctx["date_from"] = date_from
@@ -489,6 +729,7 @@ class MachineLineView(TemplateView):
 
         # ------------------------------------------------------------------ kanban_mapping
         else:  # kanban_mapping
+            from core.models.item_line import ItemLine as _ItemLine
             qs = KanbanItemMapping.objects.select_related("item")
             if q:
                 qs = qs.filter(
@@ -499,19 +740,53 @@ class MachineLineView(TemplateView):
                     | Q(item__sku__icontains=q)
                     | Q(item__sd_code__icontains=q)
                 )
-            qs = qs.order_by("kanban_qr")
-            paginator = Paginator(qs, per_page)
-            page_obj = paginator.get_page(page)
-            rows = [
-                {
-                    "id": str(obj.id),
-                    "kanban_qr": obj.kanban_qr,
-                    "item_qr": obj.item_qr,
-                    "item_id": str(obj.item_id),
-                    "item_label": f"{obj.item.sd_code or obj.item.sku} — {obj.item.part_name}" if obj.item else "-",
-                }
-                for obj in page_obj.object_list
-            ]
+            all_km = list(qs.order_by("item__sd_code", "item__sku", "kanban_qr"))
+
+            item_ids = list({str(o.item_id) for o in all_km})
+            item_to_line: dict = {}
+            for il in (
+                _ItemLine.objects.filter(item_id__in=item_ids)
+                .select_related("line")
+                .order_by("line__line_name")
+            ):
+                ik = str(il.item_id)
+                if ik not in item_to_line:
+                    item_to_line[ik] = (str(il.line_id), il.line.line_name)
+
+            km_line_map: dict = {}
+            km_line_order: list = []
+            for o in all_km:
+                ik = str(o.item_id)
+                line_info = item_to_line.get(ik)
+                if line_info:
+                    lk, ln = line_info
+                else:
+                    lk, ln = "__none__", "ไม่ระบุ Line"
+                if lk not in km_line_map:
+                    km_line_map[lk] = {
+                        "line_id": lk if lk != "__none__" else "",
+                        "line_name": ln,
+                        "mappings": [],
+                    }
+                    km_line_order.append(lk)
+                km_line_map[lk]["mappings"].append({
+                    "id": str(o.id),
+                    "kanban_qr": o.kanban_qr,
+                    "item_qr": o.item_qr,
+                    "item_id": ik,
+                    "item_label": f"{o.item.sd_code or o.item.sku} — {o.item.part_name}" if o.item else "-",
+                })
+
+            paginator = Paginator(all_km, max(len(all_km), 1))
+            page_obj = paginator.get_page(1)
+            rows = []
+            sorted_groups = sorted(
+                [v for k, v in km_line_map.items() if k != "__none__"],
+                key=lambda g: g["line_name"],
+            )
+            if "__none__" in km_line_map:
+                sorted_groups.append(km_line_map["__none__"])
+            ctx["km_line_groups"] = sorted_groups
             ctx["items_list"] = list(
                 Item_list.objects.filter(item_lines__isnull=False)
                 .exclude(part_name="")
@@ -535,9 +810,11 @@ class MachineLineView(TemplateView):
             "detection_object":    DetectionObject.objects.count(),
             "item_object":         ItemObject.objects.count(),
             "machine_object":      MachineObject.objects.count(),
+            "inspection_modelss":  InspectionModels.objects.count(),
             "object_detect_model": ObjectDetectionModel.objects.count(),
             "defect_detect_model": DefectDetectionInModels.objects.count(),
             "defect_mode":         DefectMode.objects.count(),
+            "inspection_report":   InspectionReport.objects.count(),
             "kanban_mapping":      KanbanItemMapping.objects.count(),
             "ok_log":              InspectionOKLog.objects.count(),
             "ng_log":              InspectionNGLog.objects.count(),
@@ -556,6 +833,27 @@ class MachineLineView(TemplateView):
 
     def _redirect_tab(self, request, tab):
         return redirect(f"/inspection/machine/?tab={tab}")
+
+    def _save_model_file(self, request) -> str | None:
+        f = request.FILES.get("model_file")
+        if not f:
+            return None
+        dest_dir = os.path.join(_django_settings.MEDIA_ROOT, "inspection_models")
+        os.makedirs(dest_dir, exist_ok=True)
+        name, ext = os.path.splitext(f.name)
+        filename = f"{name}{ext}"
+        dest_path = os.path.join(dest_dir, filename)
+        if os.path.exists(dest_path):
+            filename = f"{name}_{uuid.uuid4().hex[:8]}{ext}"
+            dest_path = os.path.join(dest_dir, filename)
+        with open(dest_path, "wb") as out:
+            for chunk in f.chunks():
+                out.write(chunk)
+        # แปลง Docker path → Windows path เพื่อ save ลง DB
+        # /app/media/inspection_models/x.pt → D:\tb_app\tbsmproduction\media\inspection_models\x.pt
+        win_base = _django_settings.WINDOWS_APP_BASE.rstrip("/\\").replace("\\", "/")
+        windows_path = win_base + dest_path.replace("/app", "")
+        return windows_path
 
     # ---------------------------------------------------------------------- POST
 
@@ -654,6 +952,7 @@ class MachineLineView(TemplateView):
         elif tab == "detection_object":
             name = (request.POST.get("name") or "").strip()
             description = (request.POST.get("description") or "").strip()
+            line_obj = self._resolve_fk(request.POST.get("line_id"), Line)
 
             if action == "create":
                 if not name:
@@ -661,7 +960,11 @@ class MachineLineView(TemplateView):
                     return self._redirect_tab(request, tab)
                 try:
                     with transaction.atomic():
-                        DetectionObject.objects.create(name=name, description=description or None)
+                        DetectionObject.objects.create(
+                            name=name,
+                            description=description or None,
+                            line=line_obj,
+                        )
                     messages.success(request, "เพิ่ม Detection Object สำเร็จ")
                 except Exception as e:
                     messages.error(request, f"เกิดข้อผิดพลาด: {e}")
@@ -676,6 +979,7 @@ class MachineLineView(TemplateView):
                         obj = DetectionObject.objects.get(pk=obj_id)
                         obj.name = name
                         obj.description = description or None
+                        obj.line = line_obj
                         obj.save()
                     messages.success(request, "บันทึกการแก้ไขสำเร็จ")
                 except DetectionObject.DoesNotExist:
@@ -817,6 +1121,109 @@ class MachineLineView(TemplateView):
                     messages.error(request, "ไม่พบรายการนี้")
                 except ProtectedError:
                     messages.error(request, "ลบไม่ได้ มีข้อมูลอ้างอิงอยู่")
+                except Exception as e:
+                    messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+                return self._redirect_tab(request, tab)
+
+        # ============================================================= inspection_modelss
+        elif tab == "inspection_modelss":
+            class_name = (request.POST.get("class_name") or "").strip()
+            description_en = (request.POST.get("description_en") or "").strip()
+            description_th = (request.POST.get("description_th") or "").strip()
+            model_path = (request.POST.get("model_path") or "").strip()
+            model_type = (request.POST.get("model_type") or "OBJECT").strip()
+            count_detect_raw = (request.POST.get("count_detect") or "0").strip()
+            try:
+                count_detect = int(count_detect_raw)
+            except Exception:
+                count_detect = 0
+
+            if action == "bulk_delete":
+                bulk_ids = request.POST.getlist("bulk_id")
+                ids = [x for x in [b.strip() for b in bulk_ids] if _is_uuid(x)]
+                if not ids:
+                    messages.error(request, "กรุณาเลือกรายการที่ต้องการลบ")
+                    return self._redirect_tab(request, tab)
+                deleted = blocked = 0
+                try:
+                    with transaction.atomic():
+                        for pk in ids:
+                            obj = InspectionModels.objects.filter(pk=pk).first()
+                            if obj is None:
+                                continue
+                            try:
+                                obj.delete()
+                                deleted += 1
+                            except ProtectedError:
+                                blocked += 1
+                except Exception as e:
+                    messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+                    return self._redirect_tab(request, tab)
+                if blocked:
+                    messages.warning(request, f"ลบสำเร็จ {deleted} รายการ, ลบไม่ได้ {blocked} รายการ (มีข้อมูลอ้างอิง)")
+                else:
+                    messages.success(request, f"ลบสำเร็จ {deleted} รายการ")
+                return self._redirect_tab(request, tab)
+
+            if action == "create":
+                if not class_name:
+                    messages.error(request, "กรุณากรอก Class Name")
+                    return self._redirect_tab(request, tab)
+                try:
+                    uploaded = self._save_model_file(request)
+                    if uploaded and not model_path:
+                        model_path = uploaded
+                    with transaction.atomic():
+                        InspectionModels.objects.create(
+                            class_name=class_name,
+                            description_en=description_en or None,
+                            description_th=description_th or None,
+                            model_path=model_path or None,
+                            model_type=model_type,
+                            count_detect=count_detect,
+                        )
+                    messages.success(request, "เพิ่ม Inspection Model สำเร็จ")
+                except Exception as e:
+                    messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+                return self._redirect_tab(request, tab)
+
+            if action == "update":
+                if not _is_uuid(obj_id):
+                    messages.error(request, "ไม่พบรหัสรายการ")
+                    return self._redirect_tab(request, tab)
+                if not class_name:
+                    messages.error(request, "กรุณากรอก Class Name")
+                    return self._redirect_tab(request, tab)
+                try:
+                    uploaded = self._save_model_file(request)
+                    if uploaded and not model_path:
+                        model_path = uploaded
+                    with transaction.atomic():
+                        o = InspectionModels.objects.get(pk=obj_id)
+                        o.class_name = class_name
+                        o.description_en = description_en or None
+                        o.description_th = description_th or None
+                        o.model_type = model_type
+                        if model_path:
+                            o.model_path = model_path
+                        o.count_detect = count_detect
+                        o.save(update_fields=["class_name", "description_en", "description_th", "model_path", "model_type", "count_detect", "updated_at"])
+                    messages.success(request, "บันทึกการแก้ไขสำเร็จ")
+                except Exception as e:
+                    messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+                return self._redirect_tab(request, tab)
+
+            if action == "delete":
+                if not _is_uuid(obj_id):
+                    messages.error(request, "ไม่พบรหัสรายการ")
+                    return self._redirect_tab(request, tab)
+                try:
+                    with transaction.atomic():
+                        o = InspectionModels.objects.get(pk=obj_id)
+                        o.object_detection_models.all().delete()
+                        o.defect_detection_models.all().delete()
+                        o.delete()
+                    messages.success(request, "ลบสำเร็จ")
                 except Exception as e:
                     messages.error(request, f"เกิดข้อผิดพลาด: {e}")
                 return self._redirect_tab(request, tab)
@@ -1003,6 +1410,104 @@ class MachineLineView(TemplateView):
                         DefectMode.objects.get(pk=obj_id).delete()
                     messages.success(request, "ลบสำเร็จ")
                 except DefectMode.DoesNotExist:
+                    messages.error(request, "ไม่พบรายการนี้")
+                except ProtectedError:
+                    messages.error(request, "ลบไม่ได้ มีข้อมูลอ้างอิงอยู่")
+                except Exception as e:
+                    messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+                return self._redirect_tab(request, tab)
+
+        # ============================================================= inspection_report
+        elif tab == "inspection_report":
+            line_id = (request.POST.get("line_id") or "").strip()
+            object_id = (request.POST.get("object_id") or "").strip()
+            defect_mode_id = (request.POST.get("defect_mode_id") or "").strip()
+            report_type = (request.POST.get("report_type") or "").strip()
+            count_raw = (request.POST.get("count") or "").strip()
+            target_count_raw = (request.POST.get("target_count") or "").strip()
+            report_date_raw = (request.POST.get("report_date") or "").strip()
+            note = (request.POST.get("note") or "").strip()
+
+            line_obj = self._resolve_fk(line_id, Line)
+            det_obj = self._resolve_fk(object_id, DetectionObject)
+            defect_mode = self._resolve_fk(defect_mode_id, DefectMode)
+            try:
+                count = int(count_raw)
+                if count < 0:
+                    count = 0
+            except Exception:
+                count = 0
+            try:
+                target_count = int(target_count_raw)
+                if target_count < 1:
+                    target_count = 30
+            except Exception:
+                target_count = 30
+            report_date = parse_date(report_date_raw) or _django_timezone.localdate()
+
+            if action == "create":
+                if not line_obj:
+                    messages.error(request, "กรุณาเลือก Line")
+                    return self._redirect_tab(request, tab)
+                if not det_obj:
+                    messages.error(request, "กรุณาเลือก Object")
+                    return self._redirect_tab(request, tab)
+                if not defect_mode:
+                    messages.error(request, "กรุณาเลือก Defect")
+                    return self._redirect_tab(request, tab)
+                if not report_type:
+                    messages.error(request, "กรุณาเลือกหรือกรอกประเภท")
+                    return self._redirect_tab(request, tab)
+                try:
+                    with transaction.atomic():
+                        InspectionReport.objects.create(
+                            line=line_obj, object=det_obj, defect_mode=defect_mode,
+                            report_type=report_type, count=count, target_count=target_count,
+                            report_date=report_date, note=note,
+                        )
+                    messages.success(request, "เพิ่ม Inspection Report สำเร็จ")
+                except Exception as e:
+                    messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+                return self._redirect_tab(request, tab)
+
+            if action == "update":
+                if not line_obj:
+                    messages.error(request, "กรุณาเลือก Line")
+                    return self._redirect_tab(request, tab)
+                if not det_obj:
+                    messages.error(request, "กรุณาเลือก Object")
+                    return self._redirect_tab(request, tab)
+                if not defect_mode:
+                    messages.error(request, "กรุณาเลือก Defect")
+                    return self._redirect_tab(request, tab)
+                if not report_type:
+                    messages.error(request, "กรุณาเลือกหรือกรอกประเภท")
+                    return self._redirect_tab(request, tab)
+                try:
+                    with transaction.atomic():
+                        o = InspectionReport.objects.get(pk=obj_id)
+                        o.line = line_obj
+                        o.object = det_obj
+                        o.defect_mode = defect_mode
+                        o.report_type = report_type
+                        o.count = count
+                        o.target_count = target_count
+                        o.report_date = report_date
+                        o.note = note
+                        o.save()
+                    messages.success(request, "บันทึกการแก้ไขสำเร็จ")
+                except InspectionReport.DoesNotExist:
+                    messages.error(request, "ไม่พบรายการนี้")
+                except Exception as e:
+                    messages.error(request, f"เกิดข้อผิดพลาด: {e}")
+                return self._redirect_tab(request, tab)
+
+            if action == "delete":
+                try:
+                    with transaction.atomic():
+                        InspectionReport.objects.get(pk=obj_id).delete()
+                    messages.success(request, "ลบสำเร็จ")
+                except InspectionReport.DoesNotExist:
                     messages.error(request, "ไม่พบรายการนี้")
                 except ProtectedError:
                     messages.error(request, "ลบไม่ได้ มีข้อมูลอ้างอิงอยู่")

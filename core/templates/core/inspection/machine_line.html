@@ -7,12 +7,23 @@
 {% block content %}
 <section class="space-y-6">
 
-    <header class="mb-2">
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Inspection Machine</h1>
-        <p class="text-sm text-slate-500 mt-1">จัดการข้อมูลเครื่องตรวจสอบ และการตั้งค่า Pipeline การตรวจสอบ</p>
+    <style>
+        .nav-scroll { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        .nav-scroll::-webkit-scrollbar { display: none; }
+    </style>
 
-        <!-- Tab Navigation -->
-        <div class="mt-4 border-b border-slate-200 overflow-x-auto">
+    <header class="mb-2">
+        <a href="/inspection/scrap-dashboard/"
+           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:border-slate-400 transition whitespace-nowrap mb-3">
+            ← Scrap Dashboard
+        </a>
+        <div class="mb-4">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Inspection Machine</h1>
+            <p class="text-sm text-slate-500 mt-1">จัดการข้อมูลเครื่องตรวจสอบ และการตั้งค่า Pipeline การตรวจสอบ</p>
+        </div>
+
+        <!-- Tab Row 1: Pipeline Config -->
+        <div class="border-b border-slate-200 nav-scroll">
             <nav class="flex min-w-max gap-0 -mb-px">
 
                 <a href="?tab=machine"
@@ -39,6 +50,12 @@
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'machine_object' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.machine_object }}</span>
                 </a>
 
+                <a href="?tab=inspection_modelss"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'inspection_modelss' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Inspection Models
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'inspection_modelss' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.inspection_modelss }}</span>
+                </a>
+
                 <a href="?tab=object_detection_model"
                     class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'object_detection_model' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
                     Object Detection Model
@@ -51,6 +68,13 @@
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'defect_detection_models' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.defect_detect_model }}</span>
                 </a>
 
+            </nav>
+        </div>
+
+        <!-- Tab Row 2: Logs & Mapping -->
+        <div class="mt-2 border-b border-slate-200 nav-scroll">
+            <nav class="flex min-w-max gap-0 -mb-px">
+
                 <a href="?tab=defect_mode"
                     class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'defect_mode' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
                     Defect Mode
@@ -61,6 +85,12 @@
                     class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'kanban_mapping' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
                     Kanban Mapping
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'kanban_mapping' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.kanban_mapping }}</span>
+                </a>
+
+                <a href="?tab=inspection_report"
+                    class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 whitespace-nowrap {% if tab == 'inspection_report' %}border-indigo-600 text-indigo-600{% else %}border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-400 transition{% endif %}">
+                    Inspection Report
+                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold {% if tab == 'inspection_report' %}bg-indigo-100 text-indigo-700{% else %}bg-slate-100 text-slate-600{% endif %}">{{ nav_counts.inspection_report }}</span>
                 </a>
 
                 <a href="?tab=ok_log"
@@ -142,27 +172,39 @@
                 {% elif tab == 'detection_object' %}Detection Objects
                 {% elif tab == 'item_object' %}Item Objects
                 {% elif tab == 'machine_object' %}Machine Objects
+                {% elif tab == 'inspection_modelss' %}Inspection Models
                 {% elif tab == 'object_detection_model' %}Object Detection Models
                 {% elif tab == 'defect_detection_models' %}Defect Detection In Models
                 {% elif tab == 'defect_mode' %}Defect Modes
+                {% elif tab == 'inspection_report' %}Inspection Reports
                 {% elif tab == 'ok_log' %}✓ OK Log
                 {% elif tab == 'ng_log' %}✗ NG Log
                 {% else %}Kanban Mappings
                 {% endif %}
             </div>
             {% if tab != 'ok_log' and tab != 'ng_log' %}
-            <button id="openAddModal"
-                class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700">
-                + {% if tab == 'machine' %}เพิ่มเครื่อง
-                {% elif tab == 'detection_object' %}เพิ่ม Object
-                {% elif tab == 'item_object' %}เพิ่ม Item Object
-                {% elif tab == 'machine_object' %}เพิ่ม Machine Object
-                {% elif tab == 'object_detection_model' %}เพิ่ม Model
-                {% elif tab == 'defect_detection_models' %}เพิ่มรายการ
-                {% elif tab == 'defect_mode' %}เพิ่ม Defect Mode
-                {% else %}เพิ่ม Mapping
+            <div class="flex items-center gap-2">
+                <button id="openAddModal"
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-700">
+                    + {% if tab == 'machine' %}เพิ่มเครื่อง
+                    {% elif tab == 'detection_object' %}เพิ่ม Object
+                    {% elif tab == 'item_object' %}เพิ่ม Item Object
+                    {% elif tab == 'machine_object' %}เพิ่ม Machine Object
+                    {% elif tab == 'inspection_modelss' %}เพิ่มข้อมูล
+                    {% elif tab == 'object_detection_model' %}เพิ่ม Model
+                    {% elif tab == 'defect_detection_models' %}เพิ่มรายการ
+                    {% elif tab == 'defect_mode' %}เพิ่ม Defect Mode
+                    {% elif tab == 'inspection_report' %}เพิ่มรายการ
+                    {% else %}เพิ่ม Mapping
+                    {% endif %}
+                </button>
+                {% if tab == 'inspection_modelss' %}
+                <button type="button" id="bulkDeleteBtn" disabled
+                    class="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">
+                    ลบที่เลือก
+                </button>
                 {% endif %}
-            </button>
+            </div>
             {% endif %}
         </div>
 
@@ -242,115 +284,247 @@
                     {% endfor %}
                 </tbody>
 
-                <!-- ==================== detection_object ==================== -->
+                <!-- ==================== detection_object accordion ==================== -->
                 {% elif tab == 'detection_object' %}
-                <thead class="bg-white text-slate-800">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Name</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Description</th>
-                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                {% for group in groups %}
+                <tbody>
+                    <tr class="bg-indigo-50 cursor-pointer select-none hover:bg-indigo-100"
+                        onclick="toggleDetectionGroup('do-grp-{{ forloop.counter }}')">
+                        <td colspan="3" class="px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-do-grp-{{ forloop.counter }}"
+                                        class="w-4 h-4 text-indigo-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-bold text-indigo-800">{{ group.line_name }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{{ group.objects|length }} objects</span>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200">
-                    {% for r in rows %}
+                </tbody>
+                <tbody id="do-grp-{{ forloop.counter }}" class="divide-y divide-slate-100 hidden">
+                    {% for obj in group.objects %}
                     <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.name }}</td>
-                        <td class="px-4 py-3 text-slate-700">{{ r.description|default:"-" }}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-900">{{ obj.name }}</td>
+                        <td class="px-4 py-3 text-slate-600">{{ obj.description|default:"-" }}</td>
                         <td class="px-4 py-3 text-center whitespace-nowrap">
                             <div class="flex justify-center gap-2">
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
-                                    data-open-edit data-id="{{ r.id }}" data-name="{{ r.name }}" data-description="{{ r.description }}">แก้ไข</button>
+                                    data-open-edit data-id="{{ obj.id }}" data-name="{{ obj.name }}"
+                                    data-description="{{ obj.description }}" data-line-id="{{ obj.line_id }}">แก้ไข</button>
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
-                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.name }}">ลบ</button>
+                                    data-open-delete data-id="{{ obj.id }}" data-label="{{ obj.name }}">ลบ</button>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    <tr><td colspan="3" class="text-center py-3 text-slate-400 text-xs">ไม่มีข้อมูล</td></tr>
                     {% endfor %}
                 </tbody>
+                {% empty %}
+                <tbody><tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr></tbody>
+                {% endfor %}
 
-                <!-- ==================== item_object ==================== -->
+                <!-- ==================== item_object accordion Line > Item > Object ==================== -->
                 {% elif tab == 'item_object' %}
-                <thead class="bg-white text-slate-800">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Item</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Quantity</th>
-                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                {% for line_group in line_groups %}{% with L=forloop.counter %}
+                <tbody>
+                    <tr class="bg-indigo-100 cursor-pointer select-none hover:bg-indigo-200"
+                        onclick="toggleIOLine({{ L }})">
+                        <td colspan="3" class="px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-io-line-{{ L }}"
+                                        class="w-4 h-4 text-indigo-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-bold text-indigo-800">{{ line_group.line_name }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">{{ line_group.items|length }} items</span>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200">
-                    {% for r in rows %}
+                </tbody>
+                {% for item_group in line_group.items %}{% with I=forloop.counter %}
+                <tbody id="io-item-hdr-{{ L }}-{{ I }}" class="hidden">
+                    <tr class="bg-indigo-50 cursor-pointer select-none hover:bg-indigo-100"
+                        onclick="toggleIOItem({{ L }}, {{ I }})">
+                        <td colspan="3" class="px-4 py-2.5 pl-10">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-io-item-{{ L }}-{{ I }}"
+                                        class="w-3.5 h-3.5 text-indigo-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-semibold text-indigo-800 text-sm">{{ item_group.item_label }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{{ item_group.objects|length }} objects</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody id="io-item-body-{{ L }}-{{ I }}" class="divide-y divide-slate-100 hidden">
+                    {% for obj in item_group.objects %}
                     <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.object_name }}</td>
-                        <td class="px-4 py-3 text-slate-700">{{ r.item_label }}</td>
-                        <td class="px-4 py-3 text-slate-700">{{ r.quantity }}</td>
+                        <td class="px-4 py-3 pl-14 font-semibold text-slate-900">{{ obj.object_name }}</td>
+                        <td class="px-4 py-3 text-slate-600 text-center">{{ obj.quantity }}</td>
                         <td class="px-4 py-3 text-center whitespace-nowrap">
                             <div class="flex justify-center gap-2">
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
-                                    data-open-edit data-id="{{ r.id }}"
-                                    data-object-id="{{ r.object_id }}" data-object-name="{{ r.object_name }}"
-                                    data-item-id="{{ r.item_id }}" data-item-label="{{ r.item_label }}"
-                                    data-quantity="{{ r.quantity }}">แก้ไข</button>
+                                    data-open-edit data-id="{{ obj.id }}"
+                                    data-object-id="{{ obj.object_id }}" data-object-name="{{ obj.object_name }}"
+                                    data-item-id="{{ obj.item_id }}" data-item-label="{{ obj.item_label }}"
+                                    data-quantity="{{ obj.quantity }}">แก้ไข</button>
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
-                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.object_name }} / {{ r.item_label }}">ลบ</button>
+                                    data-open-delete data-id="{{ obj.id }}" data-label="{{ obj.object_name }} / {{ obj.item_label }}">ลบ</button>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    <tr><td colspan="3" class="text-center py-3 text-slate-400 text-xs">ไม่มีข้อมูล</td></tr>
                     {% endfor %}
                 </tbody>
+                {% endwith %}{% endfor %}
+                {% endwith %}{% empty %}
+                <tbody><tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr></tbody>
+                {% endfor %}
 
-                <!-- ==================== machine_object ==================== -->
+                <!-- ==================== machine_object accordion ==================== -->
                 {% elif tab == 'machine_object' %}
-                <thead class="bg-white text-slate-800">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Machine</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
-                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">Camera No.</th>
-                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                {% for group in mo_groups %}
+                <tbody>
+                    <tr class="bg-indigo-50 cursor-pointer select-none hover:bg-indigo-100"
+                        onclick="toggleMachineGroup('mo-grp-{{ forloop.counter }}')">
+                        <td colspan="3" class="px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-mo-grp-{{ forloop.counter }}"
+                                        class="w-4 h-4 text-indigo-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-bold text-indigo-800">{{ group.machine_label }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{{ group.objects|length }} objects</span>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200">
-                    {% for r in rows %}
+                </tbody>
+                <tbody id="mo-grp-{{ forloop.counter }}" class="divide-y divide-slate-100 hidden">
+                    {% for obj in group.objects %}
                     <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.machine_label }}</td>
-                        <td class="px-4 py-3 text-slate-700">{{ r.object_name }}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-900">{{ obj.object_name }}</td>
                         <td class="px-4 py-3 text-center">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-700">Cam {{ r.camera_number }}</span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">Cam {{ obj.camera_number }}</span>
                         </td>
                         <td class="px-4 py-3 text-center whitespace-nowrap">
                             <div class="flex justify-center gap-2">
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
-                                    data-open-edit data-id="{{ r.id }}"
-                                    data-machine-id="{{ r.machine_id }}"
-                                    data-object-id="{{ r.object_id }}"
-                                    data-camera-number="{{ r.camera_number }}">แก้ไข</button>
+                                    data-open-edit data-id="{{ obj.id }}"
+                                    data-machine-id="{{ obj.machine_id }}"
+                                    data-object-id="{{ obj.object_id }}"
+                                    data-camera-number="{{ obj.camera_number }}">แก้ไข</button>
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
-                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.machine_label }} / {{ r.object_name }}">ลบ</button>
+                                    data-open-delete data-id="{{ obj.id }}" data-label="{{ obj.machine_label }} / {{ obj.object_name }}">ลบ</button>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    <tr><td colspan="3" class="text-center py-3 text-slate-400 text-xs">ไม่มีข้อมูล</td></tr>
                     {% endfor %}
                 </tbody>
+                {% empty %}
+                <tbody><tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr></tbody>
+                {% endfor %}
 
-                <!-- ==================== object_detection_model ==================== -->
-                {% elif tab == 'object_detection_model' %}
+                <!-- ==================== inspection_modelss ==================== -->
+                {% elif tab == 'inspection_modelss' %}
                 <thead class="bg-white text-slate-800">
                     <tr>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Inspection Model</th>
+                        <th class="px-4 py-3 text-left font-extrabold"><input id="selectAllRows" type="checkbox" class="h-4 w-4" /></th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Class Name</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Type</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Description (TH)</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Model Path</th>
+                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">Count Detect</th>
                         <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200">
                     {% for r in rows %}
                     <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.object_name }}</td>
+                        <td class="px-4 py-3"><input type="checkbox" class="h-4 w-4 rowCheckbox" data-id="{{ r.id }}" /></td>
+                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.class_name|default:"-" }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            {% if r.model_type == "OBJECT" %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">Object Detection</span>
+                            {% elif r.model_type == "DEFECT" %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">Defect Detection</span>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-slate-700 max-w-xs truncate">{{ r.description_th|default:"-" }}</td>
+                        <td class="px-4 py-3 text-slate-600 text-xs font-mono max-w-xs truncate">{{ r.model_path|default:"-" }}</td>
+                        <td class="px-4 py-3 text-slate-700 text-center">{{ r.count_detect|default:0 }}</td>
+                        <td class="px-4 py-3">
+                            <div class="flex items-center justify-center gap-2">
+                                <button type="button"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600 whitespace-nowrap"
+                                    data-open-edit
+                                    data-id="{{ r.id }}"
+                                    data-class-name="{{ r.class_name|default:'' }}"
+                                    data-description-en="{{ r.description_en|default:'' }}"
+                                    data-description-th="{{ r.description_th|default:'' }}"
+                                    data-model-path="{{ r.model_path|default:'' }}"
+                                    data-count-detect="{{ r.count_detect|default:0 }}"
+                                    data-model-type="{{ r.model_type|default:'OBJECT' }}">แก้ไข</button>
+                                <button type="button"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700 whitespace-nowrap"
+                                    data-open-delete
+                                    data-id="{{ r.id }}"
+                                    data-label="{{ r.class_name|default:'' }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td class="px-4 py-8 text-center text-slate-600" colspan="7">ยังไม่มีข้อมูล Inspection Model</td></tr>
+                    {% endfor %}
+                </tbody>
+
+                <!-- ==================== object_detection_model accordion ==================== -->
+                {% elif tab == 'object_detection_model' %}
+                {% for group in odm_groups %}
+                <tbody>
+                    <tr class="bg-indigo-50 cursor-pointer select-none hover:bg-indigo-100"
+                        onclick="toggleODMGroup('odm-grp-{{ forloop.counter }}')">
+                        <td colspan="3" class="px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-odm-grp-{{ forloop.counter }}"
+                                        class="w-4 h-4 text-indigo-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-bold text-indigo-800">{{ group.line_name }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{{ group.items|length }} รายการ</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody id="odm-grp-{{ forloop.counter }}" class="divide-y divide-slate-100 hidden">
+                    {% for r in group.items %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900">{{ r.object_name }}</td>
                         <td class="px-4 py-3 text-slate-700">{{ r.model_class }}</td>
                         <td class="px-4 py-3 text-center whitespace-nowrap">
                             <div class="flex justify-center gap-2">
@@ -364,24 +538,39 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    <tr><td colspan="3" class="text-center py-3 text-slate-400 text-xs">ไม่มีข้อมูล</td></tr>
                     {% endfor %}
                 </tbody>
+                {% empty %}
+                <tbody><tr><td colspan="3" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr></tbody>
+                {% endfor %}
 
-                <!-- ==================== defect_detection_models ==================== -->
+                <!-- ==================== defect_detection_models accordion ==================== -->
                 {% elif tab == 'defect_detection_models' %}
-                <thead class="bg-white text-slate-800">
-                    <tr>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Detection Object</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Defect Mode</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Inspection Model</th>
-                        <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
+                {% for group in ddm_groups %}
+                <tbody>
+                    <tr class="bg-rose-50 cursor-pointer select-none hover:bg-rose-100"
+                        onclick="toggleDDMGroup('ddm-grp-{{ forloop.counter }}')">
+                        <td colspan="4" class="px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-ddm-grp-{{ forloop.counter }}"
+                                        class="w-4 h-4 text-rose-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-bold text-rose-800">{{ group.line_name }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{{ group.items|length }} รายการ</span>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-200">
-                    {% for r in rows %}
+                </tbody>
+                <tbody id="ddm-grp-{{ forloop.counter }}" class="divide-y divide-slate-100 hidden">
+                    {% for r in group.items %}
                     <tr class="hover:bg-slate-50">
-                        <td class="px-4 py-3 font-semibold text-slate-900 whitespace-nowrap">{{ r.object_name }}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-900">{{ r.object_name }}</td>
                         <td class="px-4 py-3 text-slate-700">{{ r.defect_mode_label }}</td>
                         <td class="px-4 py-3 text-slate-700">{{ r.model_class }}</td>
                         <td class="px-4 py-3 text-center whitespace-nowrap">
@@ -389,17 +578,23 @@
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
                                     data-open-edit data-id="{{ r.id }}"
                                     data-object-id="{{ r.object_id }}"
+                                    data-object-name="{{ r.object_name }}"
                                     data-defect-mode-id="{{ r.defect_mode_id }}"
-                                    data-model-id="{{ r.model_id }}">แก้ไข</button>
+                                    data-defect-mode-label="{{ r.defect_mode_label }}"
+                                    data-model-id="{{ r.model_id }}"
+                                    data-model-class="{{ r.model_class }}">แก้ไข</button>
                                 <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
                                     data-open-delete data-id="{{ r.id }}" data-label="{{ r.object_name }} / {{ r.defect_mode_label }}">ลบ</button>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr>
+                    <tr><td colspan="4" class="text-center py-3 text-slate-400 text-xs">ไม่มีข้อมูล</td></tr>
                     {% endfor %}
                 </tbody>
+                {% empty %}
+                <tbody><tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr></tbody>
+                {% endfor %}
 
                 <!-- ==================== defect_mode ==================== -->
                 {% elif tab == 'defect_mode' %}
@@ -443,18 +638,99 @@
                     {% endfor %}
                 </tbody>
 
-                <!-- ==================== kanban_mapping ==================== -->
-                {% elif tab == 'kanban_mapping' %}
+                <!-- ==================== inspection_report accordion ==================== -->
+                {% elif tab == 'inspection_report' %}
                 <thead class="bg-white text-slate-800">
                     <tr>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Kanban QR</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Item QR</th>
-                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">ชิ้นงาน (Item)</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Object</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">Defect</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">ประเภท</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">ทดสอบแล้ว / เป้าหมาย</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">วันที่ทดสอบ</th>
+                        <th class="px-4 py-3 text-left font-extrabold whitespace-nowrap">หมายเหตุ</th>
                         <th class="px-4 py-3 text-center font-extrabold whitespace-nowrap">จัดการ</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200">
-                    {% for r in rows %}
+                {% for group in ir_groups %}
+                <tbody>
+                    <tr class="bg-teal-50 cursor-pointer select-none hover:bg-teal-100"
+                        onclick="toggleIRGroup('ir-grp-{{ forloop.counter }}')">
+                        <td colspan="7" class="px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-ir-grp-{{ forloop.counter }}"
+                                        class="w-4 h-4 text-teal-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-bold text-teal-800">{{ group.line_name }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">{{ group.items|length }} รายการ</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody id="ir-grp-{{ forloop.counter }}" class="divide-y divide-slate-100 hidden">
+                    {% for r in group.items %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-4 py-3 font-semibold text-slate-900">{{ r.object_name }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.defect_mode_label }}</td>
+                        <td class="px-4 py-3 text-slate-700">{{ r.report_type_display }}</td>
+                        <td class="px-4 py-3 text-slate-700 font-mono">{{ r.count_display }}</td>
+                        <td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.report_date }}</td>
+                        <td class="px-4 py-3 text-slate-600 max-w-xs truncate">{{ r.note|default:"-" }}</td>
+                        <td class="px-4 py-3 text-center whitespace-nowrap">
+                            <div class="flex justify-center gap-2">
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-amber-500 hover:bg-amber-600"
+                                    data-open-edit data-id="{{ r.id }}"
+                                    data-line-id="{{ r.line_id }}"
+                                    data-object-id="{{ r.object_id }}"
+                                    data-object-name="{{ r.object_name }}"
+                                    data-defect-mode-id="{{ r.defect_mode_id }}"
+                                    data-defect-mode-label="{{ r.defect_mode_label }}"
+                                    data-report-type="{{ r.report_type }}"
+                                    data-count="{{ r.count }}"
+                                    data-target-count="{{ r.target_count }}"
+                                    data-report-date="{{ r.report_date }}"
+                                    data-note="{{ r.note }}">แก้ไข</button>
+                                <button class="px-3 py-1.5 rounded-lg font-semibold text-white bg-red-600 hover:bg-red-700"
+                                    data-open-delete data-id="{{ r.id }}" data-label="{{ r.object_name }} / {{ r.defect_mode_label }}">ลบ</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-3 text-slate-400 text-xs">ไม่มีข้อมูล</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% empty %}
+                <tbody><tr><td colspan="7" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล</td></tr></tbody>
+                {% endfor %}
+
+                <!-- ==================== kanban_mapping accordion ==================== -->
+                {% elif tab == 'kanban_mapping' %}
+                {% for group in km_line_groups %}
+                <tbody>
+                    <tr class="bg-indigo-50 cursor-pointer select-none hover:bg-indigo-100"
+                        onclick="toggleKMLine('km-grp-{{ forloop.counter }}')">
+                        <td colspan="4" class="px-4 py-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <svg id="chev-km-grp-{{ forloop.counter }}"
+                                        class="w-4 h-4 text-indigo-500 transition-transform duration-200"
+                                        style="transform:rotate(-90deg)"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                    <span class="font-bold text-indigo-800">{{ group.line_name }}</span>
+                                </div>
+                                <span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{{ group.mappings|length }} mappings</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+                <tbody id="km-grp-{{ forloop.counter }}" class="divide-y divide-slate-100 hidden">
+                    {% for r in group.mappings %}
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3 font-mono font-semibold text-slate-900 whitespace-nowrap">{{ r.kanban_qr }}</td>
                         <td class="px-4 py-3 font-mono text-slate-700 whitespace-nowrap">{{ r.item_qr }}</td>
@@ -473,9 +749,12 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล Kanban Mapping</td></tr>
+                    <tr><td colspan="4" class="text-center py-3 text-slate-400 text-xs">ไม่มีข้อมูล</td></tr>
                     {% endfor %}
                 </tbody>
+                {% empty %}
+                <tbody><tr><td colspan="4" class="text-center py-8 text-slate-500">ยังไม่มีข้อมูล Kanban Mapping</td></tr></tbody>
+                {% endfor %}
 
                 <!-- ==================== ok_log ==================== -->
                 {% elif tab == 'ok_log' %}
@@ -590,7 +869,19 @@
                         <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ r.kanban_qr }}</td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-700">{{ r.item_qr }}</td>
                         <td class="px-4 py-3 text-center">
-                            {% if r.photo_path %}<a href="{{ r.photo_path }}" target="_blank" onclick="event.stopPropagation()" class="text-indigo-600 hover:underline text-xs">ดูรูป</a>
+                            {% if r.qr_image_count %}
+                            <button type="button"
+                                onclick="event.stopPropagation(); openPhotoModal(this)"
+                                data-title="รูป QR: {{ r.kanban_qr }}"
+                                data-photos='{{ r.qr_images_json }}'
+                                class="inline-flex items-center gap-1 group cursor-pointer">
+                                <img src="{{ r.qr_first_image }}" alt="รูป"
+                                     class="w-10 h-10 rounded-lg object-cover border border-slate-300 group-hover:border-red-400 transition"
+                                     onerror="this.style.display='none'" />
+                                {% if r.qr_image_count > 1 %}
+                                <span class="text-xs font-semibold text-red-600">+{{ r.qr_image_count|add:"-1" }}</span>
+                                {% endif %}
+                            </button>
                             {% else %}<span class="text-slate-300 text-xs">—</span>{% endif %}
                         </td>
                     </tr>
@@ -683,7 +974,7 @@
 {% if tab == 'ok_log' or tab == 'ng_log' %}
 <div id="photoModal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4"
      onclick="if(event.target===this) closePhotoModal()">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div class="bg-white rounded-2xl shadow-2xl w-fit max-w-[92vw] max-h-[92vh] flex flex-col">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
             <h3 id="photoModalTitle" class="font-bold text-lg text-slate-800 truncate pr-4"></h3>
             <button onclick="closePhotoModal()"
@@ -875,6 +1166,15 @@
         <h2 class="text-lg font-extrabold mb-4">เพิ่ม Detection Object</h2>
         <div class="space-y-3">
             <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Line</label>
+                <select name="line_id" class="w-full border px-3 py-2 rounded-md">
+                    <option value="">— ไม่ระบุ —</option>
+                    {% for ln in lines_list %}
+                    <option value="{{ ln.id }}">{{ ln.line_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Name <span class="text-red-500">*</span></label>
                 <input name="name" required placeholder="ชื่อ Object" class="w-full border px-3 py-2 rounded-md">
             </div>
@@ -898,6 +1198,15 @@
         <input type="hidden" name="id" id="doEditId">
         <h2 class="text-lg font-extrabold mb-4">แก้ไข Detection Object</h2>
         <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Line</label>
+                <select name="line_id" id="doEditLineId" class="w-full border px-3 py-2 rounded-md">
+                    <option value="">— ไม่ระบุ —</option>
+                    {% for ln in lines_list %}
+                    <option value="{{ ln.id }}">{{ ln.line_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Name <span class="text-red-500">*</span></label>
                 <input name="name" id="doEditName" required class="w-full border px-3 py-2 rounded-md">
@@ -1107,6 +1416,137 @@
     </form>
 </div>
 
+{# -------------------- inspection_modelss modals -------------------- #}
+{% elif tab == 'inspection_modelss' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" enctype="multipart/form-data" class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6 max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="inspection_modelss">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold text-slate-900">เพิ่ม Inspection Model</h2>
+        <div class="mt-4 space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">ประเภท Model <span class="text-red-500">*</span></label>
+                <div class="mt-2 flex gap-6">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="model_type" value="OBJECT" checked>
+                        <span class="text-sm font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">Object Detection</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="model_type" value="DEFECT">
+                        <span class="text-sm font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">Defect Detection</span>
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Class Name <span class="text-red-500">*</span></label>
+                <input name="class_name" required type="text" placeholder="เช่น Bolt_LH, Defect_Scratch" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Description (TH)</label>
+                <textarea name="description_th" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">อัปโหลดไฟล์ Model</label>
+                <input type="file" id="addFileInput" name="model_file" accept=".pt,.pth,.onnx,.pkl,.bin,.weights" class="hidden" />
+                <div id="addFileZone" onclick="document.getElementById('addFileInput').click()"
+                    class="mt-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-xl px-4 py-4 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <div id="addFileName" class="text-sm text-slate-500 text-center">คลิกเพื่อเลือกไฟล์ (จะ copy เข้าระบบ)</div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Path ของ Model <span class="text-slate-400 font-normal text-xs">(auto-fill เมื่อเลือกไฟล์ หรือแก้ไขเองได้)</span></label>
+                <input type="text" name="model_path" id="addModelPath" placeholder="จะ fill อัตโนมัติเมื่อเลือกไฟล์"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div id="addCountDetectBlock">
+                <label class="block text-sm font-semibold text-slate-700">Count Detect</label>
+                <input name="count_detect" type="number" value="0" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+        </div>
+        <div class="mt-5 flex items-center justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center p-4 sm:p-6">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" enctype="multipart/form-data" class="relative w-full max-w-lg rounded-2xl shadow-2xl bg-white p-6 max-h-[90vh] overflow-y-auto">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="inspection_modelss">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="editId">
+        <h2 class="text-lg font-extrabold text-slate-900">แก้ไข Inspection Model</h2>
+        <div class="mt-4 space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">ประเภท Model <span class="text-red-500">*</span></label>
+                <div class="mt-2 flex gap-6">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="model_type" id="editTypeObject" value="OBJECT">
+                        <span class="text-sm font-semibold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">Object Detection</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="model_type" id="editTypeDefect" value="DEFECT">
+                        <span class="text-sm font-semibold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-full">Defect Detection</span>
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Class Name <span class="text-red-500">*</span></label>
+                <input name="class_name" id="editClassName" required type="text" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Description (TH)</label>
+                <textarea name="description_th" id="editDescTh" rows="2" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">อัปโหลดไฟล์ Model ใหม่ <span class="text-slate-400 font-normal text-xs">(ไม่บังคับ — จะ copy เข้าระบบ)</span></label>
+                <input type="file" id="editFileInput" name="model_file" accept=".pt,.pth,.onnx,.pkl,.bin,.weights" class="hidden" />
+                <div id="editFileZone" onclick="document.getElementById('editFileInput').click()"
+                    class="mt-1 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-300 rounded-xl px-4 py-4 cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <div id="editFileName" class="text-sm text-slate-500 text-center">คลิกเพื่อเลือกไฟล์ใหม่</div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700">Path ของ Model <span class="text-slate-400 font-normal text-xs">(auto-fill เมื่อเลือกไฟล์ใหม่ หรือแก้ไขเองได้)</span></label>
+                <input type="text" name="model_path" id="editModelPath" placeholder="path ปัจจุบัน"
+                    class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div id="editCountDetectBlock">
+                <label class="block text-sm font-semibold text-slate-700">Count Detect</label>
+                <input name="count_detect" id="editCountDetect" type="number" class="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+        </div>
+        <div class="mt-5 flex items-center justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="inspection_modelss">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
 {# -------------------- object_detection_model modals -------------------- #}
 {% elif tab == 'object_detection_model' %}
 <div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
@@ -1196,24 +1636,33 @@
         <div class="space-y-3">
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
-                <select name="object_id" required class="w-full border px-3 py-2 rounded-md bg-white">
-                    <option value="">— เลือก Object —</option>
-                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
-                </select>
+                <input type="hidden" name="object_id" id="ddmAddObjectId" />
+                <div class="relative">
+                    <input type="text" id="ddmAddObjectSearch" placeholder="พิมพ์เพื่อค้นหา Object..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ddmAddObjectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
             </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Defect Mode <span class="text-red-500">*</span></label>
-                <select name="defect_mode_id" required class="w-full border px-3 py-2 rounded-md bg-white">
-                    <option value="">— เลือก Defect Mode —</option>
-                    {% for dm in defect_modes_list %}<option value="{{ dm.id }}">{{ dm.name_th }} / {{ dm.name_en }}</option>{% endfor %}
-                </select>
+                <input type="hidden" name="defect_mode_id" id="ddmAddDefectModeId" />
+                <div class="relative">
+                    <input type="text" id="ddmAddDefectSearch" placeholder="พิมพ์เพื่อค้นหา Defect Mode..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ddmAddDefectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
             </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model <span class="text-red-500">*</span></label>
-                <select name="model_id" required class="w-full border px-3 py-2 rounded-md bg-white">
-                    <option value="">— เลือก Model —</option>
-                    {% for m in models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
-                </select>
+                <input type="hidden" name="model_id" id="ddmAddModelId" />
+                <div class="relative">
+                    <input type="text" id="ddmAddModelSearch" placeholder="พิมพ์เพื่อค้นหา Model..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ddmAddModelDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
             </div>
         </div>
         <div class="mt-5 flex justify-end gap-2">
@@ -1233,24 +1682,33 @@
         <div class="space-y-3">
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Detection Object <span class="text-red-500">*</span></label>
-                <select name="object_id" id="ddmEditObjectId" required class="w-full border px-3 py-2 rounded-md bg-white">
-                    <option value="">— เลือก Object —</option>
-                    {% for o in objects_list %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
-                </select>
+                <input type="hidden" name="object_id" id="ddmEditObjectId" />
+                <div class="relative">
+                    <input type="text" id="ddmEditObjectSearch" placeholder="พิมพ์เพื่อค้นหา Object..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ddmEditObjectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
             </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Defect Mode <span class="text-red-500">*</span></label>
-                <select name="defect_mode_id" id="ddmEditDefectModeId" required class="w-full border px-3 py-2 rounded-md bg-white">
-                    <option value="">— เลือก Defect Mode —</option>
-                    {% for dm in defect_modes_list %}<option value="{{ dm.id }}">{{ dm.name_th }} / {{ dm.name_en }}</option>{% endfor %}
-                </select>
+                <input type="hidden" name="defect_mode_id" id="ddmEditDefectModeId" />
+                <div class="relative">
+                    <input type="text" id="ddmEditDefectSearch" placeholder="พิมพ์เพื่อค้นหา Defect Mode..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ddmEditDefectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
             </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-1">Inspection Model <span class="text-red-500">*</span></label>
-                <select name="model_id" id="ddmEditModelId" required class="w-full border px-3 py-2 rounded-md bg-white">
-                    <option value="">— เลือก Model —</option>
-                    {% for m in models_list %}<option value="{{ m.id }}">{{ m.class_name }}</option>{% endfor %}
-                </select>
+                <input type="hidden" name="model_id" id="ddmEditModelId" />
+                <div class="relative">
+                    <input type="text" id="ddmEditModelSearch" placeholder="พิมพ์เพื่อค้นหา Model..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="ddmEditModelDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
             </div>
         </div>
         <div class="mt-5 flex justify-end gap-2">
@@ -1377,6 +1835,167 @@
     <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
         {% csrf_token %}
         <input type="hidden" name="tab" value="defect_mode">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" id="deleteId">
+        <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
+        <p id="deleteLabel" class="text-sm mt-2 text-slate-600"></p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg">ลบ</button>
+        </div>
+    </form>
+</div>
+
+{# -------------------- inspection_report modals -------------------- #}
+{% elif tab == 'inspection_report' %}
+<div id="addModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="inspection_report">
+        <input type="hidden" name="action" value="create">
+        <h2 class="text-lg font-extrabold mb-4">เพิ่ม Inspection Report</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ไลน์ผลิต <span class="text-red-500">*</span></label>
+                <select name="line_id" id="irAddLineId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Line —</option>
+                    {% for l in lines_list %}<option value="{{ l.id }}">{{ l.line_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Object <span class="text-red-500">*</span></label>
+                <input type="hidden" name="object_id" id="irAddObjectId" />
+                <div class="relative">
+                    <input type="text" id="irAddObjectSearch" placeholder="เลือก Line ก่อน แล้วพิมพ์เพื่อค้นหา Object..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="irAddObjectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Defect <span class="text-red-500">*</span></label>
+                <input type="hidden" name="defect_mode_id" id="irAddDefectId" />
+                <div class="relative">
+                    <input type="text" id="irAddDefectSearch" placeholder="พิมพ์เพื่อค้นหา Defect..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="irAddDefectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ประเภท <span class="text-red-500">*</span></label>
+                <input type="hidden" name="report_type" id="irAddReportTypeHidden" />
+                <select id="irAddReportTypeSelect" class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือกประเภท —</option>
+                    {% for t in report_type_options %}<option value="{{ t.value }}">{{ t.label }}</option>{% endfor %}
+                    <option value="__new__">+ เพิ่มประเภทใหม่...</option>
+                </select>
+                <input type="text" id="irAddReportTypeNew" placeholder="พิมพ์ชื่อประเภทใหม่"
+                    class="hidden mt-2 w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ทดสอบแล้ว (ครั้ง) <span class="text-red-500">*</span></label>
+                    <input type="number" name="count" min="0" value="0" required class="w-full border px-3 py-2 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">เป้าหมาย (ครั้ง) <span class="text-red-500">*</span></label>
+                    <input type="number" name="target_count" min="1" value="30" required class="w-full border px-3 py-2 rounded-md">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">วันที่ทดสอบ <span class="text-red-500">*</span></label>
+                <input type="date" name="report_date" value="{% now 'Y-m-d' %}" required class="w-full border px-3 py-2 rounded-md" style="color-scheme: light;">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">หมายเหตุ</label>
+                <textarea name="note" id="irAddNote" rows="2" class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">เพิ่ม</button>
+        </div>
+    </form>
+</div>
+<div id="editModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="inspection_report">
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="id" id="irEditId">
+        <h2 class="text-lg font-extrabold mb-4">แก้ไข Inspection Report</h2>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ไลน์ผลิต <span class="text-red-500">*</span></label>
+                <select name="line_id" id="irEditLineId" required class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือก Line —</option>
+                    {% for l in lines_list %}<option value="{{ l.id }}">{{ l.line_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Object <span class="text-red-500">*</span></label>
+                <input type="hidden" name="object_id" id="irEditObjectId" />
+                <div class="relative">
+                    <input type="text" id="irEditObjectSearch" placeholder="เลือก Line ก่อน แล้วพิมพ์เพื่อค้นหา Object..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="irEditObjectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">Defect <span class="text-red-500">*</span></label>
+                <input type="hidden" name="defect_mode_id" id="irEditDefectModeId" />
+                <div class="relative">
+                    <input type="text" id="irEditDefectSearch" placeholder="พิมพ์เพื่อค้นหา Defect..." autocomplete="off"
+                        class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+                    <div id="irEditDefectDropdown"
+                        class="absolute z-50 w-full bg-white border border-slate-300 rounded-md shadow-lg max-h-52 overflow-y-auto hidden mt-1"></div>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">ประเภท <span class="text-red-500">*</span></label>
+                <input type="hidden" name="report_type" id="irEditReportTypeHidden" />
+                <select id="irEditReportTypeSelect" class="w-full border px-3 py-2 rounded-md bg-white">
+                    <option value="">— เลือกประเภท —</option>
+                    {% for t in report_type_options %}<option value="{{ t.value }}">{{ t.label }}</option>{% endfor %}
+                    <option value="__new__">+ เพิ่มประเภทใหม่...</option>
+                </select>
+                <input type="text" id="irEditReportTypeNew" placeholder="พิมพ์ชื่อประเภทใหม่"
+                    class="hidden mt-2 w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">ทดสอบแล้ว (ครั้ง) <span class="text-red-500">*</span></label>
+                    <input type="number" name="count" id="irEditCount" min="0" required class="w-full border px-3 py-2 rounded-md">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">เป้าหมาย (ครั้ง) <span class="text-red-500">*</span></label>
+                    <input type="number" name="target_count" id="irEditTargetCount" min="1" required class="w-full border px-3 py-2 rounded-md">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">วันที่ทดสอบ <span class="text-red-500">*</span></label>
+                <input type="date" name="report_date" id="irEditReportDate" required class="w-full border px-3 py-2 rounded-md" style="color-scheme: light;">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-1">หมายเหตุ</label>
+                <textarea name="note" id="irEditNote" rows="2" class="w-full border px-3 py-2 rounded-md focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" data-close class="px-4 py-2 bg-slate-100 rounded-lg">ยกเลิก</button>
+            <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg">บันทึก</button>
+        </div>
+    </form>
+</div>
+<div id="deleteModal" class="fixed inset-0 z-[9999] hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" data-close></div>
+    <form method="post" class="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="inspection_report">
         <input type="hidden" name="action" value="delete">
         <input type="hidden" name="id" id="deleteId">
         <h2 class="text-lg font-extrabold">ยืนยันการลบ</h2>
@@ -1528,12 +2147,21 @@ document.querySelectorAll('tr[data-row-href]').forEach(tr => {
 })
 
 {% elif tab == 'detection_object' %}
+// ---- detection_object: accordion toggle ----
+function toggleDetectionGroup(id) {
+    const tbody = document.getElementById(id)
+    const chev = document.getElementById('chev-' + id)
+    if (!tbody) return
+    const isNowHidden = tbody.classList.toggle('hidden')
+    if (chev) chev.style.transform = isNowHidden ? 'rotate(-90deg)' : 'rotate(0deg)'
+}
 // ---- detection_object: edit / delete ----
 document.querySelectorAll('[data-open-edit]').forEach(btn => {
     btn.onclick = () => {
         document.getElementById('doEditId').value = btn.dataset.id
         document.getElementById('doEditName').value = btn.dataset.name
         document.getElementById('doEditDescription').value = btn.dataset.description || ''
+        document.getElementById('doEditLineId').value = btn.dataset.lineId || ''
         openModal('editModal')
     }
 })
@@ -1546,6 +2174,34 @@ document.querySelectorAll('[data-open-delete]').forEach(btn => {
 })
 
 {% elif tab == 'item_object' %}
+// ---- item_object: nested accordion Line > Item > Object ----
+function toggleIOLine(L) {
+    const hdrs = document.querySelectorAll(`[id^="io-item-hdr-${L}-"]`)
+    const isCurrentlyHidden = hdrs.length > 0 && hdrs[0].classList.contains('hidden')
+    hdrs.forEach(el => {
+        if (isCurrentlyHidden) {
+            el.classList.remove('hidden')
+        } else {
+            el.classList.add('hidden')
+            // collapse item body when collapsing line
+            const bodyId = el.id.replace('io-item-hdr', 'io-item-body')
+            const body = document.getElementById(bodyId)
+            if (body) body.classList.add('hidden')
+            const suffix = el.id.replace(`io-item-hdr-${L}-`, '')
+            const chev = document.getElementById(`chev-io-item-${L}-${suffix}`)
+            if (chev) chev.style.transform = 'rotate(-90deg)'
+        }
+    })
+    const lineChev = document.getElementById(`chev-io-line-${L}`)
+    if (lineChev) lineChev.style.transform = isCurrentlyHidden ? 'rotate(0deg)' : 'rotate(-90deg)'
+}
+function toggleIOItem(L, I) {
+    const body = document.getElementById(`io-item-body-${L}-${I}`)
+    const chev = document.getElementById(`chev-io-item-${L}-${I}`)
+    if (!body) return
+    const isNowHidden = body.classList.toggle('hidden')
+    if (chev) chev.style.transform = isNowHidden ? 'rotate(-90deg)' : 'rotate(0deg)'
+}
 // ---- item_object: searchable item select + edit / delete ----
 const IO_ITEM_OPTIONS = [
     {% for it in items_list %}
@@ -1616,6 +2272,14 @@ document.querySelectorAll('[data-open-delete]').forEach(btn => {
 })
 
 {% elif tab == 'machine_object' %}
+// ---- machine_object: accordion toggle ----
+function toggleMachineGroup(id) {
+    const tbody = document.getElementById(id)
+    const chev = document.getElementById('chev-' + id)
+    if (!tbody) return
+    const isNowHidden = tbody.classList.toggle('hidden')
+    if (chev) chev.style.transform = isNowHidden ? 'rotate(-90deg)' : 'rotate(0deg)'
+}
 // ---- machine_object: edit / delete ----
 document.querySelectorAll('[data-open-edit]').forEach(btn => {
     btn.onclick = () => {
@@ -1634,7 +2298,124 @@ document.querySelectorAll('[data-open-delete]').forEach(btn => {
     }
 })
 
+{% elif tab == 'inspection_modelss' %}
+// ---- inspection_modelss: count_detect show/hide by model type ----
+function imToggleCountDetect(prefix, type) {
+    const block = document.getElementById(prefix + 'CountDetectBlock')
+    if (!block) return
+    if (type === 'DEFECT') {
+        block.style.display = 'none'
+        const input = block.querySelector('input')
+        if (input) input.value = '0'
+    } else {
+        block.style.display = ''
+    }
+}
+document.querySelectorAll('#addModal input[name="model_type"]').forEach(radio => {
+    radio.addEventListener('change', () => imToggleCountDetect('add', radio.value))
+})
+document.querySelectorAll('#editModal input[name="model_type"]').forEach(radio => {
+    radio.addEventListener('change', () => imToggleCountDetect('edit', radio.value))
+})
+imToggleCountDetect('add', 'OBJECT')
+
+// ---- inspection_modelss: file drop zone preview ----
+document.getElementById('addFileInput').addEventListener('change', function () {
+    const zone = document.getElementById('addFileZone')
+    if (this.files && this.files[0]) {
+        const f = this.files[0]
+        document.getElementById('addFileName').innerHTML =
+            '<span class="font-semibold text-indigo-700">' + f.name + '</span>' +
+            '<br><span class="text-xs text-slate-400">' + (f.size / 1024 / 1024).toFixed(2) + ' MB</span>'
+        zone.classList.replace('border-slate-300', 'border-emerald-400')
+        zone.classList.add('bg-emerald-50')
+    }
+})
+document.getElementById('editFileInput').addEventListener('change', function () {
+    const zone = document.getElementById('editFileZone')
+    if (this.files && this.files[0]) {
+        const f = this.files[0]
+        document.getElementById('editFileName').innerHTML =
+            '<span class="font-semibold text-indigo-700">' + f.name + '</span>' +
+            '<br><span class="text-xs text-slate-400">' + (f.size / 1024 / 1024).toFixed(2) + ' MB</span>'
+        zone.classList.replace('border-slate-300', 'border-emerald-400')
+        zone.classList.add('bg-emerald-50')
+    }
+})
+
+// ---- inspection_modelss: bulk select / bulk delete ----
+const imSelectAll = document.getElementById('selectAllRows')
+const imBulkDeleteBtn = document.getElementById('bulkDeleteBtn')
+function imUpdateBulk() { imBulkDeleteBtn.disabled = !document.querySelectorAll('.rowCheckbox:checked').length }
+if (imSelectAll) imSelectAll.addEventListener('change', () => {
+    document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = imSelectAll.checked)
+    imUpdateBulk()
+})
+document.querySelectorAll('.rowCheckbox').forEach(cb => cb.addEventListener('change', imUpdateBulk))
+imUpdateBulk()
+imBulkDeleteBtn.addEventListener('click', () => {
+    const ids = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.dataset.id)
+    if (!ids.length) return
+    if (!confirm('ต้องการลบ ' + ids.length + ' รายการหรือไม่?')) return
+    const form = document.createElement('form')
+    form.method = 'post'; form.style.display = 'none'
+    const tabEl = document.createElement('input'); tabEl.type = 'hidden'; tabEl.name = 'tab'; tabEl.value = 'inspection_modelss'
+    form.appendChild(tabEl)
+    const csrfEl = document.createElement('input'); csrfEl.type = 'hidden'; csrfEl.name = 'csrfmiddlewaretoken'
+    csrfEl.value = document.querySelector('[name=csrfmiddlewaretoken]').value
+    form.appendChild(csrfEl)
+    const actionEl = document.createElement('input'); actionEl.type = 'hidden'; actionEl.name = 'action'; actionEl.value = 'bulk_delete'
+    form.appendChild(actionEl)
+    ids.forEach(id => { const i = document.createElement('input'); i.type = 'hidden'; i.name = 'bulk_id'; i.value = id; form.appendChild(i) })
+    document.body.appendChild(form); form.submit()
+})
+
+// ---- inspection_modelss: open add / edit / delete ----
+document.getElementById('openAddModal').onclick = () => {
+    document.getElementById('addModelPath').value = ''
+    document.getElementById('addFileInput').value = ''
+    document.getElementById('addFileName').textContent = 'คลิกเพื่อเลือกไฟล์ (จะ copy เข้าระบบ)'
+    const az = document.getElementById('addFileZone')
+    az.classList.remove('border-emerald-400', 'bg-emerald-50')
+    az.classList.add('border-slate-300')
+    openModal('addModal')
+}
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('editId').value = btn.dataset.id || ''
+        document.getElementById('editClassName').value = btn.dataset.className || ''
+        document.getElementById('editDescTh').value = btn.dataset.descriptionTh || ''
+        document.getElementById('editCountDetect').value = btn.dataset.countDetect || 0
+        document.getElementById('editModelPath').value = btn.dataset.modelPath || ''
+        const mt = btn.dataset.modelType || 'OBJECT'
+        document.getElementById('editTypeObject').checked = (mt === 'OBJECT')
+        document.getElementById('editTypeDefect').checked = (mt === 'DEFECT')
+        imToggleCountDetect('edit', mt)
+        document.getElementById('editFileInput').value = ''
+        document.getElementById('editFileName').textContent = 'คลิกเพื่อเลือกไฟล์ใหม่'
+        const ez = document.getElementById('editFileZone')
+        ez.classList.remove('border-emerald-400', 'bg-emerald-50')
+        ez.classList.add('border-slate-300')
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+
 {% elif tab == 'object_detection_model' %}
+// ---- object_detection_model: accordion toggle ----
+function toggleODMGroup(id) {
+    const tbody = document.getElementById(id)
+    const chev = document.getElementById('chev-' + id)
+    if (!tbody) return
+    const isNowHidden = tbody.classList.toggle('hidden')
+    if (chev) chev.style.transform = isNowHidden ? 'rotate(-90deg)' : 'rotate(0deg)'
+}
 // ---- object_detection_model: edit / delete ----
 document.querySelectorAll('[data-open-edit]').forEach(btn => {
     btn.onclick = () => {
@@ -1653,13 +2434,92 @@ document.querySelectorAll('[data-open-delete]').forEach(btn => {
 })
 
 {% elif tab == 'defect_detection_models' %}
+// ---- defect_detection_models: accordion toggle ----
+function toggleDDMGroup(id) {
+    const tbody = document.getElementById(id)
+    const chev = document.getElementById('chev-' + id)
+    if (!tbody) return
+    const isNowHidden = tbody.classList.toggle('hidden')
+    if (chev) chev.style.transform = isNowHidden ? 'rotate(-90deg)' : 'rotate(0deg)'
+}
+
+// ---- defect_detection_models: searchable Object / Defect Mode / Model selects ----
+const DDM_OBJECT_OPTIONS = [
+    {% for o in objects_list %}
+    { id: "{{ o.id|escapejs }}", label: "{{ o.name|escapejs }}" },
+    {% endfor %}
+]
+const DDM_DEFECT_OPTIONS = [
+    {% for dm in defect_modes_list %}
+    { id: "{{ dm.id|escapejs }}", label: "{{ dm.name_th|escapejs }} / {{ dm.name_en|escapejs }}" },
+    {% endfor %}
+]
+const DDM_MODEL_OPTIONS = [
+    {% for m in models_list %}
+    { id: "{{ m.id|escapejs }}", label: "{{ m.class_name|escapejs }}" },
+    {% endfor %}
+]
+
+function initDDMSearchSelect({ searchId, hiddenId, dropdownId, options }) {
+    const searchEl = document.getElementById(searchId)
+    const hiddenEl = document.getElementById(hiddenId)
+    const dropEl   = document.getElementById(dropdownId)
+
+    function renderList(query) {
+        const q = (query || '').toLowerCase()
+        const filtered = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options
+        dropEl.innerHTML = ''
+        if (!filtered.length) {
+            dropEl.innerHTML = '<div class="px-3 py-2 text-sm text-slate-400">ไม่พบรายการ</div>'
+            return
+        }
+        filtered.slice(0, 100).forEach(o => {
+            const div = document.createElement('div')
+            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50'
+            div.textContent = o.label
+            div.onmousedown = (e) => {
+                e.preventDefault()
+                hiddenEl.value = o.id
+                searchEl.value = o.label
+                dropEl.classList.add('hidden')
+            }
+            dropEl.appendChild(div)
+        })
+    }
+
+    searchEl.addEventListener('focus', () => { renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('input', () => { hiddenEl.value = ''; renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('blur', () => {
+        setTimeout(() => { if (!hiddenEl.value) searchEl.value = ''; dropEl.classList.add('hidden') }, 150)
+    })
+
+    return {
+        setValue(id, label) { hiddenEl.value = id || ''; searchEl.value = label || '' },
+        clear() { hiddenEl.value = ''; searchEl.value = '' }
+    }
+}
+
+const ddmAddObjectSelect  = initDDMSearchSelect({ searchId: 'ddmAddObjectSearch',  hiddenId: 'ddmAddObjectId',  dropdownId: 'ddmAddObjectDropdown',  options: DDM_OBJECT_OPTIONS })
+const ddmAddDefectSelect  = initDDMSearchSelect({ searchId: 'ddmAddDefectSearch',  hiddenId: 'ddmAddDefectModeId', dropdownId: 'ddmAddDefectDropdown', options: DDM_DEFECT_OPTIONS })
+const ddmAddModelSelect   = initDDMSearchSelect({ searchId: 'ddmAddModelSearch',   hiddenId: 'ddmAddModelId',   dropdownId: 'ddmAddModelDropdown',   options: DDM_MODEL_OPTIONS })
+const ddmEditObjectSelect = initDDMSearchSelect({ searchId: 'ddmEditObjectSearch', hiddenId: 'ddmEditObjectId', dropdownId: 'ddmEditObjectDropdown', options: DDM_OBJECT_OPTIONS })
+const ddmEditDefectSelect = initDDMSearchSelect({ searchId: 'ddmEditDefectSearch', hiddenId: 'ddmEditDefectModeId', dropdownId: 'ddmEditDefectDropdown', options: DDM_DEFECT_OPTIONS })
+const ddmEditModelSelect  = initDDMSearchSelect({ searchId: 'ddmEditModelSearch',  hiddenId: 'ddmEditModelId',  dropdownId: 'ddmEditModelDropdown',  options: DDM_MODEL_OPTIONS })
+
+document.getElementById('openAddModal').onclick = () => {
+    ddmAddObjectSelect.clear()
+    ddmAddDefectSelect.clear()
+    ddmAddModelSelect.clear()
+    openModal('addModal')
+}
+
 // ---- defect_detection_models: edit / delete ----
 document.querySelectorAll('[data-open-edit]').forEach(btn => {
     btn.onclick = () => {
         document.getElementById('ddmEditId').value = btn.dataset.id
-        document.getElementById('ddmEditObjectId').value = btn.dataset.objectId || ''
-        document.getElementById('ddmEditDefectModeId').value = btn.dataset.defectModeId || ''
-        document.getElementById('ddmEditModelId').value = btn.dataset.modelId || ''
+        ddmEditObjectSelect.setValue(btn.dataset.objectId, btn.dataset.objectName)
+        ddmEditDefectSelect.setValue(btn.dataset.defectModeId, btn.dataset.defectModeLabel)
+        ddmEditModelSelect.setValue(btn.dataset.modelId, btn.dataset.modelClass)
         openModal('editModal')
     }
 })
@@ -1693,7 +2553,209 @@ document.querySelectorAll('[data-open-delete]').forEach(btn => {
     }
 })
 
+{% elif tab == 'inspection_report' %}
+// ---- inspection_report: accordion toggle ----
+function toggleIRGroup(id) {
+    const tbody = document.getElementById(id)
+    const chev = document.getElementById('chev-' + id)
+    if (!tbody) return
+    const isNowHidden = tbody.classList.toggle('hidden')
+    if (chev) chev.style.transform = isNowHidden ? 'rotate(-90deg)' : 'rotate(0deg)'
+}
+
+// ---- inspection_report: searchable Object (filtered by Line) / Defect selects ----
+const IR_OBJECT_OPTIONS = [
+    {% for o in objects_list %}
+    { id: "{{ o.id|escapejs }}", label: "{{ o.name|escapejs }}", lineId: "{{ o.line_id|escapejs }}" },
+    {% endfor %}
+]
+const IR_DEFECT_OPTIONS = [
+    {% for dm in defect_modes_list %}
+    { id: "{{ dm.id|escapejs }}", label: "{{ dm.name_th|escapejs }} / {{ dm.name_en|escapejs }}" },
+    {% endfor %}
+]
+
+function initIRObjectSearchSelect({ searchId, hiddenId, dropdownId, lineSelectId }) {
+    const searchEl = document.getElementById(searchId)
+    const hiddenEl = document.getElementById(hiddenId)
+    const dropEl   = document.getElementById(dropdownId)
+    const lineSel  = document.getElementById(lineSelectId)
+
+    function renderList(query) {
+        const lineId = lineSel.value
+        dropEl.innerHTML = ''
+        if (!lineId) {
+            dropEl.innerHTML = '<div class="px-3 py-2 text-sm text-slate-400">กรุณาเลือก Line ก่อน</div>'
+            return
+        }
+        const q = (query || '').toLowerCase()
+        let filtered = IR_OBJECT_OPTIONS.filter(o => o.lineId === lineId)
+        if (q) filtered = filtered.filter(o => o.label.toLowerCase().includes(q))
+        if (!filtered.length) {
+            dropEl.innerHTML = '<div class="px-3 py-2 text-sm text-slate-400">ไม่พบรายการ</div>'
+            return
+        }
+        filtered.slice(0, 100).forEach(o => {
+            const div = document.createElement('div')
+            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50'
+            div.textContent = o.label
+            div.onmousedown = (e) => {
+                e.preventDefault()
+                hiddenEl.value = o.id
+                searchEl.value = o.label
+                dropEl.classList.add('hidden')
+            }
+            dropEl.appendChild(div)
+        })
+    }
+
+    searchEl.addEventListener('focus', () => { renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('input', () => { hiddenEl.value = ''; renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('blur', () => {
+        setTimeout(() => { if (!hiddenEl.value) searchEl.value = ''; dropEl.classList.add('hidden') }, 150)
+    })
+    lineSel.addEventListener('change', () => { hiddenEl.value = ''; searchEl.value = '' })
+
+    return {
+        setValue(id, label) { hiddenEl.value = id || ''; searchEl.value = label || '' },
+        clear() { hiddenEl.value = ''; searchEl.value = '' }
+    }
+}
+
+function initIRSearchSelect({ searchId, hiddenId, dropdownId, options }) {
+    const searchEl = document.getElementById(searchId)
+    const hiddenEl = document.getElementById(hiddenId)
+    const dropEl   = document.getElementById(dropdownId)
+
+    function renderList(query) {
+        const q = (query || '').toLowerCase()
+        const filtered = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options
+        dropEl.innerHTML = ''
+        if (!filtered.length) {
+            dropEl.innerHTML = '<div class="px-3 py-2 text-sm text-slate-400">ไม่พบรายการ</div>'
+            return
+        }
+        filtered.slice(0, 100).forEach(o => {
+            const div = document.createElement('div')
+            div.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50'
+            div.textContent = o.label
+            div.onmousedown = (e) => {
+                e.preventDefault()
+                hiddenEl.value = o.id
+                searchEl.value = o.label
+                dropEl.classList.add('hidden')
+            }
+            dropEl.appendChild(div)
+        })
+    }
+
+    searchEl.addEventListener('focus', () => { renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('input', () => { hiddenEl.value = ''; renderList(searchEl.value); dropEl.classList.remove('hidden') })
+    searchEl.addEventListener('blur', () => {
+        setTimeout(() => { if (!hiddenEl.value) searchEl.value = ''; dropEl.classList.add('hidden') }, 150)
+    })
+
+    return {
+        setValue(id, label) { hiddenEl.value = id || ''; searchEl.value = label || '' },
+        clear() { hiddenEl.value = ''; searchEl.value = '' }
+    }
+}
+
+const irAddObjectSelect  = initIRObjectSearchSelect({ searchId: 'irAddObjectSearch',  hiddenId: 'irAddObjectId',  dropdownId: 'irAddObjectDropdown',  lineSelectId: 'irAddLineId' })
+const irEditObjectSelect = initIRObjectSearchSelect({ searchId: 'irEditObjectSearch', hiddenId: 'irEditObjectId', dropdownId: 'irEditObjectDropdown', lineSelectId: 'irEditLineId' })
+const irAddDefectSelect  = initIRSearchSelect({ searchId: 'irAddDefectSearch',  hiddenId: 'irAddDefectId',        dropdownId: 'irAddDefectDropdown',  options: IR_DEFECT_OPTIONS })
+const irEditDefectSelect = initIRSearchSelect({ searchId: 'irEditDefectSearch', hiddenId: 'irEditDefectModeId',  dropdownId: 'irEditDefectDropdown', options: IR_DEFECT_OPTIONS })
+
+// ---- inspection_report: "ประเภท" select ที่พิมพ์เพิ่มประเภทใหม่ได้ ----
+function initIRTypeSelect({ selectId, newInputId, hiddenId }) {
+    const selectEl = document.getElementById(selectId)
+    const newEl = document.getElementById(newInputId)
+    const hiddenEl = document.getElementById(hiddenId)
+
+    selectEl.addEventListener('change', () => {
+        if (selectEl.value === '__new__') {
+            newEl.classList.remove('hidden')
+            newEl.value = ''
+            newEl.focus()
+            hiddenEl.value = ''
+        } else {
+            newEl.classList.add('hidden')
+            hiddenEl.value = selectEl.value
+        }
+    })
+    newEl.addEventListener('input', () => { hiddenEl.value = newEl.value.trim() })
+
+    return {
+        setValue(value) {
+            const opt = Array.from(selectEl.options).find(o => o.value === value)
+            if (value && opt) {
+                selectEl.value = value
+                newEl.classList.add('hidden')
+                newEl.value = ''
+                hiddenEl.value = value
+            } else if (value) {
+                selectEl.value = '__new__'
+                newEl.classList.remove('hidden')
+                newEl.value = value
+                hiddenEl.value = value
+            } else {
+                selectEl.value = ''
+                newEl.classList.add('hidden')
+                newEl.value = ''
+                hiddenEl.value = ''
+            }
+        },
+        clear() {
+            selectEl.value = ''
+            newEl.classList.add('hidden')
+            newEl.value = ''
+            hiddenEl.value = ''
+        }
+    }
+}
+const irAddTypeSelect  = initIRTypeSelect({ selectId: 'irAddReportTypeSelect',  newInputId: 'irAddReportTypeNew',  hiddenId: 'irAddReportTypeHidden' })
+const irEditTypeSelect = initIRTypeSelect({ selectId: 'irEditReportTypeSelect', newInputId: 'irEditReportTypeNew', hiddenId: 'irEditReportTypeHidden' })
+
+document.getElementById('openAddModal').onclick = () => {
+    irAddObjectSelect.clear()
+    irAddDefectSelect.clear()
+    irAddTypeSelect.clear()
+    document.getElementById('irAddNote').value = ''
+    openModal('addModal')
+}
+
+// ---- inspection_report: edit / delete ----
+document.querySelectorAll('[data-open-edit]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('irEditId').value = btn.dataset.id
+        document.getElementById('irEditLineId').value = btn.dataset.lineId || ''
+        irEditObjectSelect.setValue(btn.dataset.objectId, btn.dataset.objectName)
+        irEditDefectSelect.setValue(btn.dataset.defectModeId, btn.dataset.defectModeLabel)
+        irEditTypeSelect.setValue(btn.dataset.reportType || '')
+        document.getElementById('irEditCount').value = btn.dataset.count || 0
+        document.getElementById('irEditTargetCount').value = btn.dataset.targetCount || 30
+        document.getElementById('irEditReportDate').value = btn.dataset.reportDate || ''
+        document.getElementById('irEditNote').value = btn.dataset.note || ''
+        openModal('editModal')
+    }
+})
+document.querySelectorAll('[data-open-delete]').forEach(btn => {
+    btn.onclick = () => {
+        document.getElementById('deleteId').value = btn.dataset.id
+        document.getElementById('deleteLabel').innerText = 'ต้องการลบ: ' + btn.dataset.label
+        openModal('deleteModal')
+    }
+})
+
 {% elif tab == 'kanban_mapping' %}
+// ---- kanban_mapping: accordion toggle ----
+function toggleKMLine(id) {
+    const tbody = document.getElementById(id)
+    const chev = document.getElementById('chev-' + id)
+    if (!tbody) return
+    const isNowHidden = tbody.classList.toggle('hidden')
+    if (chev) chev.style.transform = isNowHidden ? 'rotate(-90deg)' : 'rotate(0deg)'
+}
 // ---- kanban_mapping: searchable item select + edit / delete ----
 const KM_ITEM_OPTIONS = [
     {% for it in items_list %}
@@ -1765,6 +2827,9 @@ document.querySelectorAll('[data-open-delete]').forEach(btn => {
     }
 })
 {% elif tab == 'ok_log' or tab == 'ng_log' %}
+function _imgError(el) {
+    el.parentElement.innerHTML = '<span class="flex items-center justify-center h-full text-slate-300 text-xs">ไม่พบรูป</span>'
+}
 function openPhotoModal(btn) {
     const title = btn.dataset.title || ''
     const photos = JSON.parse(btn.dataset.photos || '[]')
@@ -1777,17 +2842,19 @@ function openPhotoModal(btn) {
     } else {
         empty.classList.add('hidden')
         grid.classList.remove('hidden')
-        grid.innerHTML = photos.map(p => `
-            <div class="flex flex-col items-center gap-2" style="width:180px">
-                <a href="${p.path}" target="_blank" rel="noopener"
-                   class="block w-44 h-44 overflow-hidden rounded-xl border border-slate-200 hover:border-indigo-400 transition bg-slate-50">
-                    <img src="${p.path}" alt="${p.caption || ''}"
-                         class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                         onerror="this.parentElement.innerHTML='<span class=\'flex items-center justify-center h-full text-slate-300 text-xs\'>ไม่พบรูป</span>'" />
+        grid.innerHTML = photos.map(p => {
+            const src = p.path || ''
+            return `
+            <div class="flex flex-col items-center gap-2">
+                <a href="${src}" target="_blank" rel="noopener"
+                   class="block overflow-hidden rounded-xl border border-slate-200 hover:border-indigo-400 transition bg-slate-50">
+                    <img src="${src}" alt="${p.caption || ''}"
+                         style="max-width:82vw; max-height:74vh; width:auto; height:auto; object-fit:contain; display:block;"
+                         onerror="_imgError(this)" />
                 </a>
                 <span class="text-xs text-slate-500 text-center break-all">${p.caption || ''}</span>
-            </div>
-        `).join('')
+            </div>`
+        }).join('')
     }
     document.getElementById('photoModal').classList.remove('hidden')
 }

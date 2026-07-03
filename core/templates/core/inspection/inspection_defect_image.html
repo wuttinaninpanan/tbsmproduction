@@ -153,8 +153,8 @@
 							<td class="px-4 py-3 text-slate-700 whitespace-nowrap">{{ r.created_at|default:"-" }}</td>
 							<td class="px-4 py-3">
 								{% if r.image_url %}
-									<a href="{{ r.image_url }}" target="_blank" rel="noreferrer">
-										<img src="{{ r.image_url }}" alt="defect image" class="w-12 h-12 rounded-md object-cover border border-slate-300 bg-slate-100 hover:opacity-80 transition" />
+									<a href="{{ r.image_url }}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2">
+										<img src="{{ r.image_url }}" alt="Photo" class="w-10 h-10 rounded-lg object-cover border border-slate-300" onerror="this.style.display='none'" />
 									</a>
 								{% else %}
 									<span class="text-xs text-slate-400">-</span>

@@ -1,15 +1,25 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.utils import timezone
 from django.views.generic import TemplateView
 
 from core.models.inspection.inspection_defect_image import InspectionDefectImage
+
+_BANGKOK = ZoneInfo("Asia/Bangkok")
+
+
+def _fmt_dt(dt, fmt="%Y-%m-%d %H:%M") -> str:
+    if dt is None:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_BANGKOK)
+    return dt.astimezone(_BANGKOK).strftime(fmt)
 
 
 def _image_url(path: str) -> str:
@@ -122,11 +132,9 @@ class InspectionDefectImageView(TemplateView):
         date_from = _parse_date(q_from_raw)
         date_to = _parse_date(q_to_raw)
         if date_from is not None:
-            dt_from = timezone.make_aware(datetime.combine(date_from, time.min))
-            qs = qs.filter(created_at__gte=dt_from)
+            qs = qs.filter(created_at__date__gte=date_from)
         if date_to is not None:
-            dt_to = timezone.make_aware(datetime.combine(date_to, time.max))
-            qs = qs.filter(created_at__lte=dt_to)
+            qs = qs.filter(created_at__date__lte=date_to)
 
         qs = qs.order_by("-created_at", "order")
 
@@ -146,7 +154,7 @@ class InspectionDefectImageView(TemplateView):
                 "image_url": _image_url(obj.image_path or ""),
                 "caption": obj.caption or "",
                 "order": obj.order,
-                "created_at": obj.created_at.strftime("%Y-%m-%d %H:%M") if obj.created_at else "",
+                "created_at": _fmt_dt(obj.created_at),
                 "qr_work": (defect.qr_work or "") if defect else "",
                 "result": (defect.result or "") if defect else "",
                 "sd_code": (getattr(part, "sd_code", "") or "") if part else "",
