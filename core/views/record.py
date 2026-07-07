@@ -133,6 +133,14 @@ def _build_record_payload(with_defects: bool = True) -> dict:
             c = getattr(it, "component", None)
             if c is None:
                 continue
+            # The defect page records discrete defective pieces, so only pcs
+            # components belong here: a whole-number BOM usage means "N pieces".
+            # A fractional usage means the component is consumed by weight/length
+            # (raw material — steel coil, oil, …) and can't be counted as a
+            # defective piece, so skip it.
+            q = it.quantity
+            if q is None or q % 1 != 0:
+                continue
             child_image = ""
             try:
                 if getattr(c, "reference_image", None):
