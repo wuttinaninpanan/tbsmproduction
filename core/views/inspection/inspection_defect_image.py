@@ -8,7 +8,9 @@ from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 
+from core.auth.decorators import staff_required
 from core.models.inspection.inspection_defect_image import InspectionDefectImage
 
 _BANGKOK = ZoneInfo("Asia/Bangkok")
@@ -86,6 +88,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+@method_decorator(staff_required, name="dispatch")
 class InspectionDefectImageView(TemplateView):
     template_name = "core/inspection/inspection_defect_image.html"
 

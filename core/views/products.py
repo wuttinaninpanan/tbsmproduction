@@ -114,8 +114,13 @@ class ProductsView(TemplateView):
 				| Q(comment__icontains=q)
 			)
 
-		# Map item_id -> list of line names so we can show all assigned lines.
-		item_ids = list(qs.values_list("id", flat=True))
+		paginator = Paginator(qs, per_page)
+		page_obj = paginator.get_page(page)
+
+		# Map item_id -> line names, only for the items shown on THIS page (not
+		# the whole filtered catalog). Materialize the page once and reuse below.
+		page_rows = list(page_obj.object_list)
+		item_ids = [it.id for it in page_rows]
 		lines_by_item: dict = {}
 		if item_ids:
 			for il in (
@@ -127,11 +132,8 @@ class ProductsView(TemplateView):
 					getattr(il.line, "line_name", "") or ""
 				)
 
-		paginator = Paginator(qs, per_page)
-		page_obj = paginator.get_page(page)
-
 		rows = []
-		for item in page_obj.object_list:
+		for item in page_rows:
 			line_names = lines_by_item.get(item.id, [])
 			image_url = ""
 			try:

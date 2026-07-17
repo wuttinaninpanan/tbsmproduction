@@ -70,6 +70,13 @@ class ProductionRecord(BaseModel):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            # Hot paths: manage_production lists by -created_at; dashboard and the
+            # scrap reports range-filter on production_date (often per line).
+            models.Index(fields=["-created_at"], name="prodrec_created_idx"),
+            models.Index(fields=["production_date"], name="prodrec_proddate_idx"),
+            models.Index(fields=["production_date", "line"], name="prodrec_proddate_line_idx"),
+        ]
 
     def __str__(self) -> str:
         item_label = self.item.sd_code if self.item_id else "Single part"

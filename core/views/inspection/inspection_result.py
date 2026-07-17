@@ -8,7 +8,9 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.timezone import localtime
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 
+from core.auth.decorators import staff_required
 from core.models.inspection.inspection_result import InspectionResult
 
 
@@ -74,6 +76,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+@method_decorator(staff_required, name="dispatch")
 class InspectionResultView(TemplateView):
 
     template_name = "core/inspection/inspection_result.html"

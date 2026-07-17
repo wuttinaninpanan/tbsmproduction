@@ -8,8 +8,10 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 from django.shortcuts import redirect
 
+from core.auth.decorators import staff_required
 from core.models.inspection.inspection_model_defect import InspectionModelsDefect
 from core.models.inspection.inspection_model import InspectionModels
 from core.models.defect_by_category import DefectByCategory
@@ -54,6 +56,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+@method_decorator(staff_required, name="dispatch")
 class InspectionModelsDefectView(TemplateView):
     template_name = "core/inspection/inspection_model_defect.html"
 

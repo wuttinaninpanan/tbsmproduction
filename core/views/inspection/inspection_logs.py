@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 
 _BANGKOK = ZoneInfo("Asia/Bangkok")
 
@@ -17,6 +18,7 @@ def _fmt_dt(dt) -> str:
         dt = dt.replace(tzinfo=_BANGKOK)
     return dt.astimezone(_BANGKOK).strftime("%Y-%m-%d %H:%M:%S")
 
+from core.auth.decorators import staff_required
 from core.models.inspection.inspection_log import (
     InspectionOKLog, InspectionOKLogDetail,
     InspectionNGLog, InspectionNGLogDetail,
@@ -57,6 +59,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+@method_decorator(staff_required, name="dispatch")
 class InspectionLogsView(TemplateView):
     template_name = "core/inspection/inspection_logs.html"
 

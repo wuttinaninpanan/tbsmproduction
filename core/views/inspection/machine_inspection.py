@@ -3,12 +3,15 @@ from __future__ import annotations
 from django.db.models import Count, Q
 from django.http import Http404
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 
+from core.auth.decorators import staff_required
 from core.models.inspection.inspection_item import InspectionItem
 from core.models.inspection.machine import Machine
 from core.models.item_line import ItemLine
 
 
+@method_decorator(staff_required, name="dispatch")
 class MachineInspectionView(TemplateView):
     """หน้ารายการ "ผลิตภัณฑ์ที่ผลิต" ของเครื่อง (master).
 

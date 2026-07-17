@@ -12,6 +12,7 @@ from .product_detail import ProductDetailView
 from .item_list import ItemListView
 from .manage_settings import ManageSettingsViews
 from .manage_settings_defect_by_category import ManageSettingsDefectByCategoryView
+from .manage_group_permissions import ManageGroupPermissionsViews, ManageGroupPermissionsDetailView
 from .manage_businesspartner import ManageBusinessPartnerViews
 from .manage_address_partner import ManageAddressPartnerViews
 from .manage_contact import ManageContactViews

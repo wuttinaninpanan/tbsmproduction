@@ -6,8 +6,10 @@ from django.db import transaction
 from django.db.models import Q
 from django.db.models.deletion import ProtectedError
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 from django.shortcuts import redirect
 
+from core.auth.decorators import staff_required
 from core.models.inspection.object_detection import KanbanItemMapping
 from core.models.item_list import Item_list
 
@@ -48,6 +50,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+@method_decorator(staff_required, name="dispatch")
 class KanbanItemMappingView(TemplateView):
     template_name = "core/inspection/kanban_item_mapping.html"
 

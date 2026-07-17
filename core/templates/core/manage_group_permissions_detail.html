@@ -1,0 +1,131 @@
+{% extends "core/base.html" %}
+
+{% block container_class %}w-full bg-white rounded-2xl shadow-xl px-4 sm:px-6 lg:px-8 py-6{% endblock %}
+
+{% block title %}สิทธิ์ของ {{ group.name }} — TBSMRD{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+	<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<nav class="text-sm text-slate-500 mb-1">
+				<a href="{{ back_url }}" class="hover:text-slate-700">จัดการ Group & สิทธิ์</a>
+				<span class="mx-1">/</span>
+				<span>{{ group.name }}</span>
+			</nav>
+			<h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900">สิทธิ์ของ Group “{{ group.name }}”</h1>
+			<p class="text-sm text-slate-600 mt-1">ติ๊กสิทธิ์ที่ต้องการมอบให้ Group นี้ แล้วกด “บันทึก” — ผู้ใช้งานทุกคนใน Group จะได้รับสิทธิ์ที่เลือกทันที</p>
+		</div>
+		<a href="{{ back_url }}" class="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 self-start">
+			<svg viewBox="0 0 20 20" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z" clip-rule="evenodd"/></svg>
+			ย้อนกลับ
+		</a>
+	</header>
+
+	<div class="rounded-2xl bg-slate-50 border border-slate-200 p-4 sm:p-5">
+		<label class="block text-sm font-semibold text-slate-700">ค้นหาสิทธิ์</label>
+		<input id="permSearch" type="text" autocomplete="off" placeholder="พิมพ์เพื่อค้นหาชื่อสิทธิ์ / โมเดล"
+			class="mt-1 w-full max-w-md rounded-md border border-slate-300 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+	</div>
+
+	<form method="post" id="permForm">
+		{% csrf_token %}
+		<div class="space-y-4" id="appGroups">
+			{% for app in app_groups %}
+				<div class="rounded-2xl border border-slate-200 overflow-hidden" data-app-block>
+					<div class="bg-slate-100 px-4 py-3 flex items-center justify-between gap-3">
+						<label class="inline-flex items-center gap-2 font-extrabold text-slate-800 cursor-pointer">
+							<input type="checkbox" data-app-select-all class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+							<span data-app-label>{{ app.app_label }}</span>
+						</label>
+						<span class="text-xs text-slate-500" data-app-count></span>
+					</div>
+					<ul class="divide-y divide-slate-200">
+						{% for p in app.permissions %}
+							<li data-perm-item data-search="{{ p.name|lower }} {{ p.codename|lower }} {{ p.model|lower }}"
+								class="flex items-center gap-3 px-4 sm:px-5 py-2.5 hover:bg-slate-50">
+								<label class="inline-flex items-center gap-3 flex-1 min-w-0 cursor-pointer">
+									<input type="checkbox" name="permission_ids" value="{{ p.id }}" {% if p.checked %}checked{% endif %}
+										data-perm-checkbox class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+									<span class="min-w-0">
+										<span class="block text-sm font-semibold text-slate-900 truncate">{{ p.name }}</span>
+										<span class="block text-xs text-slate-500 truncate">{{ app.app_label }}.{{ p.codename }}</span>
+									</span>
+								</label>
+							</li>
+						{% endfor %}
+					</ul>
+				</div>
+			{% empty %}
+				<div class="py-8 px-4 text-center text-sm text-slate-600">ยังไม่มีสิทธิ์ในระบบ</div>
+			{% endfor %}
+		</div>
+
+		{# Sticky save bar #}
+		<div class="sticky bottom-0 z-10 mt-4 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur px-4 sm:px-5 py-3 flex items-center justify-between">
+			<span class="text-sm text-slate-600">เลือกแล้ว <span class="font-bold text-slate-900" data-selected-mirror>{{ selected_count }}</span> / {{ total_count }} สิทธิ์</span>
+			<div class="flex items-center gap-2">
+				<a href="{{ back_url }}" class="px-4 py-2 rounded-lg font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200">ยกเลิก</a>
+				<button type="submit" class="px-5 py-2 rounded-lg font-semibold text-white bg-emerald-600 hover:bg-emerald-700">บันทึก</button>
+			</div>
+		</div>
+	</form>
+</section>
+
+<script>
+(() => {
+	const checkboxes = Array.from(document.querySelectorAll("[data-perm-checkbox]"));
+	const countEls = Array.from(document.querySelectorAll("[data-selected-mirror]"));
+	const appBlocks = Array.from(document.querySelectorAll("[data-app-block]"));
+
+	const updateCount = () => {
+		const n = checkboxes.filter((c) => c.checked).length;
+		countEls.forEach((el) => { el.textContent = n; });
+	};
+
+	const updateAppState = (block) => {
+		const boxes = Array.from(block.querySelectorAll("[data-perm-checkbox]"));
+		const selectAll = block.querySelector("[data-app-select-all]");
+		const countLabel = block.querySelector("[data-app-count]");
+		const checkedCount = boxes.filter((c) => c.checked).length;
+		if (selectAll) {
+			selectAll.checked = boxes.length > 0 && checkedCount === boxes.length;
+			selectAll.indeterminate = checkedCount > 0 && checkedCount < boxes.length;
+		}
+		if (countLabel) countLabel.textContent = checkedCount + " / " + boxes.length;
+	};
+
+	appBlocks.forEach((block) => {
+		updateAppState(block);
+		block.querySelector("[data-app-select-all]")?.addEventListener("change", (e) => {
+			block.querySelectorAll("[data-perm-checkbox]").forEach((c) => { c.checked = e.target.checked; });
+			updateAppState(block);
+			updateCount();
+		});
+	});
+
+	checkboxes.forEach((c) => c.addEventListener("change", () => {
+		updateAppState(c.closest("[data-app-block]"));
+		updateCount();
+	}));
+
+	// Client-side filter — hidden rows stay in the DOM (and submitted) so
+	// filtering never silently drops a selection.
+	const search = document.getElementById("permSearch");
+	search?.addEventListener("input", () => {
+		const q = search.value.trim().toLowerCase();
+		appBlocks.forEach((block) => {
+			let visibleCount = 0;
+			block.querySelectorAll("[data-perm-item]").forEach((li) => {
+				const match = !q || (li.dataset.search || "").includes(q);
+				li.classList.toggle("hidden", !match);
+				if (match) visibleCount += 1;
+			});
+			block.classList.toggle("hidden", visibleCount === 0 && q !== "");
+		});
+	});
+
+	updateCount();
+})();
+</script>
+{% endblock %}

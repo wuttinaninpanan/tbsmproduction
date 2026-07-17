@@ -14,10 +14,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Build/runtime OS deps (gettext for i18n; curl for healthchecks).
+# Runtime OS deps only (gettext for i18n; curl for healthchecks). No C
+# toolchain: every dependency (psycopg[binary], pillow, ...) ships a prebuilt
+# wheel, so gcc/python3-dev were dead weight (~250 MB).
 RUN apt-get update -qq && apt-get install -y --no-install-recommends \
-    gcc \
-    python3-dev \
     gettext \
     curl \
     ca-certificates \

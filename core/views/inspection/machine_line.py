@@ -17,6 +17,7 @@ from django.db.models.deletion import ProtectedError
 from django.utils import timezone as _django_timezone
 from django.utils.dateparse import parse_date
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 from django.shortcuts import redirect
 
 _BANGKOK = ZoneInfo("Asia/Bangkok")
@@ -30,6 +31,7 @@ def _fmt_dt(dt) -> str:
     return dt.astimezone(_BANGKOK).strftime("%Y-%m-%d %H:%M:%S")
 
 
+from core.auth.decorators import staff_required
 from core.models import User
 from core.models.department import Department
 from core.models.inspection.machine import Machine
@@ -122,6 +124,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+@method_decorator(staff_required, name="dispatch")
 class MachineLineView(TemplateView):
     template_name = "core/inspection/machine_line.html"
 
@@ -834,13 +837,27 @@ class MachineLineView(TemplateView):
     def _redirect_tab(self, request, tab):
         return redirect(f"/inspection/machine/?tab={tab}")
 
+    # Model-weight uploads: allow only known model formats, cap the size, and
+    # never trust the client-supplied path component.
+    _ALLOWED_MODEL_EXTS = {".pt", ".pth", ".onnx", ".engine", ".weights", ".tflite"}
+    _MAX_MODEL_UPLOAD_BYTES = 500 * 1024 * 1024  # 500 MB
+
     def _save_model_file(self, request) -> str | None:
         f = request.FILES.get("model_file")
         if not f:
             return None
+        # Strip any directory component the client may have sent (defence in
+        # depth on top of Django's own filename sanitisation).
+        base = os.path.basename(f.name or "").strip()
+        name, ext = os.path.splitext(base)
+        ext = ext.lower()
+        if not name or ext not in self._ALLOWED_MODEL_EXTS:
+            allowed = ", ".join(sorted(self._ALLOWED_MODEL_EXTS))
+            raise ValueError(f"ชนิดไฟล์โมเดลไม่ถูกต้อง (รองรับ: {allowed})")
+        if f.size is not None and f.size > self._MAX_MODEL_UPLOAD_BYTES:
+            raise ValueError("ไฟล์โมเดลมีขนาดใหญ่เกินไป (จำกัด 500 MB)")
         dest_dir = os.path.join(_django_settings.MEDIA_ROOT, "inspection_models")
         os.makedirs(dest_dir, exist_ok=True)
-        name, ext = os.path.splitext(f.name)
         filename = f"{name}{ext}"
         dest_path = os.path.join(dest_dir, filename)
         if os.path.exists(dest_path):

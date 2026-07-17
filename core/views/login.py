@@ -1,9 +1,26 @@
 from django.contrib import messages
 from django.contrib.auth import authenticate, login
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import TemplateView
 
 from core.services.auditlog import log_event
+
+
+def _safe_next(request, candidate: str) -> str:
+    """Return ``candidate`` only if it is a safe, same-site relative URL.
+
+    Prevents an open redirect: an attacker crafting ``/login/?next=https://evil``
+    could otherwise bounce a freshly authenticated user to another site.
+    """
+    candidate = (candidate or "").strip()
+    if candidate and url_has_allowed_host_and_scheme(
+        candidate,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return candidate
+    return "/"
 
 
 class LoginViews(TemplateView):
@@ -11,13 +28,13 @@ class LoginViews(TemplateView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["next"] = (self.request.GET.get("next") or "").strip()
+        ctx["next"] = _safe_next(self.request, self.request.GET.get("next"))
         return ctx
 
     def post(self, request, *args, **kwargs):
         username = (request.POST.get("username") or "").strip()
         password = (request.POST.get("password") or "").strip()
-        next_url = (request.POST.get("next") or request.GET.get("next") or "/").strip() or "/"
+        next_url = _safe_next(request, request.POST.get("next") or request.GET.get("next"))
         remember = (request.POST.get("remember") or "") in {"on", "1", "true", "True"}
 
         if not username or not password:

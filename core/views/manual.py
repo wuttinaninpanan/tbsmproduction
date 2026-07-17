@@ -13,6 +13,7 @@ from django.views.generic import TemplateView
 
 from core.auth.decorators import staff_required, user_required
 from core.models.manual import Manual
+from core.services.html_sanitize import sanitize_manual_html
 
 
 def _is_uuid(value: str) -> bool:
@@ -107,6 +108,9 @@ class ManualDetailView(TemplateView):
         if manual is None:
             raise Http404("ไม่พบคู่มือ หรือคุณไม่มีสิทธิ์เข้าถึง")
 
+        # Sanitize at render too, so manuals stored before on-save sanitization
+        # was introduced are also safe. Not persisted — just the value shown.
+        manual.detail = sanitize_manual_html(manual.detail)
         ctx["manual"] = manual
         ctx["can_manage"] = _can_manage(user)
         return ctx
@@ -138,7 +142,7 @@ class ManualFormView(TemplateView):
 
         title = (request.POST.get("title") or "").strip()
         description = (request.POST.get("description") or "").strip()
-        detail = request.POST.get("detail") or ""          # HTML จาก WYSIWYG (staff เป็นผู้เขียน = เชื่อถือได้)
+        raw_detail = request.POST.get("detail") or ""   # HTML ดิบจาก WYSIWYG
         usefor = (request.POST.get("usefor") or "").strip().upper()
         is_active = str(request.POST.get("is_active")).lower() == "true"
 
@@ -150,12 +154,16 @@ class ManualFormView(TemplateView):
             messages.error(request, "กรุณากรอกหัวข้อคู่มือ")
             return redirect(request.get_full_path())
 
-        if "blob:" in detail:
+        # ตรวจ blob: บน HTML ดิบก่อน (sanitize จะตัด blob: ทิ้ง ทำให้ตรวจไม่เจอ)
+        if "blob:" in raw_detail:
             messages.error(
                 request,
                 "บันทึกรูปภาพไม่สำเร็จ: กรุณาแทรกรูปใหม่อีกครั้ง แล้วกดบันทึก",
             )
             return redirect(request.get_full_path())
+
+        # staff เป็นผู้เขียน แต่ยัง sanitize กัน stored XSS
+        detail = sanitize_manual_html(raw_detail)
 
         try:
             with transaction.atomic():

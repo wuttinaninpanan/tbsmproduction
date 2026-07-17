@@ -10,7 +10,9 @@ from django.db.models.deletion import ProtectedError
 from django.http import Http404
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
+from django.utils.decorators import method_decorator
 
+from core.auth.decorators import staff_required
 from core.models.bill_of_material_item_master import BillOfMaterialItemMater
 from core.models.inspection.inspection_item import InspectionItem
 from core.models.inspection.inspection_model import InspectionModels
@@ -56,6 +58,7 @@ def _page_items(num_pages: int, current: int) -> list[int | None]:
     return compressed
 
 
+@method_decorator(staff_required, name="dispatch")
 class MachineProductInspectionView(TemplateView):
     """หน้าจัดการ Inspection Item ของผลิตภัณฑ์ (เบอร์งาน) หนึ่งตัว ภายใต้เครื่องที่เลือก (detail)."""
 

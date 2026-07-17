@@ -93,8 +93,8 @@ def next_global_item_number() -> int:
 
 
 class Item_list(BaseModel):
-    sd_code = models.CharField(max_length=32, blank=True, default="")
-    part_number = models.CharField(max_length=255)
+    sd_code = models.CharField(max_length=32, blank=True, default="", db_index=True)
+    part_number = models.CharField(max_length=255, db_index=True)
     part_name = models.CharField(max_length=255)
     sku = models.CharField(max_length=100)
     weight = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="kg")
